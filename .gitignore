@@ -3,3 +3,8 @@
 /stift-data/
 stift
 *.tar.gz
+
+# generated site assets (make site-assets)
+/site/public/dl/
+/site/public/install.sh
+/site/public/proxmox.sh

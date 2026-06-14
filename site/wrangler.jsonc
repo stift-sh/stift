@@ -1,0 +1,17 @@
+// stift.sh — docs site + install scripts + release binaries, served as
+// Cloudflare Workers static assets (no compute). Deploy with `make site-deploy`
+// from the repo root (it assembles public/ from dist/ first).
+{
+  "name": "stift-sh",
+  "compatibility_date": "2026-06-01",
+  "assets": {
+    "directory": "./public",
+    "not_found_handling": "404-page"
+  }
+  // Once the stift.sh zone is active on this Cloudflare account, attach the
+  // domain by uncommenting and redeploying:
+  // ,"routes": [
+  //   { "pattern": "stift.sh", "custom_domain": true },
+  //   { "pattern": "www.stift.sh", "custom_domain": true }
+  // ]
+}

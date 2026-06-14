@@ -49,40 +49,16 @@ artifacts the install script expects; hosting them just means serving the
 `dist/` directory at these paths:
 
 ```
-https://stift.sh/install.sh                       this script
+https://stift.sh/install.sh                       client installer
+https://stift.sh/proxmox.sh                       Proxmox LXC helper (see below)
 https://stift.sh/dl/latest/stift-<os>-<arch>      binaries (+ .sha256 each)
 https://stift.sh/dl/<version>/stift-<os>-<arch>   pinned versions
 ```
 
-## Server: deploy in one minute
-
-### Binary
-
-```sh
-make build                      # or: go build -o bin/stift .
-./bin/stift serve --data /var/lib/stift
-```
-
-On first start the server prints an **admin token once** — store it. Then it listens
-on `:8580`.
-
-### Docker
-
-```sh
-docker compose up -d            # uses docker-compose.yml in this repo
-docker compose logs stift   # grab the first-boot admin token
-```
-
-Or pin the token instead of fishing it out of logs:
-
-```sh
-export STIFT_ADMIN_TOKEN="stf_$(openssl rand -hex 24)"
-docker run -d -p 8580:8580 -v stift-data:/data \
-  -e STIFT_ADMIN_TOKEN stift:latest
-```
-
-A read-only web UI for browsing/downloading sessions is served at `/`
-(paste a token; it never leaves your browser).
+The stift.sh site itself lives in [`site/`](site/) — a Cloudflare Worker
+serving the docs page, both scripts, and the `dist/` binaries as static
+assets. `make site-deploy` assembles `site/public/` from `dist/` and runs
+`wrangler deploy`.
 
 ## Client: push and pull sessions
 
@@ -169,6 +145,62 @@ stift token revoke <id>
 | `STIFT_CONFIG` | client | config file path (default `~/.config/stift/config.json`) |
 | `STIFT_LISTEN`, `STIFT_DATA` | server | listen address / data directory |
 | `STIFT_ADMIN_TOKEN` | server | register a fixed admin token at startup |
+
+## Server: deploy in one minute
+
+### Binary
+
+```sh
+make build                      # or: go build -o bin/stift .
+./bin/stift serve --data /var/lib/stift
+```
+
+On first start the server prints an **admin token once** — store it. Then it listens
+on `:8580`.
+
+For a permanent install on a Linux host (bare metal, VM, or LXC), use the
+hardened systemd unit in [`deploy/stift.service`](deploy/stift.service):
+
+```sh
+cp dist/stift-linux-amd64 /usr/local/bin/stift && chmod +x /usr/local/bin/stift
+cp deploy/stift.service /etc/systemd/system/
+systemctl enable --now stift
+journalctl -u stift          # first-boot admin token is in here
+```
+
+### Proxmox VE
+
+One command on the Proxmox host creates an unprivileged Debian LXC
+(1 core / 512MB / 8GB by default), installs stift as a hardened systemd
+service, and prints the server URL + admin token, ready for `stift login`:
+
+```sh
+bash -c "$(curl -fsSL https://stift.sh/proxmox.sh)"
+```
+
+The script ([`deploy/proxmox.sh`](deploy/proxmox.sh)) asks for confirmation
+before creating anything. Flags: `--ctid`, `--hostname`, `--storage`,
+`--disk`, `--cores`, `--memory`, `--bridge`, `--ip CIDR --gw IP` (static
+instead of DHCP), `--binary PATH` (install a local build instead of
+downloading), `--token`, `--yes`. See `--help`.
+
+### Docker
+
+```sh
+docker compose up -d            # uses docker-compose.yml in this repo
+docker compose logs stift   # grab the first-boot admin token
+```
+
+Or pin the token instead of fishing it out of logs:
+
+```sh
+export STIFT_ADMIN_TOKEN="stf_$(openssl rand -hex 24)"
+docker run -d -p 8580:8580 -v stift-data:/data \
+  -e STIFT_ADMIN_TOKEN stift:latest
+```
+
+A read-only web UI for browsing/downloading sessions is served at `/`
+(paste a token; it never leaves your browser).
 
 ## HTTP API
 

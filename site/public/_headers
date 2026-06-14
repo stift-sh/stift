@@ -1,0 +1,15 @@
+# Served by Cloudflare Workers static assets.
+
+/install.sh
+  Content-Type: text/x-shellscript; charset=utf-8
+  Cache-Control: public, max-age=300
+
+/proxmox.sh
+  Content-Type: text/x-shellscript; charset=utf-8
+  Cache-Control: public, max-age=300
+
+# "latest" moves on every release — keep it short-lived. (Rules stack in this
+# file, so don't add an overlapping /dl/* rule; pinned-version dirs get default
+# caching.)
+/dl/latest/*
+  Cache-Control: public, max-age=300

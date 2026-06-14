@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>stift — self-hosted cloud storage for AI coding agent sessions</title>
+<meta name="description" content="stift gives your AI coding agent sessions a home: one binary on your server, then stift push / stift pull between machines. Claude Code, Codex, Gemini CLI, Cursor, opencode, aider.">
+<meta property="og:title" content="stift — session store for AI coding agents">
+<meta property="og:description" content="Self-hosted, single binary, zero dependencies. Push and pull your agent sessions between machines.">
+<meta property="og:url" content="https://stift.sh/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23bf3415'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='20' font-weight='bold' fill='%23f2efe6' text-anchor='middle'%3ES%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Martian+Mono:wdth,wght@75..100,300..800&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f2efe6;
+  --paper-deep:#eae5d6;
+  --ink:#181510;
+  --ink-soft:#57523f;
+  --rule:#cfc8b2;
+  --rule-strong:#181510;
+  --red:#bf3415;
+  --plate:#181510;
+  --plate-text:#ece7d7;
+  --plate-dim:#9d967f;
+  --plate-accent:#e8a948;
+  --plate-green:#9dbd7e;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+  --display:"Martian Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--mono);
+  font-size:14px;
+  line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+/* paper grain */
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:999;opacity:.5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .04 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+::selection{background:var(--red);color:var(--paper)}
+a{color:var(--red);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+a:hover{background:var(--red);color:var(--paper);text-decoration:none}
+strong{font-weight:600}
+em{font-style:italic}
+
+.frame{max-width:1180px;margin:0 auto;padding:0 24px}
+
+/* ============ masthead ============ */
+header.mast{border-bottom:2px solid var(--rule-strong)}
+.mast-top{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:14px 0;border-bottom:1px solid var(--rule);
+  font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);
+  gap:16px;flex-wrap:wrap;
+}
+.mast-top a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--ink)}
+.mast-top a:hover{background:var(--ink);color:var(--paper)}
+.doc-no{color:var(--red);font-weight:600}
+.mast-main{padding:64px 0 48px;position:relative}
+h1.wordmark{
+  font-family:var(--display);
+  font-variation-settings:"wdth" 75;
+  font-weight:800;
+  font-size:clamp(64px,14vw,176px);
+  line-height:.9;letter-spacing:-.02em;
+  text-transform:lowercase;
+}
+h1.wordmark .dot{color:var(--red)}
+.tagline{
+  margin-top:28px;max-width:62ch;
+  font-size:clamp(15px,1.6vw,18px);line-height:1.65;
+}
+.tagline b{font-weight:600;background:linear-gradient(transparent 62%,rgba(191,52,21,.28) 62%)}
+.stamps{display:flex;gap:10px;flex-wrap:wrap;margin-top:32px}
+.stamp{
+  border:1.5px solid var(--ink);padding:4px 12px;
+  font-size:10.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+}
+.stamp.red{border-color:var(--red);color:var(--red);transform:rotate(-1.2deg)}
+
+/* ============ layout ============ */
+.layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:56px;padding:56px 0 96px}
+nav.toc{position:sticky;top:0;align-self:start;padding-top:8px;max-height:100vh;overflow:auto}
+nav.toc .toc-head{
+  font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-soft);
+  border-bottom:1px solid var(--rule-strong);padding-bottom:8px;margin-bottom:12px;
+}
+nav.toc ol{list-style:none;counter-reset:toc}
+nav.toc li{counter-increment:toc;border-bottom:1px solid var(--rule)}
+nav.toc a{
+  display:flex;gap:10px;padding:7px 2px;font-size:12px;
+  color:var(--ink);text-decoration:none;
+}
+nav.toc a::before{content:counter(toc,decimal-leading-zero);color:var(--red);font-weight:600}
+nav.toc a:hover{background:var(--ink);color:var(--paper)}
+nav.toc a:hover::before{color:var(--plate-accent)}
+
+main{counter-reset:sec}
+section.sec{counter-increment:sec;padding:48px 0;border-top:2px solid var(--rule-strong);position:relative}
+section.sec:first-child{border-top:none;padding-top:0}
+h2{
+  font-family:var(--display);font-variation-settings:"wdth" 80;font-weight:700;
+  font-size:clamp(22px,3vw,30px);letter-spacing:-.01em;line-height:1.15;
+  margin-bottom:8px;display:flex;align-items:baseline;gap:18px;
+}
+h2::before{
+  content:counter(sec,decimal-leading-zero);
+  font-size:.62em;color:var(--red);font-weight:800;
+  font-variation-settings:"wdth" 100;
+}
+.sec-sub{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:28px}
+h3{
+  font-family:var(--display);font-variation-settings:"wdth" 85;font-weight:700;
+  font-size:15px;letter-spacing:.02em;text-transform:uppercase;
+  margin:36px 0 14px;display:flex;align-items:center;gap:10px;
+}
+h3::after{content:"";flex:1;border-top:1px solid var(--rule)}
+p{margin:14px 0;max-width:74ch}
+ul.spec{margin:14px 0 14px 0;list-style:none;max-width:74ch}
+ul.spec li{padding-left:22px;position:relative;margin:8px 0}
+ul.spec li::before{content:"—";position:absolute;left:0;color:var(--red)}
+code{
+  font-family:var(--mono);font-size:.93em;
+  background:var(--paper-deep);border:1px solid var(--rule);
+  padding:1px 5px;white-space:nowrap;
+}
+
+/* ============ ink plates (code blocks) ============ */
+.plate{position:relative;margin:18px 0;border:2px solid var(--plate);max-width:860px}
+.plate-bar{
+  display:flex;justify-content:space-between;align-items:center;
+  background:var(--paper);border-bottom:2px solid var(--plate);
+  padding:5px 12px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);
+}
+.plate pre{
+  background:var(--plate);color:var(--plate-text);
+  padding:18px 20px;overflow-x:auto;font-size:13px;line-height:1.7;
+}
+.plate pre code{background:none;border:none;padding:0;white-space:pre;font-size:inherit}
+.plate .c{color:var(--plate-dim)}        /* comment */
+.plate .p{color:var(--red);font-weight:600;filter:brightness(1.6)} /* prompt $ */
+.plate .a{color:var(--plate-accent)}     /* accent / strings */
+.plate .g{color:var(--plate-green)}      /* output ok */
+button.copy{
+  font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  background:none;border:1.5px solid var(--ink);color:var(--ink);
+  padding:2px 10px;cursor:pointer;
+}
+button.copy:hover{background:var(--red);border-color:var(--red);color:var(--paper)}
+button.copy.done{background:var(--ink);color:var(--paper)}
+
+/* hero install plate */
+.hero-install{margin-top:40px;max-width:760px}
+.hero-install .plate pre{font-size:clamp(13px,1.8vw,16px)}
+
+/* ascii figure */
+figure.fig{margin:26px 0;max-width:860px;border:1px solid var(--rule-strong)}
+figure.fig pre{
+  padding:26px 20px;overflow-x:auto;text-align:center;
+  font-size:clamp(10px,1.5vw,13.5px);line-height:1.5;background:var(--paper-deep);
+}
+figure.fig .arrow{color:var(--red);font-weight:600}
+figure.fig figcaption{
+  border-top:1px solid var(--rule-strong);padding:6px 12px;
+  font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);
+}
+
+/* ============ tables ============ */
+.tbl{width:100%;border-collapse:collapse;margin:18px 0;font-size:13px;max-width:860px}
+.tbl th{
+  text-align:left;font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink-soft);font-weight:600;
+  border-top:2px solid var(--rule-strong);border-bottom:1px solid var(--rule-strong);
+  padding:8px 14px 8px 0;
+}
+.tbl td{border-bottom:1px solid var(--rule);padding:9px 14px 9px 0;vertical-align:top}
+.tbl tr:last-child td{border-bottom:2px solid var(--rule-strong)}
+.tbl td:first-child,.tbl th:first-child{padding-left:0}
+.tbl .m{font-weight:600;white-space:nowrap}
+.tbl .red{color:var(--red);font-weight:600}
+
+/* note blocks */
+.note{
+  border-left:3px solid var(--red);background:var(--paper-deep);
+  padding:12px 18px;margin:18px 0;max-width:74ch;font-size:13px;
+}
+.note b{color:var(--red)}
+
+/* footer */
+footer{border-top:2px solid var(--rule-strong);padding:28px 0 64px;
+  display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft)}
+footer a{color:var(--ink)}
+
+@media (max-width:880px){
+  .layout{grid-template-columns:1fr;gap:0}
+  nav.toc{position:static;max-height:none;margin-bottom:24px}
+}
+@media (prefers-reduced-motion:no-preference){
+  .mast-main>*{animation:rise .6s cubic-bezier(.2,.7,.2,1) both}
+  .mast-main>*:nth-child(2){animation-delay:.08s}
+  .mast-main>*:nth-child(3){animation-delay:.16s}
+  .mast-main>*:nth-child(4){animation-delay:.24s}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+}
+</style>
+</head>
+<body>
+
+<header class="mast">
+  <div class="frame">
+    <div class="mast-top">
+      <span class="doc-no">stift.sh — technical reference</span>
+      <span>self-hosted · single binary · mit</span>
+      <a href="https://github.com/stift-sh/stift">github.com/stift-sh/stift</a>
+    </div>
+    <div class="mast-main">
+      <h1 class="wordmark">stift<span class="dot">.</span></h1>
+      <p class="tagline">
+        Self-hosted cloud storage for AI coding agent sessions. Your sessions —
+        full conversation history, context, todo state — live in scattered
+        dot-directories on whatever machine you happened to be using.
+        <b>stift gives them a home</b>: one binary on any server, a token, and
+        <code>stift push</code> / <code>stift pull</code> between machines.
+      </p>
+      <div class="stamps">
+        <span class="stamp">one binary</span>
+        <span class="stamp">pure go stdlib</span>
+        <span class="stamp">no database</span>
+        <span class="stamp red">der stift · „the pencil"</span>
+      </div>
+      <div class="hero-install">
+        <div class="plate">
+          <div class="plate-bar"><span>install the client</span><button class="copy" data-copy="curl -fsSL https://stift.sh/install.sh | sh">copy</button></div>
+          <pre><code><span class="p">$</span> curl -fsSL https://stift.sh/install.sh | sh</code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="frame">
+<div class="layout">
+
+<nav class="toc" aria-label="contents">
+  <div class="toc-head">Contents</div>
+  <ol>
+    <li><a href="#how">How it works</a></li>
+    <li><a href="#install">Install the client</a></li>
+    <li><a href="#server">Deploy a server</a></li>
+    <li><a href="#usage">Push &amp; pull</a></li>
+    <li><a href="#custom">Custom agents</a></li>
+    <li><a href="#tokens">Tokens &amp; environment</a></li>
+    <li><a href="#api">HTTP API</a></li>
+    <li><a href="#security">Security notes</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============ 01 how ============ -->
+<section class="sec" id="how">
+  <h2>How it works</h2>
+  <div class="sec-sub">one server, every machine in sync</div>
+  <p>
+    Deploy a single binary (or container) on any server. On first start it prints
+    an admin token. Every dev machine logs in once, then pushes and pulls sessions
+    for the project it is standing in.
+  </p>
+  <figure class="fig">
+    <pre>
+     laptop <span class="arrow">──push──▶</span> ┌───────────────┐ <span class="arrow">◀──push──</span> desktop
+                      │     stift     │
+workstation <span class="arrow">◀──pull──</span> │  your server  │ <span class="arrow">──pull──▶</span> new machine
+                      └───────────────┘</pre>
+    <figcaption>fig. 1 — sync topology</figcaption>
+  </figure>
+  <p>
+    Zero runtime dependencies (pure Go stdlib), no database server — sessions are
+    stored as tar.gz blobs plus JSON metadata on disk. The same binary is both
+    server (<code>stift serve</code>) and client (<code>stift push</code> / <code>pull</code> / …).
+  </p>
+
+  <h3>Supported agents</h3>
+  <table class="tbl">
+    <thead><tr><th>Agent</th><th>Name</th><th>What gets synced</th></tr></thead>
+    <tbody>
+      <tr><td class="m">Claude Code</td><td><code>claude</code></td><td><code>~/.claude/projects/&lt;project&gt;/&lt;session&gt;.jsonl</code> + todo state</td></tr>
+      <tr><td class="m">OpenAI Codex CLI</td><td><code>codex</code></td><td><code>~/.codex/sessions/…/rollout-*.jsonl</code></td></tr>
+      <tr><td class="m">Gemini CLI</td><td><code>gemini</code></td><td><code>~/.gemini/tmp/&lt;project&gt;/</code> (logs, saved chats, checkpoints)</td></tr>
+      <tr><td class="m">Cursor CLI</td><td><code>cursor</code></td><td><code>~/.cursor/chats/&lt;project&gt;/&lt;session&gt;/</code></td></tr>
+      <tr><td class="m">opencode</td><td><code>opencode</code></td><td>session + messages + parts from <code>~/.local/share/opencode/storage</code></td></tr>
+      <tr><td class="m">aider</td><td><code>aider</code></td><td><code>.aider.chat.history.md</code>, <code>.aider.input.history</code> (in-project)</td></tr>
+    </tbody>
+  </table>
+  <p>Anything not listed can be added as a <a href="#custom">custom agent</a> — a name and a path pattern in a small JSON file.</p>
+</section>
+
+<!-- ============ 02 install ============ -->
+<section class="sec" id="install">
+  <h2>Install the client</h2>
+  <div class="sec-sub">linux · macos · amd64 / arm64</div>
+  <div class="plate">
+    <div class="plate-bar"><span>sh</span><button class="copy" data-copy="curl -fsSL https://stift.sh/install.sh | sh">copy</button></div>
+    <pre><code><span class="p">$</span> curl -fsSL https://stift.sh/install.sh | sh</code></pre>
+  </div>
+  <p>
+    The script (<a href="/install.sh">read it first</a>) detects your OS/arch,
+    <strong>verifies the binary's SHA-256 checksum</strong>, and installs to
+    <code>/usr/local/bin</code> if writable, otherwise <code>~/.local/bin</code>.
+  </p>
+  <table class="tbl">
+    <thead><tr><th>Override</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td class="m"><code>STIFT_VERSION</code></td><td>version to install (default <code>latest</code>)</td></tr>
+      <tr><td class="m"><code>STIFT_INSTALL_DIR</code></td><td>where to put the binary</td></tr>
+      <tr><td class="m"><code>STIFT_BASE_URL</code></td><td>download base (default <code>https://stift.sh/dl</code>)</td></tr>
+    </tbody>
+  </table>
+  <p>
+    Windows: download <a href="/dl/latest/stift-windows-amd64.exe"><code>stift-windows-amd64.exe</code></a>
+    and put it on <code>PATH</code>. Or build from source with <code>make build</code> (Go 1.26+).
+  </p>
+
+  <h3>Direct downloads</h3>
+  <table class="tbl">
+    <thead><tr><th>Platform</th><th>Binary</th><th>Checksum</th></tr></thead>
+    <tbody>
+      <tr><td class="m">Linux x86-64</td><td><a href="/dl/latest/stift-linux-amd64">stift-linux-amd64</a></td><td><a href="/dl/latest/stift-linux-amd64.sha256">.sha256</a></td></tr>
+      <tr><td class="m">Linux arm64</td><td><a href="/dl/latest/stift-linux-arm64">stift-linux-arm64</a></td><td><a href="/dl/latest/stift-linux-arm64.sha256">.sha256</a></td></tr>
+      <tr><td class="m">macOS Intel</td><td><a href="/dl/latest/stift-darwin-amd64">stift-darwin-amd64</a></td><td><a href="/dl/latest/stift-darwin-amd64.sha256">.sha256</a></td></tr>
+      <tr><td class="m">macOS Apple Silicon</td><td><a href="/dl/latest/stift-darwin-arm64">stift-darwin-arm64</a></td><td><a href="/dl/latest/stift-darwin-arm64.sha256">.sha256</a></td></tr>
+      <tr><td class="m">Windows x86-64</td><td><a href="/dl/latest/stift-windows-amd64.exe">stift-windows-amd64.exe</a></td><td><a href="/dl/latest/stift-windows-amd64.exe.sha256">.sha256</a></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============ 03 server ============ -->
+<section class="sec" id="server">
+  <h2>Deploy a server</h2>
+  <div class="sec-sub">binary · systemd · proxmox lxc · docker — one minute each</div>
+
+  <h3>Binary</h3>
+  <div class="plate">
+    <div class="plate-bar"><span>sh</span><button class="copy" data-copy="stift serve --data /var/lib/stift">copy</button></div>
+    <pre><code><span class="p">$</span> stift serve --data /var/lib/stift</code></pre>
+  </div>
+  <p>
+    On first start the server prints an <strong>admin token once</strong> — store it.
+    Then it listens on <code>:8580</code>. For a permanent install on a Linux host
+    (bare metal, VM, or LXC), use the hardened systemd unit from
+    <a href="https://github.com/stift-sh/stift/blob/main/deploy/stift.service"><code>deploy/stift.service</code></a>:
+  </p>
+  <div class="plate">
+    <div class="plate-bar"><span>sh · as root</span><button class="copy" data-copy="cp dist/stift-linux-amd64 /usr/local/bin/stift &amp;&amp; chmod +x /usr/local/bin/stift
+cp deploy/stift.service /etc/systemd/system/
+systemctl enable --now stift
+journalctl -u stift">copy</button></div>
+    <pre><code><span class="p">$</span> cp dist/stift-linux-amd64 /usr/local/bin/stift <span class="a">&amp;&amp;</span> chmod +x /usr/local/bin/stift
+<span class="p">$</span> cp deploy/stift.service /etc/systemd/system/
+<span class="p">$</span> systemctl enable --now stift
+<span class="p">$</span> journalctl -u stift   <span class="c"># first-boot admin token is in here</span></code></pre>
+  </div>
+
+  <h3>Proxmox VE</h3>
+  <p>
+    One command on the Proxmox host creates an unprivileged Debian LXC
+    (1 core / 512 MB / 8 GB by default), installs stift as a hardened systemd
+    service, and prints the server URL + admin token, ready for <code>stift login</code>:
+  </p>
+  <div class="plate">
+    <div class="plate-bar"><span>sh · on the proxmox host, as root</span><button class="copy" data-copy="bash -c &quot;$(curl -fsSL https://stift.sh/proxmox.sh)&quot;">copy</button></div>
+    <pre><code><span class="p">$</span> bash -c <span class="a">"$(curl -fsSL https://stift.sh/proxmox.sh)"</span></code></pre>
+  </div>
+  <p>
+    The script (<a href="/proxmox.sh">read it first</a>) shows its plan and
+    <strong>asks for confirmation before creating anything</strong>. Flags:
+    <code>--ctid</code>, <code>--hostname</code>, <code>--storage</code>, <code>--disk</code>,
+    <code>--cores</code>, <code>--memory</code>, <code>--bridge</code>,
+    <code>--ip CIDR --gw IP</code> (static instead of DHCP),
+    <code>--binary PATH</code> (install a local build instead of downloading),
+    <code>--token</code>, <code>--yes</code>. See <code>--help</code>.
+  </p>
+
+  <h3>Docker</h3>
+  <div class="plate">
+    <div class="plate-bar"><span>sh</span><button class="copy" data-copy="docker compose up -d
+docker compose logs stift">copy</button></div>
+    <pre><code><span class="p">$</span> docker compose up -d        <span class="c"># uses docker-compose.yml in the repo</span>
+<span class="p">$</span> docker compose logs stift   <span class="c"># grab the first-boot admin token</span></code></pre>
+  </div>
+  <p>Or pin the token instead of fishing it out of logs:</p>
+  <div class="plate">
+    <div class="plate-bar"><span>sh</span><button class="copy" data-copy='export STIFT_ADMIN_TOKEN="stf_$(openssl rand -hex 24)"
+docker run -d -p 8580:8580 -v stift-data:/data -e STIFT_ADMIN_TOKEN stift:latest'>copy</button></div>
+    <pre><code><span class="p">$</span> export STIFT_ADMIN_TOKEN=<span class="a">"stf_$(openssl rand -hex 24)"</span>
+<span class="p">$</span> docker run -d -p 8580:8580 -v stift-data:/data \
+    -e STIFT_ADMIN_TOKEN stift:latest</code></pre>
+  </div>
+  <p>
+    A read-only web UI for browsing and downloading sessions is served at <code>/</code>
+    (paste a token; it never leaves your browser).
+  </p>
+</section>
+
+<!-- ============ 04 usage ============ -->
+<section class="sec" id="usage">
+  <h2>Push &amp; pull</h2>
+  <div class="sec-sub">the daily loop</div>
+  <div class="plate">
+    <div class="plate-bar"><span>sh</span><button class="copy" data-copy="stift login https://sessions.example.com --token stf_...
+stift agents
+stift push">copy</button></div>
+    <pre><code><span class="c"># one-time, on each machine</span>
+<span class="p">$</span> stift login https://sessions.example.com --token stf_...
+
+<span class="c"># see what agents/sessions exist for the current project</span>
+<span class="p">$</span> stift agents
+
+<span class="c"># push this project's sessions (all agents) to the server</span>
+<span class="p">$</span> stift push
+
+<span class="c"># ...or be specific</span>
+<span class="p">$</span> stift push --agent claude,codex --latest
+<span class="p">$</span> stift push --all-projects        <span class="c"># everything on this machine</span>
+
+<span class="c"># on another machine: browse and restore</span>
+<span class="p">$</span> stift list
+<span class="p">$</span> stift pull 1920b89e              <span class="c"># by id (prefixes work)</span>
+<span class="p">$</span> stift pull --latest --agent claude</code></pre>
+  </div>
+  <ul class="spec">
+    <li><strong>Pushes are idempotent</strong> — re-pushing an unchanged session is a no-op (<code>unchanged</code>); a changed session updates the existing record in place (<code>updated</code>).</li>
+    <li><strong>Pulls never overwrite</strong> existing local files unless you pass <code>--force</code>; <code>--dry-run</code> lists the archive contents first.</li>
+    <li>Sessions restore to the same project path they came from — agents key their session storage by project path, so this is what makes the agent see them.</li>
+  </ul>
+</section>
+
+<!-- ============ 05 custom agents ============ -->
+<section class="sec" id="custom">
+  <h2>Custom agents</h2>
+  <div class="sec-sub">any tool that keeps session state in files</div>
+  <p>Define it in <code>~/.config/stift/agents.json</code> (override the path with <code>STIFT_AGENTS</code>):</p>
+  <div class="plate">
+    <div class="plate-bar"><span>~/.config/stift/agents.json</span><button class="copy" data-copy='[
+  { "name": "windsurf", "sessions": "~/.windsurf/runs/*" },
+  { "name": "roo",      "sessions": "~/.roo/{md5}/tasks/*" },
+  { "name": "notes",    "sessions": ".ai-notes/history.md" }
+]'>copy</button></div>
+    <pre><code>[
+  { <span class="a">"name"</span>: <span class="g">"windsurf"</span>, <span class="a">"sessions"</span>: <span class="g">"~/.windsurf/runs/*"</span> },
+  { <span class="a">"name"</span>: <span class="g">"roo"</span>,      <span class="a">"sessions"</span>: <span class="g">"~/.roo/{md5}/tasks/*"</span> },
+  { <span class="a">"name"</span>: <span class="g">"notes"</span>,    <span class="a">"sessions"</span>: <span class="g">".ai-notes/history.md"</span> }
+]</code></pre>
+  </div>
+  <p>Two fields per agent:</p>
+  <ul class="spec">
+    <li><strong><code>name</code></strong> — lowercase letters, digits, dashes; must not clash with a built-in. Usable everywhere an agent name is (<code>stift push --agent roo</code>).</li>
+    <li><strong><code>sessions</code></strong> — a glob pattern saying where sessions live. Each match becomes one session: a matched <em>file</em> is a single-file session, a matched <em>directory</em> is a session containing everything under it. The session id is derived from the matched name (<code>run-7</code>, <code>history</code>, …).</li>
+  </ul>
+  <h3>Pattern rules</h3>
+  <ul class="spec">
+    <li><code>~/…</code> patterns are home-based; anything else resolves against the project directory (like aider's in-project history files).</li>
+    <li>Many agents encode the project path into a directory name. Placeholders cover the common encodings and make project filtering work exactly like built-ins: <code>{sha256}</code> (Gemini-style hash), <code>{md5}</code> (Cursor-style), <code>{munged}</code> (Claude-style <code>-work-app</code>), <code>{basename}</code> (last path element).</li>
+    <li>A home-based pattern <em>without</em> a placeholder is treated as machine-global: detected on every push, stored without a project association.</li>
+    <li>Invalid entries are skipped with a warning; <strong>nothing outside your home (or project) directory is ever archived</strong>, even if a pattern tries.</li>
+  </ul>
+</section>
+
+<!-- ============ 06 tokens & env ============ -->
+<section class="sec" id="tokens">
+  <h2>Tokens &amp; environment</h2>
+  <div class="sec-sub">one token per machine — revoke any one of them</div>
+  <div class="plate">
+    <div class="plate-bar"><span>sh</span><button class="copy" data-copy="stift token create laptop
+stift token create ci --admin
+stift token list
+stift token revoke &lt;id&gt;">copy</button></div>
+    <pre><code><span class="p">$</span> stift token create laptop        <span class="c"># prints the secret once</span>
+<span class="p">$</span> stift token create ci --admin    <span class="c"># admin = may manage tokens</span>
+<span class="p">$</span> stift token list
+<span class="p">$</span> stift token revoke &lt;id&gt;</code></pre>
+  </div>
+  <table class="tbl">
+    <thead><tr><th>Variable</th><th>Used by</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td class="m"><code>STIFT_SERVER</code>, <code>STIFT_TOKEN</code></td><td>client</td><td>override saved login (handy for CI)</td></tr>
+      <tr><td class="m"><code>STIFT_CONFIG</code></td><td>client</td><td>config file path (default <code>~/.config/stift/config.json</code>)</td></tr>
+      <tr><td class="m"><code>STIFT_LISTEN</code>, <code>STIFT_DATA</code></td><td>server</td><td>listen address / data directory</td></tr>
+      <tr><td class="m"><code>STIFT_ADMIN_TOKEN</code></td><td>server</td><td>register a fixed admin token at startup</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============ 07 api ============ -->
+<section class="sec" id="api">
+  <h2>HTTP API</h2>
+  <div class="sec-sub">all /v1 endpoints require <code>Authorization: Bearer &lt;token&gt;</code></div>
+  <table class="tbl">
+    <thead><tr><th>Method &amp; path</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td class="m"><span class="red">POST</span> /v1/sessions</td><td>upload (multipart: <code>meta</code> JSON field, then <code>archive</code> tar.gz)</td></tr>
+      <tr><td class="m"><span class="red">GET</span> /v1/sessions?agent=&amp;project=&amp;host=&amp;q=</td><td>list, newest first</td></tr>
+      <tr><td class="m"><span class="red">GET</span> /v1/sessions/{id}</td><td>metadata (id prefixes accepted)</td></tr>
+      <tr><td class="m"><span class="red">GET</span> /v1/sessions/{id}/archive</td><td>download tar.gz</td></tr>
+      <tr><td class="m"><span class="red">DELETE</span> /v1/sessions/{id}</td><td>delete</td></tr>
+      <tr><td class="m"><span class="red">GET</span> /v1/whoami</td><td>token name + role</td></tr>
+      <tr><td class="m"><span class="red">GET/POST/DELETE</span> /v1/tokens</td><td>token management (admin only)</td></tr>
+      <tr><td class="m"><span class="red">GET</span> /healthz</td><td>liveness (no auth)</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============ 08 security ============ -->
+<section class="sec" id="security">
+  <h2>Security notes</h2>
+  <div class="sec-sub">read before exposing anything</div>
+  <ul class="spec">
+    <li>Tokens are stored <strong>hashed</strong> (SHA-256) on the server; secrets are shown once.</li>
+    <li>Run behind TLS — a reverse proxy (Caddy, nginx, Traefik) or your tunnel of choice. The server itself speaks plain HTTP.</li>
+    <li>Tar extraction rejects absolute paths and <code>..</code> traversal.</li>
+  </ul>
+  <div class="note">
+    <b>Treat the data directory like source code.</b> Session archives contain full
+    conversation history, which often includes source code and may include secrets
+    your agent saw. Treat the data directory and tokens accordingly.
+  </div>
+</section>
+
+</main>
+</div>
+
+<footer>
+  <div class="frame" style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;width:100%;padding:0">
+    <span>stift — mit license</span>
+    <span><a href="/install.sh">install.sh</a> · <a href="/proxmox.sh">proxmox.sh</a> · <a href="https://github.com/stift-sh/stift">source</a></span>
+  </div>
+</footer>
+
+<script>
+for (const b of document.querySelectorAll("button.copy")) {
+  b.addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(b.dataset.copy); } catch {}
+    b.textContent = "copied"; b.classList.add("done");
+    setTimeout(() => { b.textContent = "copy"; b.classList.remove("done"); }, 1400);
+  });
+}
+</script>
+</body>
+</html>
