@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"stift/internal/api"
+	"github.com/stift-sh/stift/engine/api"
 )
 
 // Client talks to a stift server.

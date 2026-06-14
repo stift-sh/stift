@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"stift/internal/client"
+	"github.com/stift-sh/stift/internal/client"
 )
 
 func cmdLogin(args []string) error {

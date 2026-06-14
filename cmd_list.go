@@ -7,7 +7,7 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"stift/internal/client"
+	"github.com/stift-sh/stift/internal/client"
 )
 
 func cmdList(args []string) error {

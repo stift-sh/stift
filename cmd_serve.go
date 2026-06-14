@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"stift/internal/server"
+	"github.com/stift-sh/stift/engine/server"
 )
 
 func cmdServe(args []string) error {
@@ -54,7 +54,12 @@ Connect a client with:
 `, raw, raw)
 	}
 
-	handler := server.New(store, tokens, server.Config{MaxUploadBytes: *maxUploadMB << 20})
+	handler := server.New(server.Options{
+		Store:  store,
+		Auth:   tokens,
+		Tokens: tokens,
+		Config: server.Config{MaxUploadBytes: *maxUploadMB << 20},
+	})
 	srv := &http.Server{
 		Addr:              *listen,
 		Handler:           handler,

@@ -6,7 +6,7 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"stift/internal/client"
+	"github.com/stift-sh/stift/internal/client"
 )
 
 func cmdToken(args []string) error {

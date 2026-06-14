@@ -9,7 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"stift/internal/api"
+	"github.com/stift-sh/stift/engine/api"
 )
 
 func newTestServer(t *testing.T) (*httptest.Server, string) {
@@ -27,7 +27,7 @@ func newTestServer(t *testing.T) (*httptest.Server, string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ts := httptest.NewServer(New(store, tokens, Config{}))
+	ts := httptest.NewServer(New(Options{Store: store, Auth: tokens, Tokens: tokens}))
 	t.Cleanup(ts.Close)
 	return ts, admin
 }
@@ -160,7 +160,7 @@ func TestStoreSurvivesRestart(t *testing.T) {
 	dataDir := t.TempDir()
 	store, _ := OpenStore(dataDir)
 	meta := testMeta()
-	saved, _, err := store.Put(meta, bytes.NewReader([]byte("payload")))
+	saved, _, err := store.Put("", meta, bytes.NewReader([]byte("payload")))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,7 +169,7 @@ func TestStoreSurvivesRestart(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, ok := store2.Get(saved.ID)
+	got, ok := store2.Get("", saved.ID)
 	if !ok || got.Key != meta.Key || got.Title != meta.Title {
 		t.Fatalf("after reopen: ok=%v got=%+v", ok, got)
 	}
@@ -212,7 +212,7 @@ func TestUploadSizeLimit(t *testing.T) {
 	store, _ := OpenStore(dataDir)
 	tokens, _ := OpenTokens(dataDir)
 	admin, _, _ := tokens.Create("admin", true)
-	ts := httptest.NewServer(New(store, tokens, Config{MaxUploadBytes: 1024}))
+	ts := httptest.NewServer(New(Options{Store: store, Auth: tokens, Tokens: tokens, Config: Config{MaxUploadBytes: 1024}}))
 	defer ts.Close()
 
 	var buf bytes.Buffer
@@ -229,7 +229,7 @@ func TestUploadSizeLimit(t *testing.T) {
 	if res.StatusCode != http.StatusRequestEntityTooLarge {
 		t.Fatalf("oversized upload: got %d, want 413", res.StatusCode)
 	}
-	if n := len(store.List(ListFilter{})); n != 0 {
+	if n := len(store.List("", ListFilter{})); n != 0 {
 		t.Fatalf("oversized upload was stored (%d sessions)", n)
 	}
 }

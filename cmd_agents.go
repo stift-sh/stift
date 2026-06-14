@@ -8,7 +8,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"stift/internal/agents"
+	"github.com/stift-sh/stift/internal/agents"
 )
 
 func cmdAgents(args []string) error {

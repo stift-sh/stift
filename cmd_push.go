@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"stift/internal/agents"
-	"stift/internal/api"
-	"stift/internal/archive"
-	"stift/internal/client"
+	"github.com/stift-sh/stift/engine/api"
+	"github.com/stift-sh/stift/engine/archive"
+	"github.com/stift-sh/stift/internal/agents"
+	"github.com/stift-sh/stift/internal/client"
 )
 
 func cmdPush(args []string) error {

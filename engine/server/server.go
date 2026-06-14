@@ -12,7 +12,7 @@ import (
 	"os"
 	"strings"
 
-	"stift/internal/api"
+	"github.com/stift-sh/stift/engine/api"
 )
 
 // Config tunes the HTTP server.
@@ -20,35 +20,66 @@ type Config struct {
 	MaxUploadBytes int64 // per-session archive size limit
 }
 
+// Identity is the authenticated caller resolved from a bearer token. Tenant is
+// "" for single-tenant self-hosted servers; a hosted/multi-tenant build sets it
+// so every storage operation is scoped to that tenant.
+type Identity struct {
+	ID     string
+	Tenant string
+	Name   string
+	Admin  bool
+}
+
+// Authenticator verifies a raw bearer token and returns the caller's Identity.
+// The default implementation is the on-disk Tokens registry; a hosted build can
+// supply one that resolves tokens (and their tenant) via a control plane.
+type Authenticator interface {
+	Authenticate(raw string) (Identity, bool)
+}
+
+// Options configures New.
+type Options struct {
+	Store  Backend       // required: session storage
+	Auth   Authenticator // required: bearer-token authentication
+	Tokens *Tokens       // optional: enables the /v1/tokens admin endpoints (self-host); nil omits them
+	Config Config
+}
+
 type Server struct {
-	store  *Store
+	store  Backend
+	auth   Authenticator
 	tokens *Tokens
 	cfg    Config
 }
 
 type ctxKey int
 
-const tokenKey ctxKey = 0
+const identityKey ctxKey = 0
 
-func New(store *Store, tokens *Tokens, cfg Config) http.Handler {
-	if cfg.MaxUploadBytes <= 0 {
-		cfg.MaxUploadBytes = 200 << 20
+// New builds the stift HTTP handler from the given options.
+func New(opts Options) http.Handler {
+	if opts.Config.MaxUploadBytes <= 0 {
+		opts.Config.MaxUploadBytes = 200 << 20
 	}
-	s := &Server{store: store, tokens: tokens, cfg: cfg}
+	s := &Server{store: opts.Store, auth: opts.Auth, tokens: opts.Tokens, cfg: opts.Config}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok\n"))
 	})
 	mux.HandleFunc("GET /{$}", serveWebUI)
-	mux.Handle("GET /v1/whoami", s.auth(false, s.handleWhoami))
-	mux.Handle("POST /v1/sessions", s.auth(false, s.handlePush))
-	mux.Handle("GET /v1/sessions", s.auth(false, s.handleList))
-	mux.Handle("GET /v1/sessions/{id}", s.auth(false, s.handleGet))
-	mux.Handle("GET /v1/sessions/{id}/archive", s.auth(false, s.handleDownload))
-	mux.Handle("DELETE /v1/sessions/{id}", s.auth(false, s.handleDelete))
-	mux.Handle("GET /v1/tokens", s.auth(true, s.handleTokenList))
-	mux.Handle("POST /v1/tokens", s.auth(true, s.handleTokenCreate))
-	mux.Handle("DELETE /v1/tokens/{id}", s.auth(true, s.handleTokenRevoke))
+	mux.Handle("GET /v1/whoami", s.authed(false, s.handleWhoami))
+	mux.Handle("POST /v1/sessions", s.authed(false, s.handlePush))
+	mux.Handle("GET /v1/sessions", s.authed(false, s.handleList))
+	mux.Handle("GET /v1/sessions/{id}", s.authed(false, s.handleGet))
+	mux.Handle("GET /v1/sessions/{id}/archive", s.authed(false, s.handleDownload))
+	mux.Handle("DELETE /v1/sessions/{id}", s.authed(false, s.handleDelete))
+	// Token management is only served when a local Tokens registry is wired in;
+	// hosted deployments manage tokens through their own control plane.
+	if s.tokens != nil {
+		mux.Handle("GET /v1/tokens", s.authed(true, s.handleTokenList))
+		mux.Handle("POST /v1/tokens", s.authed(true, s.handleTokenCreate))
+		mux.Handle("DELETE /v1/tokens/{id}", s.authed(true, s.handleTokenRevoke))
+	}
 	return logRequests(mux)
 }
 
@@ -59,24 +90,28 @@ func logRequests(next http.Handler) http.Handler {
 	})
 }
 
-func (s *Server) auth(needAdmin bool, next http.HandlerFunc) http.Handler {
+func (s *Server) authed(needAdmin bool, next http.HandlerFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		raw := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
 		if raw == "" || raw == r.Header.Get("Authorization") {
 			writeErr(w, http.StatusUnauthorized, "missing bearer token")
 			return
 		}
-		tok, ok := s.tokens.Check(raw)
+		id, ok := s.auth.Authenticate(raw)
 		if !ok {
 			writeErr(w, http.StatusUnauthorized, "invalid token")
 			return
 		}
-		if needAdmin && !tok.Admin {
+		if needAdmin && !id.Admin {
 			writeErr(w, http.StatusForbidden, "admin token required")
 			return
 		}
-		next(w, r.WithContext(context.WithValue(r.Context(), tokenKey, tok)))
+		next(w, r.WithContext(context.WithValue(r.Context(), identityKey, id)))
 	})
+}
+
+func identityFrom(r *http.Request) Identity {
+	return r.Context().Value(identityKey).(Identity)
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
@@ -90,13 +125,14 @@ func writeErr(w http.ResponseWriter, status int, msg string) {
 }
 
 func (s *Server) handleWhoami(w http.ResponseWriter, r *http.Request) {
-	tok := r.Context().Value(tokenKey).(api.TokenInfo)
-	writeJSON(w, http.StatusOK, api.Whoami{Name: tok.Name, Admin: tok.Admin})
+	id := identityFrom(r)
+	writeJSON(w, http.StatusOK, api.Whoami{Name: id.Name, Admin: id.Admin})
 }
 
 // handlePush accepts multipart/form-data with a "meta" JSON field and an
 // "archive" tar.gz file field.
 func (s *Server) handlePush(w http.ResponseWriter, r *http.Request) {
+	tenant := identityFrom(r).Tenant
 	r.Body = http.MaxBytesReader(w, r.Body, s.cfg.MaxUploadBytes)
 	mr, err := r.MultipartReader()
 	if err != nil {
@@ -134,7 +170,7 @@ func (s *Server) handlePush(w http.ResponseWriter, r *http.Request) {
 				writeErr(w, http.StatusBadRequest, `meta.base must be "home" or "project"`)
 				return
 			}
-			sess, status, err := s.store.Put(meta, part)
+			sess, status, err := s.store.Put(tenant, meta, part)
 			if err != nil {
 				var tooBig *http.MaxBytesError
 				if errors.As(err, &tooBig) {
@@ -158,7 +194,7 @@ func (s *Server) handlePush(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleList(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	sessions := s.store.List(ListFilter{
+	sessions := s.store.List(identityFrom(r).Tenant, ListFilter{
 		Agent:   q.Get("agent"),
 		Project: q.Get("project"),
 		Host:    q.Get("host"),
@@ -168,7 +204,7 @@ func (s *Server) handleList(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) resolve(w http.ResponseWriter, r *http.Request) (string, bool) {
-	id, err := s.store.ResolveID(r.PathValue("id"))
+	id, err := s.store.ResolveID(identityFrom(r).Tenant, r.PathValue("id"))
 	if errors.Is(err, os.ErrNotExist) {
 		writeErr(w, http.StatusNotFound, "no such session")
 		return "", false
@@ -185,7 +221,7 @@ func (s *Server) handleGet(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	sess, _ := s.store.Get(id)
+	sess, _ := s.store.Get(identityFrom(r).Tenant, id)
 	writeJSON(w, http.StatusOK, sess)
 }
 
@@ -194,7 +230,7 @@ func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	f, sess, err := s.store.OpenArchive(id)
+	f, sess, err := s.store.OpenArchive(identityFrom(r).Tenant, id)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -211,7 +247,7 @@ func (s *Server) handleDelete(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if err := s.store.Delete(id); err != nil {
+	if err := s.store.Delete(identityFrom(r).Tenant, id); err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -244,9 +280,9 @@ func (s *Server) handleTokenCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleTokenRevoke(w http.ResponseWriter, r *http.Request) {
-	tok := r.Context().Value(tokenKey).(api.TokenInfo)
+	caller := identityFrom(r)
 	id := r.PathValue("id")
-	if id == tok.ID {
+	if id == caller.ID {
 		writeErr(w, http.StatusBadRequest, "refusing to revoke the token used for this request")
 		return
 	}

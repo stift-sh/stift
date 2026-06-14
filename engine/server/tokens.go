@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"stift/internal/api"
+	"github.com/stift-sh/stift/engine/api"
 )
 
 // TokenPrefix marks stift access tokens so they are recognizable in
@@ -117,6 +117,17 @@ func (t *Tokens) Check(raw string) (api.TokenInfo, bool) {
 		}
 	}
 	return api.TokenInfo{}, false
+}
+
+// Authenticate makes the local token registry usable as an Authenticator.
+// It maps a verified token to the default ("") tenant: a self-hosted server is
+// single-tenant.
+func (t *Tokens) Authenticate(raw string) (Identity, bool) {
+	info, ok := t.Check(raw)
+	if !ok {
+		return Identity{}, false
+	}
+	return Identity{ID: info.ID, Name: info.Name, Admin: info.Admin}, true
 }
 
 func (t *Tokens) List() []api.TokenInfo {

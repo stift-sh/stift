@@ -9,9 +9,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"stift/internal/api"
-	"stift/internal/archive"
-	"stift/internal/client"
+	"github.com/stift-sh/stift/engine/api"
+	"github.com/stift-sh/stift/engine/archive"
+	"github.com/stift-sh/stift/internal/client"
 )
 
 func cmdPull(args []string) error {
