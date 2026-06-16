@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>stift — self-hosted cloud storage for AI coding agent sessions</title>
-<meta name="description" content="stift gives your AI coding agent sessions a home: one binary on your server, then stift push / stift pull between machines. Claude Code, Codex, Gemini CLI, Cursor, opencode, aider.">
+<title>stift — sync your AI coding agent sessions · hosted or self-hosted</title>
+<meta name="description" content="stift gives your AI coding agent sessions a home, then stift push / stift pull between machines. Use Stift Cloud (hosted, free to start) or self-host the single MIT binary. Claude Code, Codex, Gemini CLI, Cursor, opencode, aider.">
 <meta property="og:title" content="stift — session store for AI coding agents">
-<meta property="og:description" content="Self-hosted, single binary, zero dependencies. Push and pull your agent sessions between machines.">
+<meta property="og:description" content="Push and pull your agent sessions between machines. Start free on Stift Cloud, or self-host the single binary — same engine, your choice.">
 <meta property="og:url" content="https://stift.sh/">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23bf3415'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='20' font-weight='bold' fill='%23f2efe6' text-anchor='middle'%3ES%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -193,6 +193,40 @@ figure.fig figcaption{
 }
 .note b{color:var(--red)}
 
+/* ============ call-to-action buttons ============ */
+.btn-row{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:32px}
+.cta{
+  font-family:var(--display);font-variation-settings:"wdth" 85;font-weight:700;
+  font-size:12px;letter-spacing:.08em;text-transform:uppercase;line-height:1;
+  padding:14px 22px;border:2px solid var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:10px;white-space:nowrap;
+}
+.cta::after{content:"▶";font-size:.7em;color:inherit}
+.cta-primary{background:var(--red);border-color:var(--red);color:var(--paper)}
+.cta-primary:hover{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.cta-ghost{background:none;color:var(--ink)}
+.cta-ghost:hover{background:var(--ink);color:var(--paper)}
+.btn-note{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft)}
+
+/* ============ pricing tiers ============ */
+.tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(232px,1fr));gap:16px;margin:24px 0;max-width:880px}
+.tier{border:2px solid var(--ink);padding:22px 20px;display:flex;flex-direction:column;background:var(--paper)}
+.tier.feature{border-color:var(--red);position:relative}
+.tier.feature::before{
+  content:"recommended";position:absolute;top:-10px;left:18px;
+  background:var(--red);color:var(--paper);font-size:9px;font-weight:700;
+  letter-spacing:.16em;text-transform:uppercase;padding:2px 9px;
+}
+.tier-name{font-family:var(--display);font-variation-settings:"wdth" 85;font-weight:700;
+  font-size:14px;letter-spacing:.04em;text-transform:uppercase}
+.tier-price{margin:10px 0 2px;font-size:26px;font-weight:600;line-height:1}
+.tier-price .unit{font-size:12px;color:var(--ink-soft);font-weight:400;letter-spacing:.02em}
+.tier-for{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);min-height:2.4em}
+.tier ul{list-style:none;margin:16px 0;font-size:12.5px;line-height:1.5;flex:1}
+.tier ul li{padding-left:20px;position:relative;margin:7px 0}
+.tier ul li::before{content:"+";position:absolute;left:0;color:var(--red);font-weight:700}
+.tier .cta{justify-content:center;width:100%;font-size:11px;padding:11px 14px}
+
 /* footer */
 footer{border-top:2px solid var(--rule-strong);padding:28px 0 64px;
   display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;
@@ -218,27 +252,35 @@ footer a{color:var(--ink)}
   <div class="frame">
     <div class="mast-top">
       <span class="doc-no">stift.sh — technical reference</span>
-      <span>self-hosted · single binary · mit</span>
-      <a href="https://github.com/stift-sh/stift">github.com/stift-sh/stift</a>
+      <span>hosted cloud · or self-host · mit core</span>
+      <span style="display:flex;gap:16px;flex-wrap:wrap">
+        <a href="https://app.stift.sh">app.stift.sh — sign in</a>
+        <a href="https://github.com/stift-sh/stift">github</a>
+      </span>
     </div>
     <div class="mast-main">
       <h1 class="wordmark">stift<span class="dot">.</span></h1>
       <p class="tagline">
-        Self-hosted cloud storage for AI coding agent sessions. Your sessions —
+        Cloud storage for AI coding agent sessions. Your sessions —
         full conversation history, context, todo state — live in scattered
         dot-directories on whatever machine you happened to be using.
-        <b>stift gives them a home</b>: one binary on any server, a token, and
-        <code>stift push</code> / <code>stift pull</code> between machines.
+        <b>stift gives them a home</b>: a token, then <code>stift push</code> /
+        <code>stift pull</code> between machines. Start free on
+        <b>Stift Cloud</b>, or self-host the single MIT binary — same engine.
       </p>
       <div class="stamps">
+        <span class="stamp">hosted or self-host</span>
         <span class="stamp">one binary</span>
         <span class="stamp">pure go stdlib</span>
-        <span class="stamp">no database</span>
         <span class="stamp red">der stift · „the pencil"</span>
+      </div>
+      <div class="btn-row">
+        <a class="cta cta-primary" href="https://app.stift.sh">Start free on Stift Cloud</a>
+        <a class="cta cta-ghost" href="#server">Or self-host it</a>
       </div>
       <div class="hero-install">
         <div class="plate">
-          <div class="plate-bar"><span>install the client</span><button class="copy" data-copy="curl -fsSL https://stift.sh/install.sh | sh">copy</button></div>
+          <div class="plate-bar"><span>install the client (both paths)</span><button class="copy" data-copy="curl -fsSL https://stift.sh/install.sh | sh">copy</button></div>
           <pre><code><span class="p">$</span> curl -fsSL https://stift.sh/install.sh | sh</code></pre>
         </div>
       </div>
@@ -253,8 +295,9 @@ footer a{color:var(--ink)}
   <div class="toc-head">Contents</div>
   <ol>
     <li><a href="#how">How it works</a></li>
+    <li><a href="#cloud">Stift Cloud</a></li>
     <li><a href="#install">Install the client</a></li>
-    <li><a href="#server">Deploy a server</a></li>
+    <li><a href="#server">Self-host a server</a></li>
     <li><a href="#usage">Push &amp; pull</a></li>
     <li><a href="#custom">Custom agents</a></li>
     <li><a href="#tokens">Tokens &amp; environment</a></li>
@@ -301,9 +344,90 @@ workstation <span class="arrow">◀──pull──</span> │  your server  │
     </tbody>
   </table>
   <p>Anything not listed can be added as a <a href="#custom">custom agent</a> — a name and a path pattern in a small JSON file.</p>
+  <div class="note">
+    <b>Two ways to get the server half.</b> Let us run it — <a href="#cloud">Stift Cloud</a>,
+    hosted and free to start — or run the binary yourself (<a href="#server">self-host</a>).
+    The CLI and everything below are identical either way; only the URL you
+    <code>stift login</code> to changes.
+  </div>
 </section>
 
-<!-- ============ 02 install ============ -->
+<!-- ============ 02 cloud ============ -->
+<section class="sec" id="cloud">
+  <h2>Stift Cloud</h2>
+  <div class="sec-sub">managed sync — sign up, get a token, push</div>
+  <p>
+    Don't want to run a server? <strong>Stift Cloud</strong> is the same open-source
+    engine, hosted for you on <code>sync.stift.sh</code>. Sign up, create a token in
+    the dashboard, and point the CLI at it — sessions sync across your machines and
+    your whole team. No infra, no upgrades, backups handled.
+  </p>
+  <div class="btn-row">
+    <a class="cta cta-primary" href="https://app.stift.sh">Start free — app.stift.sh</a>
+    <span class="btn-note">no card to start · free tier · cancel anytime</span>
+  </div>
+
+  <h3>Quickstart</h3>
+  <div class="plate">
+    <div class="plate-bar"><span>sh</span><button class="copy" data-copy="curl -fsSL https://stift.sh/install.sh | sh
+stift login https://sync.stift.sh --token stf_...
+stift push">copy</button></div>
+    <pre><code><span class="c"># 1. install the CLI</span>
+<span class="p">$</span> curl -fsSL https://stift.sh/install.sh | sh
+
+<span class="c"># 2. sign up at app.stift.sh, create a token, then log in</span>
+<span class="p">$</span> stift login https://sync.stift.sh --token stf_...
+
+<span class="c"># 3. sync — sessions show up in your dashboard</span>
+<span class="p">$</span> stift push</code></pre>
+  </div>
+
+  <h3>Pricing</h3>
+  <div class="tiers">
+    <div class="tier">
+      <span class="tier-name">Self-host</span>
+      <div class="tier-price">$0<span class="unit"> · MIT</span></div>
+      <div class="tier-for">run the binary yourself</div>
+      <ul>
+        <li>Unlimited sessions &amp; storage</li>
+        <li>Your server, your data</li>
+        <li>Single binary, no database</li>
+        <li>Community support</li>
+      </ul>
+      <a class="cta cta-ghost" href="#server">Read the guide</a>
+    </div>
+    <div class="tier">
+      <span class="tier-name">Cloud Free</span>
+      <div class="tier-price">$0<span class="unit"> / mo</span></div>
+      <div class="tier-for">hosted, for getting going</div>
+      <ul>
+        <li>Up to 100 sessions</li>
+        <li>Uncapped storage</li>
+        <li>Web dashboard</li>
+        <li>Zero infrastructure</li>
+      </ul>
+      <a class="cta cta-ghost" href="https://app.stift.sh">Start free</a>
+    </div>
+    <div class="tier feature">
+      <span class="tier-name">Cloud Pro</span>
+      <div class="tier-price">$4<span class="unit"> / seat / mo</span></div>
+      <div class="tier-for">hosted, for teams</div>
+      <ul>
+        <li>Unlimited sessions</li>
+        <li>Uncapped storage</li>
+        <li>Team organizations</li>
+        <li>Per-seat billing, upgrade anytime</li>
+      </ul>
+      <a class="cta cta-primary" href="https://app.stift.sh">Start free</a>
+    </div>
+  </div>
+  <p class="btn-note" style="max-width:74ch">
+    Storage is uncapped on every plan. Start on the free tier and upgrade in the
+    dashboard when you outgrow it — billing is handled by Stripe.
+  </p>
+</section>
+
+<!-- ============ 03 install ============ -->
 <section class="sec" id="install">
   <h2>Install the client</h2>
   <div class="sec-sub">linux · macos · amd64 / arm64</div>
@@ -342,10 +466,10 @@ workstation <span class="arrow">◀──pull──</span> │  your server  │
   </table>
 </section>
 
-<!-- ============ 03 server ============ -->
+<!-- ============ 04 server ============ -->
 <section class="sec" id="server">
-  <h2>Deploy a server</h2>
-  <div class="sec-sub">binary · systemd · proxmox lxc · docker — one minute each</div>
+  <h2>Self-host a server</h2>
+  <div class="sec-sub">binary · systemd · proxmox lxc · docker — one minute each · or use <a href="#cloud">Stift Cloud</a></div>
 
   <h3>Binary</h3>
   <div class="plate">
@@ -410,7 +534,7 @@ docker run -d -p 8580:8580 -v stift-data:/data -e STIFT_ADMIN_TOKEN stift:latest
   </p>
 </section>
 
-<!-- ============ 04 usage ============ -->
+<!-- ============ 05 usage ============ -->
 <section class="sec" id="usage">
   <h2>Push &amp; pull</h2>
   <div class="sec-sub">the daily loop</div>
@@ -443,7 +567,7 @@ stift push">copy</button></div>
   </ul>
 </section>
 
-<!-- ============ 05 custom agents ============ -->
+<!-- ============ 06 custom agents ============ -->
 <section class="sec" id="custom">
   <h2>Custom agents</h2>
   <div class="sec-sub">any tool that keeps session state in files</div>
@@ -474,7 +598,7 @@ stift push">copy</button></div>
   </ul>
 </section>
 
-<!-- ============ 06 tokens & env ============ -->
+<!-- ============ 07 tokens & env ============ -->
 <section class="sec" id="tokens">
   <h2>Tokens &amp; environment</h2>
   <div class="sec-sub">one token per machine — revoke any one of them</div>
@@ -499,7 +623,7 @@ stift token revoke &lt;id&gt;">copy</button></div>
   </table>
 </section>
 
-<!-- ============ 07 api ============ -->
+<!-- ============ 08 api ============ -->
 <section class="sec" id="api">
   <h2>HTTP API</h2>
   <div class="sec-sub">all /v1 endpoints require <code>Authorization: Bearer &lt;token&gt;</code></div>
@@ -518,7 +642,7 @@ stift token revoke &lt;id&gt;">copy</button></div>
   </table>
 </section>
 
-<!-- ============ 08 security ============ -->
+<!-- ============ 09 security ============ -->
 <section class="sec" id="security">
   <h2>Security notes</h2>
   <div class="sec-sub">read before exposing anything</div>
@@ -539,8 +663,8 @@ stift token revoke &lt;id&gt;">copy</button></div>
 
 <footer>
   <div class="frame" style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;width:100%;padding:0">
-    <span>stift — mit license</span>
-    <span><a href="/install.sh">install.sh</a> · <a href="/proxmox.sh">proxmox.sh</a> · <a href="https://github.com/stift-sh/stift">source</a></span>
+    <span>stift — mit core · <a href="https://app.stift.sh">stift cloud</a></span>
+    <span><a href="https://app.stift.sh">app.stift.sh</a> · <a href="/install.sh">install.sh</a> · <a href="/proxmox.sh">proxmox.sh</a> · <a href="https://github.com/stift-sh/stift">source</a></span>
   </div>
 </footer>
 
