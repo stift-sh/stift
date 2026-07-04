@@ -9,11 +9,13 @@ import (
 	"strings"
 
 	"github.com/stift-sh/stift/internal/client"
+	"github.com/stift-sh/stift/internal/service"
 )
 
 func cmdLogin(args []string) error {
 	fs := flag.NewFlagSet("login", flag.ExitOnError)
 	token := fs.String("token", "", "access token (prompted for if omitted)")
+	noDaemon := fs.Bool("no-daemon", false, "don't start background auto-sync")
 	fs.Usage = func() {
 		fmt.Fprintln(os.Stderr, "usage: stift login <server-url> [--token TOKEN]")
 		fs.PrintDefaults()
@@ -61,5 +63,14 @@ func cmdLogin(args []string) error {
 		role = "admin token"
 	}
 	fmt.Printf("logged in to %s as %q (%s); saved to %s\n", server, who.Name, role, path)
+
+	if !*noDaemon {
+		if err := service.Install(); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: could not start background sync: %v\n", err)
+			fmt.Fprintln(os.Stderr, "retry with `stift start`, or run `stift daemon` in the foreground")
+		} else {
+			fmt.Println("background auto-sync started — your sessions now sync automatically")
+		}
+	}
 	return nil
 }

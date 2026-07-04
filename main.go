@@ -36,6 +36,22 @@ func main() {
 		err = cmdAgents(args)
 	case "token":
 		err = cmdToken(args)
+	case "daemon":
+		err = cmdDaemon(args)
+	case "start":
+		err = cmdStart(args)
+	case "stop":
+		err = cmdStop(args)
+	case "restart":
+		err = cmdRestart(args)
+	case "status":
+		err = cmdStatus(args)
+	case "link":
+		err = cmdLink(args)
+	case "unlink":
+		err = cmdUnlink(args)
+	case "links":
+		err = cmdLinks(args)
 	case "version", "--version", "-v":
 		fmt.Println("stift " + version)
 	case "help", "--help", "-h":
@@ -50,6 +66,19 @@ func main() {
 	}
 }
 
+// resolveHost returns this machine's identity for session ownership. It can be
+// overridden with STIFT_HOST, useful when the OS hostname is unstable.
+func resolveHost() string {
+	if h := os.Getenv("STIFT_HOST"); h != "" {
+		return h
+	}
+	h, _ := os.Hostname()
+	if h == "" {
+		h = "unknown"
+	}
+	return h
+}
+
 func usage() {
 	fmt.Print(`stift — self-hosted session store for AI coding agents
 
@@ -58,7 +87,7 @@ Server:
       Run the server. Prints an admin token on first start.
 
 Client:
-  stift login URL --token TOKEN     Save server connection
+  stift login URL --token TOKEN     Save server connection & start auto-sync
   stift push [flags]                Upload local agent sessions
   stift pull [ID] [flags]           Download and restore sessions
   stift list [flags]                List sessions stored on the server
@@ -66,12 +95,18 @@ Client:
   stift agents [flags]              Show sessions detected on this machine
   stift token create|list|revoke    Manage access tokens (admin)
 
+Background sync:
+  stift start | stop | restart      Control the background auto-sync service
+  stift status                      Show sync status
+  stift link [project-id]           Link this project & pull its sessions here
+  stift unlink | links              Remove / list project links
+
 Supported agents: claude (Claude Code), codex (Codex CLI), gemini (Gemini CLI),
 cursor (Cursor CLI), opencode, aider. Add your own in
 ~/.config/stift/agents.json — see the Custom agents section of the README.
 
 Environment: STIFT_SERVER, STIFT_TOKEN, STIFT_CONFIG, STIFT_AGENTS,
-STIFT_DATA, STIFT_ADMIN_TOKEN (serve).
+STIFT_DATA, STIFT_ADMIN_TOKEN (serve), STIFT_SYNC_INTERVAL, STIFT_STATE.
 
 Run "stift COMMAND -h" for command flags.
 `)

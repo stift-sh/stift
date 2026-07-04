@@ -10,6 +10,8 @@ type Session struct {
 	Agent     string    `json:"agent"`
 	SessionID string    `json:"session_id"`
 	Project   string    `json:"project,omitempty"`
+	ProjectID string    `json:"project_id,omitempty"` // repo name, for cross-machine matching
+	Repo      string    `json:"repo,omitempty"`       // normalized git remote URL (secondary signal)
 	Host      string    `json:"host"`
 	Title     string    `json:"title,omitempty"`
 	Base      string    `json:"base"` // "home" or "project": what archive paths are relative to

@@ -7,10 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/stift-sh/stift/engine/api"
-	"github.com/stift-sh/stift/engine/archive"
 	"github.com/stift-sh/stift/internal/agents"
 	"github.com/stift-sh/stift/internal/client"
+	"github.com/stift-sh/stift/internal/daemon"
 )
 
 func cmdPush(args []string) error {
@@ -41,10 +40,7 @@ func cmdPush(args []string) error {
 			return err
 		}
 	}
-	host, _ := os.Hostname()
-	if host == "" {
-		host = "unknown"
-	}
+	host := resolveHost()
 
 	var names []string
 	if *agentList != "" {
@@ -81,32 +77,7 @@ func cmdPush(args []string) error {
 			fmt.Printf("would push  %s  (%d files)\n", label, len(s.Files))
 			continue
 		}
-		tmp, err := os.CreateTemp("", "stift-push-*.tar.gz")
-		if err != nil {
-			return err
-		}
-		n, err := archive.Pack(tmp, s.BaseDir, s.Files)
-		if cerr := tmp.Close(); err == nil {
-			err = cerr
-		}
-		if err != nil {
-			os.Remove(tmp.Name())
-			fmt.Fprintf(os.Stderr, "pack failed  %s: %v\n", label, err)
-			failures++
-			continue
-		}
-		res, err := c.Push(api.Session{
-			Key:       s.Key(host),
-			Agent:     s.Agent,
-			SessionID: s.SessionID,
-			Project:   s.Project,
-			Host:      host,
-			Title:     s.Title,
-			Base:      s.Base,
-			Files:     n,
-			ModTime:   s.ModTime,
-		}, tmp.Name())
-		os.Remove(tmp.Name())
+		res, err := daemon.PushSession(c, s, host)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "push failed  %s: %v\n", label, err)
 			failures++
