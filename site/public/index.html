@@ -264,8 +264,8 @@ footer a{color:var(--ink)}
         Cloud storage for AI coding agent sessions. Your sessions —
         full conversation history, context, todo state — live in scattered
         dot-directories on whatever machine you happened to be using.
-        <b>stift gives them a home</b>: a token, then <code>stift push</code> /
-        <code>stift pull</code> between machines. Start free on
+        <b>stift gives them a home</b>: log in once and a background service
+        <b>syncs every session automatically</b> — no manual push/pull. Start free on
         <b>Stift Cloud</b>, or self-host the single MIT binary — same engine.
       </p>
       <div class="stamps">
@@ -298,6 +298,7 @@ footer a{color:var(--ink)}
     <li><a href="#cloud">Stift Cloud</a></li>
     <li><a href="#install">Install the client</a></li>
     <li><a href="#server">Self-host a server</a></li>
+    <li><a href="#sync">Background sync</a></li>
     <li><a href="#usage">Push &amp; pull</a></li>
     <li><a href="#custom">Custom agents</a></li>
     <li><a href="#tokens">Tokens &amp; environment</a></li>
@@ -376,9 +377,11 @@ stift push">copy</button></div>
 <span class="p">$</span> curl -fsSL https://stift.sh/install.sh | sh
 
 <span class="c"># 2. sign up at app.stift.sh, create a token, then log in</span>
+<span class="c">#    (this also starts background auto-sync)</span>
 <span class="p">$</span> stift login https://sync.stift.sh --token stf_...
 
-<span class="c"># 3. sync — sessions show up in your dashboard</span>
+<span class="c"># 3. that's it — sessions sync automatically and show up in your dashboard.</span>
+<span class="c">#    push by hand any time you want:</span>
 <span class="p">$</span> stift push</code></pre>
   </div>
 
@@ -534,10 +537,61 @@ docker run -d -p 8580:8580 -v stift-data:/data -e STIFT_ADMIN_TOKEN stift:latest
   </p>
 </section>
 
-<!-- ============ 05 usage ============ -->
+<!-- ============ 05 background sync ============ -->
+<section class="sec" id="sync">
+  <h2>Background sync</h2>
+  <div class="sec-sub">log in once — sessions sync on their own</div>
+  <p>
+    <code>stift login</code> also starts a small background service, so you set up
+    a machine once and then forget about it. A lightweight daemon — a per-user
+    systemd/launchd service, or a detached process where neither exists — runs
+    every ~30s and keeps everything in sync. No manual push/pull.
+  </p>
+  <div class="plate">
+    <div class="plate-bar"><span>sh · once per machine</span><button class="copy" data-copy="stift login https://sync.stift.sh --token stf_...">copy</button></div>
+    <pre><code><span class="p">$</span> stift login https://sync.stift.sh --token stf_...
+<span class="g">background auto-sync started — your sessions now sync automatically</span></code></pre>
+  </div>
+  <ul class="spec">
+    <li><strong>Pushes</strong> every changed agent session across <em>all</em> your projects, continuously.</li>
+    <li><strong>Pulls</strong> sessions for projects you're actively working on here, restoring them so the local agent sees them — <strong>never overwriting a live local file</strong> (conflicts are logged, not applied).</li>
+    <li>Projects are matched across machines by <strong>git repo name</strong> (the remote's last path segment, else the folder name), so the same repo lines up even when its path differs machine to machine.</li>
+  </ul>
+
+  <h3>On a second machine</h3>
+  <p>
+    Point stift at a folder and it pulls that project's history right away; later
+    sessions keep syncing automatically.
+  </p>
+  <div class="plate">
+    <div class="plate-bar"><span>sh · in the project directory</span><button class="copy" data-copy="stift link">copy</button></div>
+    <pre><code><span class="p">$</span> cd ~/code/myapp
+<span class="p">$</span> stift link
+<span class="g">linked ~/code/myapp -&gt; myapp</span>
+<span class="g">pulled 12 session(s)</span></code></pre>
+  </div>
+
+  <h3>Managing the service</h3>
+  <table class="tbl">
+    <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td class="m"><code>stift start</code> · <code>stop</code> · <code>restart</code></td><td>control the background sync service</td></tr>
+      <tr><td class="m"><code>stift status</code></td><td>running state + any sessions on the server not restored here yet</td></tr>
+      <tr><td class="m"><code>stift link</code> · <code>unlink</code> · <code>links</code></td><td>manage which folders pull which project</td></tr>
+      <tr><td class="m"><code>stift pull --project-id NAME</code></td><td>restore a whole project into the current directory</td></tr>
+      <tr><td class="m"><code>stift login --no-daemon</code></td><td>log in without starting background sync</td></tr>
+    </tbody>
+  </table>
+  <div class="note">
+    Everything in <a href="#usage">Push &amp; pull</a> still works by hand — the
+    daemon just does it for you. Restores never clobber a running agent's files.
+  </div>
+</section>
+
+<!-- ============ 06 usage ============ -->
 <section class="sec" id="usage">
   <h2>Push &amp; pull</h2>
-  <div class="sec-sub">the daily loop</div>
+  <div class="sec-sub">manual control, when you want it</div>
   <div class="plate">
     <div class="plate-bar"><span>sh</span><button class="copy" data-copy="stift login https://sessions.example.com --token stf_...
 stift agents
@@ -617,6 +671,9 @@ stift token revoke &lt;id&gt;">copy</button></div>
     <tbody>
       <tr><td class="m"><code>STIFT_SERVER</code>, <code>STIFT_TOKEN</code></td><td>client</td><td>override saved login (handy for CI)</td></tr>
       <tr><td class="m"><code>STIFT_CONFIG</code></td><td>client</td><td>config file path (default <code>~/.config/stift/config.json</code>)</td></tr>
+      <tr><td class="m"><code>STIFT_SYNC_INTERVAL</code></td><td>daemon</td><td>background sync interval (default <code>30s</code>)</td></tr>
+      <tr><td class="m"><code>STIFT_HOST</code></td><td>client/daemon</td><td>override this machine's host label (default OS hostname)</td></tr>
+      <tr><td class="m"><code>STIFT_STATE</code></td><td>daemon</td><td>sync-state cache path (default <code>~/.cache/stift/sync-state.json</code>)</td></tr>
       <tr><td class="m"><code>STIFT_LISTEN</code>, <code>STIFT_DATA</code></td><td>server</td><td>listen address / data directory</td></tr>
       <tr><td class="m"><code>STIFT_ADMIN_TOKEN</code></td><td>server</td><td>register a fixed admin token at startup</td></tr>
     </tbody>
