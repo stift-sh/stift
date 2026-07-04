@@ -73,6 +73,14 @@ type UnpackResult struct {
 // (no absolute paths, no ".." traversal) or the whole operation fails.
 // When overwrite is false, existing files are skipped and reported.
 func Unpack(r io.Reader, baseDir string, overwrite bool) (UnpackResult, error) {
+	return UnpackRemap(r, baseDir, overwrite, nil)
+}
+
+// UnpackRemap is Unpack with an optional rename hook applied to each entry's
+// slash-separated name before it is written, e.g. to relocate a session into a
+// different project directory on another machine. Returning "" skips the entry.
+// The rewritten name must still be a safe, local path.
+func UnpackRemap(r io.Reader, baseDir string, overwrite bool, rename func(name string) string) (UnpackResult, error) {
 	var res UnpackResult
 	gz, err := gzip.NewReader(r)
 	if err != nil {
@@ -91,14 +99,21 @@ func Unpack(r io.Reader, baseDir string, overwrite bool) (UnpackResult, error) {
 		if hdr.Typeflag != tar.TypeReg {
 			continue
 		}
-		name := filepath.FromSlash(hdr.Name)
-		if !isLocalName(hdr.Name) {
-			return res, fmt.Errorf("archive entry %q has unsafe path", hdr.Name)
+		slashName := hdr.Name
+		if rename != nil {
+			slashName = rename(slashName)
+			if slashName == "" {
+				continue
+			}
+		}
+		name := filepath.FromSlash(slashName)
+		if !isLocalName(slashName) {
+			return res, fmt.Errorf("archive entry %q has unsafe path", slashName)
 		}
 		dst := filepath.Join(baseDir, name)
 		if !overwrite {
 			if _, err := os.Lstat(dst); err == nil {
-				res.Skipped = append(res.Skipped, hdr.Name)
+				res.Skipped = append(res.Skipped, slashName)
 				continue
 			}
 		}

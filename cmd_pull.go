@@ -6,12 +6,14 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 
 	"github.com/stift-sh/stift/engine/api"
 	"github.com/stift-sh/stift/engine/archive"
 	"github.com/stift-sh/stift/internal/client"
+	"github.com/stift-sh/stift/internal/daemon"
 )
 
 func cmdPull(args []string) error {
@@ -20,11 +22,13 @@ func cmdPull(args []string) error {
 	project := fs.String("project", "", "with --latest: restrict to one project path; also overrides restore directory for project-based sessions")
 	host := fs.String("host", "", "with --latest: restrict to sessions pushed from one host")
 	latest := fs.Bool("latest", false, "pull the most recently updated session matching the filters")
+	projectID := fs.String("project-id", "", "restore every session for this project id into the current directory")
 	force := fs.Bool("force", false, "overwrite existing local files")
 	dryRun := fs.Bool("dry-run", false, "list archive contents without writing anything")
 	fs.Usage = func() {
 		fmt.Fprintln(os.Stderr, "usage: stift pull <session-id>")
 		fmt.Fprintln(os.Stderr, "       stift pull --latest [--agent A] [--project P] [--host H]")
+		fmt.Fprintln(os.Stderr, "       stift pull --project-id ID   (restore a whole project here)")
 		fs.PrintDefaults()
 	}
 	fs.Parse(args)
@@ -32,6 +36,10 @@ func cmdPull(args []string) error {
 	c, err := client.Require()
 	if err != nil {
 		return err
+	}
+
+	if *projectID != "" {
+		return reconcileProjectID(c, *projectID, *project)
 	}
 
 	var sess api.Session
@@ -89,6 +97,28 @@ func cmdPull(args []string) error {
 		fmt.Printf(", %d existing files skipped (use --force to overwrite)", len(res.Skipped))
 	}
 	fmt.Println()
+	return nil
+}
+
+// reconcileProjectID restores every server session for projectID into dir
+// (default: the current directory), never overwriting existing files.
+func reconcileProjectID(c *client.Client, projectID, dir string) error {
+	var err error
+	if dir == "" {
+		if dir, err = os.Getwd(); err != nil {
+			return err
+		}
+	}
+	if dir, err = filepath.Abs(dir); err != nil {
+		return err
+	}
+	home, _ := os.UserHomeDir()
+	host := resolveHost()
+	n, err := daemon.ReconcileOnce(c, home, host, dir, projectID, log.New(os.Stdout, "", 0))
+	if err != nil {
+		return err
+	}
+	fmt.Printf("pulled %d session(s) for %s into %s\n", n, projectID, dir)
 	return nil
 }
 
