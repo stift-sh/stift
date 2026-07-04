@@ -5,7 +5,9 @@ Self-hosted cloud storage for AI coding agent sessions.
 Your agent sessions — the full conversation history, context, and todo state — live in
 scattered dot-directories on whatever machine you happened to be using. **stift**
 gives them a home: deploy a single binary (or container) on any server, get a token,
-and `stift push` / `stift pull` your sessions between machines.
+and log in once. After that a small background service **syncs your sessions
+automatically** — no manual push/pull. `stift push` / `stift pull` are still there
+when you want explicit control.
 
 ```
      laptop ──push──▶ ┌───────────────┐ ◀──push── desktop
@@ -59,6 +61,46 @@ The stift.sh site itself lives in [`site/`](site/) — a Cloudflare Worker
 serving the docs page, both scripts, and the `dist/` binaries as static
 assets. `make site-deploy` assembles `site/public/` from `dist/` and runs
 `wrangler deploy`.
+
+## Background sync
+
+`stift login` also starts a small background service, so you set up a machine
+once and then forget about it — sessions sync on their own.
+
+```sh
+# one-time, on each machine — logs in AND starts background auto-sync
+stift login https://sessions.example.com --token stf_...
+```
+
+From then on a lightweight daemon (a per-user systemd/launchd service, or a
+detached process where neither exists) runs every ~30s and:
+
+- **pushes** every changed agent session across *all* your projects, and
+- **pulls** sessions for projects you're actively working on here, restoring
+  them so the local agent sees them — **never overwriting a live local file**
+  (conflicts are logged, not applied).
+
+On a second machine, point stift at a folder and it pulls that project's history
+right away; later sessions keep syncing automatically:
+
+```sh
+cd ~/code/myapp
+stift link                 # pulls this project's sessions now
+```
+
+Projects are matched across machines by **git repo name** — the remote's last
+path segment, or the folder name when there's no remote — so the same repo lines
+up even when its path differs from machine to machine.
+
+```sh
+stift start | stop | restart    # control the background service
+stift status                    # running state + sessions on the server not here yet
+stift link | unlink | links     # manage which folders pull which project
+stift pull --project-id NAME    # restore a whole project into the current dir
+stift login --no-daemon ...     # log in without starting background sync
+```
+
+Everything below still works by hand — you just shouldn't need it day to day.
 
 ## Client: push and pull sessions
 
@@ -143,6 +185,9 @@ stift token revoke <id>
 |---|---|---|
 | `STIFT_SERVER`, `STIFT_TOKEN` | client | override saved login (handy for CI) |
 | `STIFT_CONFIG` | client | config file path (default `~/.config/stift/config.json`) |
+| `STIFT_SYNC_INTERVAL` | daemon | background sync interval (default `30s`) |
+| `STIFT_HOST` | client/daemon | override this machine's host label (default OS hostname) |
+| `STIFT_STATE` | daemon | sync-state cache path (default `~/.cache/stift/sync-state.json`) |
 | `STIFT_LISTEN`, `STIFT_DATA` | server | listen address / data directory |
 | `STIFT_ADMIN_TOKEN` | server | register a fixed admin token at startup |
 
@@ -238,7 +283,9 @@ make docker    # build the container image
 
 Layout: `internal/agents` (per-agent session detection), `internal/archive`
 (tar.gz pack/unpack), `internal/server` (HTTP API + storage + tokens),
-`internal/client` (API client + config), `cmd_*.go` (CLI subcommands).
+`internal/client` (API client + config), `internal/daemon` (background push +
+reconcile loop), `internal/service` (systemd/launchd/detached-process control),
+`internal/gitrepo` (cross-machine project identity), `cmd_*.go` (CLI subcommands).
 
 Adding an agent = one file in `internal/agents` implementing
 `Detect(home, project) ([]LocalSession, error)` plus a registry entry in
