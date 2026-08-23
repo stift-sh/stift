@@ -34,6 +34,8 @@ func main() {
 		err = cmdDelete(args)
 	case "agents", "detect":
 		err = cmdAgents(args)
+	case "skills":
+		err = cmdSkills(args)
 	case "token":
 		err = cmdToken(args)
 	case "daemon":
@@ -90,6 +92,10 @@ Client:
   stift login URL --token TOKEN     Save server connection & start auto-sync
   stift push [flags]                Upload local agent sessions
   stift pull [ID] [flags]           Download and restore sessions
+  stift push --skills [flags]       Upload agent config (skills, agents, commands, CLAUDE.md)
+  stift pull --skills [flags]       Download agent config; --scope user,project,org
+  stift skills list|history NAME|diff NAME [N]|rollback NAME N|delete NAME
+                                    Inspect and roll back per-unit config versions
   stift list [flags]                List sessions stored on the server
   stift delete ID...                Delete sessions from the server
   stift agents [flags]              Show sessions detected on this machine
@@ -105,7 +111,7 @@ Supported agents: claude (Claude Code), codex (Codex CLI), gemini (Gemini CLI),
 cursor (Cursor CLI), opencode, aider. Add your own in
 ~/.config/stift/agents.json — see the Custom agents section of the README.
 
-Environment: STIFT_SERVER, STIFT_TOKEN, STIFT_CONFIG, STIFT_AGENTS,
+Environment: STIFT_SERVER, STIFT_TOKEN, STIFT_CONFIG, STIFT_AGENTS, STIFT_SKILLS_STATE,
 STIFT_DATA, STIFT_ADMIN_TOKEN (serve), STIFT_SYNC_INTERVAL, STIFT_STATE.
 
 Run "stift COMMAND -h" for command flags.

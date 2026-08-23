@@ -18,6 +18,7 @@ import (
 // Config tunes the HTTP server.
 type Config struct {
 	MaxUploadBytes int64 // per-session archive size limit
+	MaxBlobBytes   int64 // per-blob (bundle file) size limit
 }
 
 // Identity is the authenticated caller resolved from a bearer token. Tenant is
@@ -61,6 +62,9 @@ func New(opts Options) http.Handler {
 	if opts.Config.MaxUploadBytes <= 0 {
 		opts.Config.MaxUploadBytes = 200 << 20
 	}
+	if opts.Config.MaxBlobBytes <= 0 {
+		opts.Config.MaxBlobBytes = 5 << 20
+	}
 	s := &Server{store: opts.Store, auth: opts.Auth, tokens: opts.Tokens, cfg: opts.Config}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -73,6 +77,13 @@ func New(opts Options) http.Handler {
 	mux.Handle("GET /v1/sessions/{id}", s.authed(false, s.handleGet))
 	mux.Handle("GET /v1/sessions/{id}/archive", s.authed(false, s.handleDownload))
 	mux.Handle("DELETE /v1/sessions/{id}", s.authed(false, s.handleDelete))
+	mux.Handle("POST /v1/blobs/check", s.authed(false, s.handleBlobsCheck))
+	mux.Handle("PUT /v1/blobs/{sha}", s.authed(false, s.handleBlobPut))
+	mux.Handle("GET /v1/blobs/{sha}", s.authed(false, s.handleBlobGet))
+	mux.Handle("GET /v1/bundles", s.authed(false, s.handleBundleList))
+	mux.Handle("PUT /v1/bundles/{scope}/{agent}/{name...}", s.authed(false, s.handleBundlePut))
+	mux.Handle("GET /v1/bundles/{scope}/{agent}/{name...}", s.authed(false, s.handleBundleGet))
+	mux.Handle("DELETE /v1/bundles/{scope}/{agent}/{name...}", s.authed(false, s.handleBundleDelete))
 	// Token management is only served when a local Tokens registry is wired in;
 	// hosted deployments manage tokens through their own control plane.
 	if s.tokens != nil {

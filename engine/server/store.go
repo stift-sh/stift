@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -41,7 +42,43 @@ type Backend interface {
 	List(tenant string, f ListFilter) []api.Session
 	// ResolveID accepts a full or unambiguous-prefix session id.
 	ResolveID(tenant, prefix string) (string, error)
+
+	// HasBlobs reports which of the given sha256 hex digests are not stored.
+	HasBlobs(tenant string, shas []string) (missing []string, err error)
+	// PutBlob stores content under its sha256; the hash and size of r are
+	// verified and the write is rejected on mismatch. Storing an existing blob
+	// again is a no-op.
+	PutBlob(tenant, sha string, r io.Reader, size int64) error
+	OpenBlob(tenant, sha string) (io.ReadCloser, error)
+
+	// PutBundle writes version HEAD+1 atomically. Returns ErrStale if
+	// HEAD != b.Parent (unless force) and ErrMissingBlob if any referenced
+	// blob is absent.
+	PutBundle(tenant string, k BundleKey, b api.Bundle, force bool) (api.Bundle, error)
+	// GetBundle returns one manifest version; version 0 means HEAD.
+	GetBundle(tenant string, k BundleKey, version int) (api.Bundle, bool)
+	// ListBundles returns the HEAD manifest of every bundle matching f.
+	ListBundles(tenant string, f BundleFilter) []api.Bundle
+	// BundleHistory returns every version, newest first.
+	BundleHistory(tenant string, k BundleKey) []api.Bundle
+	DeleteBundle(tenant string, k BundleKey) error
 }
+
+// BundleKey identifies one bundle (one config unit) within a tenant. Name is
+// the unit's path relative to the agent's config root (1-3 clean segments).
+type BundleKey struct{ Scope, Agent, Project, Name string }
+
+// BundleFilter narrows ListBundles; zero value matches everything.
+type BundleFilter struct{ Scope, Agent, Project, Name string }
+
+var (
+	// ErrStale is returned by PutBundle when the bundle's Parent is not the
+	// current HEAD; the HTTP layer maps it to 409.
+	ErrStale = errors.New("bundle is stale: parent is not the current head")
+	// ErrMissingBlob is returned by PutBundle when a referenced blob has not
+	// been uploaded; the HTTP layer maps it to 412.
+	ErrMissingBlob = errors.New("bundle references a missing blob")
+)
 
 // scope is the in-memory index for a single tenant.
 type scope struct {
@@ -58,6 +95,10 @@ type DiskStore struct {
 	root   string
 	mu     sync.RWMutex
 	scopes map[string]*scope
+
+	dataDir string
+	bmu     sync.Mutex
+	heads   map[string]map[BundleKey]*api.Bundle // tenant -> key -> HEAD manifest
 }
 
 // OpenStore opens (creating if needed) the on-disk session store rooted at
@@ -67,7 +108,10 @@ func OpenStore(dataDir string) (*DiskStore, error) {
 	if err := os.MkdirAll(root, 0o700); err != nil {
 		return nil, err
 	}
-	s := &DiskStore{root: root, scopes: map[string]*scope{}}
+	s := &DiskStore{root: root, scopes: map[string]*scope{}, dataDir: dataDir, heads: map[string]map[BundleKey]*api.Bundle{}}
+	if err := s.loadBundles(); err != nil {
+		return nil, err
+	}
 	entries, err := os.ReadDir(root)
 	if err != nil {
 		return nil, err

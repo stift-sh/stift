@@ -132,6 +132,61 @@ archive contents first.
 Sessions restore to the same project path they came from (agents key their
 session storage by project path, so this is what makes the agent see them).
 
+### Skills and agent configuration
+
+Besides sessions, stift syncs the files that *configure* an agent — skills,
+subagents, slash commands and `CLAUDE.md`. Each of these is a **unit** with
+its own version history, so rolling back one skill never touches its
+neighbours:
+
+| Unit name | What it is (Claude Code, user scope) |
+|---|---|
+| `skills/<name>` | the directory `~/.claude/skills/<name>/` (SKILL.md and everything beside it) |
+| `agents/<name>` | `~/.claude/agents/<name>.md` (or a directory of that name) |
+| `commands/<name>` | `~/.claude/commands/<name>.md` (or a directory of that name) |
+| `CLAUDE.md` | `~/.claude/CLAUDE.md` |
+
+Project scope names are relative to the project directory: `.claude/skills/<name>`,
+`.claude/commands/<name>`, `.claude/CLAUDE.md` and the top-level `CLAUDE.md`.
+
+```sh
+stift push --skills                    # every unit in user (~/.claude) + project scope
+stift push --skills --scope user       # one scope only; org requires an admin token
+stift push --skills --name skills/deploy
+stift pull --skills                    # user + project + org, newest version of each unit
+stift pull --skills --dry-run          # show what would change
+stift pull --skills --name skills/deploy --version 3
+stift skills list                      # units on the server, with parsed skill names
+stift skills history skills/deploy
+stift skills diff skills/deploy [N]    # local files vs server version N (default: latest)
+stift skills rollback skills/deploy N  # re-publish version N as the newest version
+stift skills delete skills/deploy      # remove the unit and its history from the server
+```
+
+`settings*.json`, `.mcp.json`, env files, dotfiles, symlinks and files over
+5 MB are never included (hooks and MCP configs hold secrets and run code).
+Loose non-markdown files directly under `skills/`, `agents/` or `commands/`
+are not units and are skipped.
+
+Every push creates a new version of each changed unit whose parent is the
+version you last synced (tracked per unit in `~/.config/stift/state.json`,
+override with `STIFT_SKILLS_STATE`). If someone else pushed that unit in between,
+the push is rejected as stale: run `stift pull --skills` to take their
+changes first, or `--force` to overwrite. Pulls write files atomically and
+never overwrite a file you changed locally since the last sync unless you
+pass `--force`; files (and whole units) deleted on the server are deleted
+locally only if you had not modified them. A unit you delete locally stays
+on the server until you `stift skills delete` it.
+
+**Org scope** is written by admins and pulled by everyone
+(`stift pull --skills --scope org`). Org units are mirrored into
+`~/.stift/org/<agent>/` and each one is symlinked into the agent's own
+directory (`~/.claude/skills/<name>`, `~/.claude/commands/<name>.md`, ...),
+so org and personal config never collide and removing an org unit removes
+the link. An existing entry that is not one of these links is left untouched
+with a warning; top-level org units such as `CLAUDE.md` stay in the mirror
+directory and are reported rather than merged.
+
 ### Custom agents
 
 Any tool that keeps session state in files can be synced. Define it in
@@ -168,6 +223,21 @@ Pattern rules:
 Invalid entries are skipped with a warning; nothing outside your home (or
 project) directory is ever archived, even if a pattern tries.
 
+An optional **`config`** field makes `--skills` work for a custom agent too:
+
+```json
+{ "name": "myagent", "sessions": "~/.myagent/runs/*",
+  "config": { "user": ["~/.myagent/skills/**", "~/.myagent/rules.md"],
+              "project": [".myagent/**", "AGENTS.md"] } }
+```
+
+`user` patterns must start with `~/`, `project` patterns are project-relative
+and the default exclusions above apply. Units are derived from the patterns:
+a literal path is one unit, `<dir>/**` makes each entry directly under
+`<dir>` a unit (markdown files drop their `.md` in the name), and any other
+glob makes each match a unit named by its path relative to home or the
+project. Names may be at most three path segments deep.
+
 ### Tokens
 
 Mint a token per machine/teammate so any one of them can be revoked:
@@ -188,6 +258,7 @@ stift token revoke <id>
 | `STIFT_SYNC_INTERVAL` | daemon | background sync interval (default `30s`) |
 | `STIFT_HOST` | client/daemon | override this machine's host label (default OS hostname) |
 | `STIFT_STATE` | daemon | sync-state cache path (default `~/.cache/stift/sync-state.json`) |
+| `STIFT_SKILLS_STATE` | client | skills sync state (default `~/.config/stift/state.json`) |
 | `STIFT_LISTEN`, `STIFT_DATA` | server | listen address / data directory |
 | `STIFT_ADMIN_TOKEN` | server | register a fixed admin token at startup |
 
@@ -258,6 +329,14 @@ All `/v1` endpoints require `Authorization: Bearer <token>`.
 | `GET /v1/sessions/{id}` | metadata (id prefixes accepted) |
 | `GET /v1/sessions/{id}/archive` | download tar.gz |
 | `DELETE /v1/sessions/{id}` | delete |
+| `POST /v1/blobs/check` | body `{"shas":[...]}` → `{"missing":[...]}` (max 10k) |
+| `PUT /v1/blobs/{sha}` | upload raw content by sha256 (`Content-Length` required, ≤ 5 MB); 400 on hash mismatch |
+| `GET /v1/blobs/{sha}` | download raw blob |
+| `GET /v1/bundles?scope=&agent=&project=&name=` | list HEAD manifests of config units (one bundle per skill, agent, command, CLAUDE.md) |
+| `PUT /v1/bundles/{scope}/{agent}/{name}?project=&force=1` | publish a manifest for unit `name` (1–3 path segments; body: bundle JSON with unit-relative file paths); 409 stale, 412 blobs missing, org scope admin-only |
+| `GET /v1/bundles/{scope}/{agent}/{name}?project=&version=` | manifest (HEAD unless `version`) |
+| `GET /v1/bundles/{scope}/{agent}/{name}?project=&history=1` | all versions of the unit, newest first |
+| `DELETE /v1/bundles/{scope}/{agent}/{name}?project=` | delete the unit and its history (org scope admin-only) |
 | `GET /v1/whoami` | token name + role |
 | `GET/POST/DELETE /v1/tokens` | token management (admin only) |
 | `GET /healthz` | liveness (no auth) |

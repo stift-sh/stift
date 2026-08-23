@@ -19,11 +19,18 @@ func cmdPush(args []string) error {
 	allProjects := fs.Bool("all-projects", false, "push sessions from every project, not just the current one")
 	latest := fs.Bool("latest", false, "push only the most recent session per agent")
 	dryRun := fs.Bool("dry-run", false, "show what would be pushed without uploading")
+	skills := fs.Bool("skills", false, "push agent configuration (skills, agents, commands, CLAUDE.md) instead of sessions")
+	scope := fs.String("scope", "user,project", "with --skills: scopes to push (user, project, org; comma-separated)")
+	force := fs.Bool("force", false, "with --skills: overwrite a newer server version")
+	name := fs.String("name", "", "with --skills: push only this unit (e.g. skills/deploy, commands/fix-tests, CLAUDE.md)")
 	fs.Parse(args)
 
 	c, err := client.Require()
 	if err != nil && !*dryRun {
 		return err
+	}
+	if *skills {
+		return pushSkills(c, *agentList, *scope, *project, *name, *force, *dryRun)
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {

@@ -53,3 +53,39 @@ type Whoami struct {
 type Error struct {
 	Error string `json:"error"`
 }
+
+// Bundle is one versioned manifest of a single *unit* of agent configuration
+// (one skill, one subagent, one command file, a CLAUDE.md, ...) identified by
+// (scope, agent, project?, name). Name is the unit's path relative to the
+// agent's config root, e.g. "skills/deploy-checklist", "agents/reviewer",
+// "commands/fix-tests" or "CLAUDE.md"; file paths in the manifest are
+// relative to the unit (a skill's SKILL.md is at path "SKILL.md"). File
+// contents live in content-addressed blobs referenced by SHA256.
+type Bundle struct {
+	Scope   string       `json:"scope"` // user|project|org
+	Agent   string       `json:"agent"`
+	Project string       `json:"project,omitempty"` // abs path (scope=project)
+	Name    string       `json:"name"`              // unit name, 1-3 clean path segments
+	Version int          `json:"version"`
+	Parent  int          `json:"parent"` // version this was based on
+	Host    string       `json:"host"`
+	Author  string       `json:"author"` // Identity.Name
+	Created time.Time    `json:"created"`
+	Files   []BundleFile `json:"files"`
+	Skills  []SkillMeta  `json:"skills"` // parsed SKILL.md frontmatter, for listing
+}
+
+// BundleFile is one file entry in a Bundle manifest.
+type BundleFile struct {
+	Path   string `json:"path"` // relative, forward slashes, no ".." / abs
+	SHA256 string `json:"sha256"`
+	Size   int64  `json:"size"`
+	Mode   uint32 `json:"mode"` // only the exec bit is honoured
+}
+
+// SkillMeta is the frontmatter summary of one SKILL.md inside a bundle.
+type SkillMeta struct {
+	Path        string `json:"path"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -27,8 +28,59 @@ import (
 // one, home-based sessions are treated as machine-global and detected on
 // every push.
 type Custom struct {
-	AgentName string `json:"name"`
-	Sessions  string `json:"sessions"`
+	AgentName  string        `json:"name"`
+	Sessions   string        `json:"sessions"`
+	ConfigSpec *CustomConfig `json:"config,omitempty"`
+}
+
+// CustomConfig says where a custom agent keeps its configuration (skills,
+// rules, ...) for `stift push/pull --skills`. User patterns must start with
+// "~/" and project patterns must be project-relative; "**" is allowed.
+type CustomConfig struct {
+	User    []string `json:"user,omitempty"`
+	Project []string `json:"project,omitempty"`
+}
+
+// Config implements ConfigDetector. Patterns are grouped by the directory
+// prefix of the first user pattern (e.g. "~/.myagent/skills/**" and
+// "~/.myagent/rules.md" share BaseDir ~/.myagent); patterns that would
+// escape home or the project directory are ignored.
+func (c Custom) Config(home, project string) []ConfigRoot {
+	if c.ConfigSpec == nil {
+		return nil
+	}
+	var roots []ConfigRoot
+	if r, ok := customRoot("user", home, c.ConfigSpec.User, "~/"); ok {
+		roots = append(roots, r)
+	}
+	if project != "" {
+		if r, ok := customRoot("project", project, c.ConfigSpec.Project, ""); ok {
+			roots = append(roots, r)
+		}
+	}
+	return roots
+}
+
+func customRoot(scope, base string, patterns []string, prefix string) (ConfigRoot, bool) {
+	var inc []string
+	for _, p := range patterns {
+		if prefix != "" {
+			if !strings.HasPrefix(p, prefix) {
+				continue
+			}
+			p = p[len(prefix):]
+		}
+		p = strings.TrimPrefix(path.Clean(p), "./")
+		if p == "" || p == "." || path.IsAbs(p) || filepath.IsAbs(filepath.FromSlash(p)) || strings.HasPrefix(p, "~") ||
+			p == ".." || strings.HasPrefix(p, "../") || strings.Contains(p, "/../") {
+			continue
+		}
+		inc = append(inc, p)
+	}
+	if len(inc) == 0 {
+		return ConfigRoot{}, false
+	}
+	return ConfigRoot{Scope: scope, BaseDir: base, Include: inc}, true
 }
 
 func (c Custom) Name() string { return c.AgentName }
@@ -80,6 +132,9 @@ func LoadCustom() ([]Detector, []string) {
 		case !customNameRe.MatchString(def.AgentName):
 			warnings = append(warnings, fmt.Sprintf(
 				"custom agents: entry %d: name %q must be lowercase letters, digits and dashes", i, def.AgentName))
+		case def.ConfigSpec != nil && badConfigPatterns(def.ConfigSpec) != "":
+			warnings = append(warnings, fmt.Sprintf(
+				"custom agents: %q: config: %s", def.AgentName, badConfigPatterns(def.ConfigSpec)))
 		case builtin[def.AgentName]:
 			warnings = append(warnings, fmt.Sprintf(
 				"custom agents: %q overrides a built-in agent name; entry skipped", def.AgentName))
@@ -96,6 +151,27 @@ func LoadCustom() ([]Detector, []string) {
 		}
 	}
 	return out, warnings
+}
+
+// badConfigPatterns returns a description of the first invalid config
+// pattern, or "" when all are acceptable.
+func badConfigPatterns(c *CustomConfig) string {
+	for _, p := range c.User {
+		if !strings.HasPrefix(p, "~/") {
+			return fmt.Sprintf("user pattern %q must start with ~/", p)
+		}
+	}
+	for _, p := range c.Project {
+		if filepath.IsAbs(p) || strings.HasPrefix(p, "~") {
+			return fmt.Sprintf("project pattern %q must be project-relative", p)
+		}
+	}
+	for _, p := range append(append([]string{}, c.User...), c.Project...) {
+		if strings.Contains("/"+p+"/", "/../") {
+			return fmt.Sprintf("pattern %q must not contain ..", p)
+		}
+	}
+	return ""
 }
 
 func (c Custom) Detect(home, project string) ([]LocalSession, error) {

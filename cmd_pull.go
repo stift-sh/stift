@@ -24,11 +24,16 @@ func cmdPull(args []string) error {
 	latest := fs.Bool("latest", false, "pull the most recently updated session matching the filters")
 	projectID := fs.String("project-id", "", "restore every session for this project id into the current directory")
 	force := fs.Bool("force", false, "overwrite existing local files")
-	dryRun := fs.Bool("dry-run", false, "list archive contents without writing anything")
+	dryRun := fs.Bool("dry-run", false, "list archive contents (or, with --skills, the file changes) without writing anything")
+	skills := fs.Bool("skills", false, "pull agent configuration (skills, agents, commands, CLAUDE.md) instead of sessions")
+	scope := fs.String("scope", "user,project,org", "with --skills: scopes to pull (comma-separated)")
+	version := fs.Int("version", 0, "with --skills --name: pull this version of the unit instead of the latest")
+	name := fs.String("name", "", "with --skills: pull only this unit (e.g. skills/deploy, commands/fix-tests, CLAUDE.md)")
 	fs.Usage = func() {
 		fmt.Fprintln(os.Stderr, "usage: stift pull <session-id>")
 		fmt.Fprintln(os.Stderr, "       stift pull --latest [--agent A] [--project P] [--host H]")
 		fmt.Fprintln(os.Stderr, "       stift pull --project-id ID   (restore a whole project here)")
+		fmt.Fprintln(os.Stderr, "       stift pull --skills [--scope user,project,org] [--agent A] [--name UNIT [--version N]] [--dry-run] [--force]")
 		fs.PrintDefaults()
 	}
 	fs.Parse(args)
@@ -36,6 +41,9 @@ func cmdPull(args []string) error {
 	c, err := client.Require()
 	if err != nil {
 		return err
+	}
+	if *skills {
+		return pullSkills(c, *agent, *scope, *project, *name, *version, *force, *dryRun)
 	}
 
 	if *projectID != "" {
