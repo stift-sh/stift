@@ -300,6 +300,7 @@ footer a{color:var(--ink)}
     <li><a href="#server">Self-host a server</a></li>
     <li><a href="#sync">Background sync</a></li>
     <li><a href="#usage">Push &amp; pull</a></li>
+    <li><a href="#skills">Skills &amp; agent config</a></li>
     <li><a href="#custom">Custom agents</a></li>
     <li><a href="#tokens">Tokens &amp; environment</a></li>
     <li><a href="#api">HTTP API</a></li>
@@ -621,6 +622,37 @@ stift push">copy</button></div>
   </ul>
 </section>
 
+<!-- ============ skills ============ -->
+<section class="sec" id="skills">
+  <h2>Skills &amp; agent config</h2>
+  <div class="sec-sub">your skills, subagents, commands and CLAUDE.md — versioned, on every machine</div>
+  <div class="plate">
+    <div class="plate-bar"><span>sh</span><button class="copy" data-copy="stift push --skills
+stift pull --skills
+stift skills list">copy</button></div>
+    <pre><code><span class="c"># push this machine's skills, agents, commands and CLAUDE.md</span>
+<span class="p">$</span> stift push --skills
+
+<span class="c"># on another machine</span>
+<span class="p">$</span> stift pull --skills
+<span class="p">$</span> stift skills list
+
+<span class="c"># every unit has its own history</span>
+<span class="p">$</span> stift skills history skills/deploy
+<span class="p">$</span> stift skills diff skills/deploy
+<span class="p">$</span> stift skills rollback skills/deploy 3
+
+<span class="c"># admins: share a set with the whole team</span>
+<span class="p">$</span> stift push --skills --scope org</code></pre>
+  </div>
+  <ul class="spec">
+    <li><strong>One unit, one version.</strong> Each skill, agent, command and CLAUDE.md is versioned on its own — rolling one back never touches another.</li>
+    <li><strong>Three scopes.</strong> <code>user</code> (<code>~/.claude/…</code>), <code>project</code> (<code>.claude/…</code>) and <code>org</code> — written by admins, pulled by everyone into <code>~/.stift/org</code> and linked in.</li>
+    <li><strong>No surprises.</strong> A push on top of a version you haven't pulled is rejected; <code>settings*.json</code>, <code>.mcp.json</code> and <code>.env</code> files are never synced.</li>
+    <li>Stored as content-addressed files plus a small JSON manifest per version — no database, works the same self-hosted and on Stift Cloud.</li>
+  </ul>
+</section>
+
 <!-- ============ 06 custom agents ============ -->
 <section class="sec" id="custom">
   <h2>Custom agents</h2>
@@ -673,6 +705,7 @@ stift token revoke &lt;id&gt;">copy</button></div>
       <tr><td class="m"><code>STIFT_CONFIG</code></td><td>client</td><td>config file path (default <code>~/.config/stift/config.json</code>)</td></tr>
       <tr><td class="m"><code>STIFT_SYNC_INTERVAL</code></td><td>daemon</td><td>background sync interval (default <code>30s</code>)</td></tr>
       <tr><td class="m"><code>STIFT_HOST</code></td><td>client/daemon</td><td>override this machine's host label (default OS hostname)</td></tr>
+      <tr><td class="m"><code>STIFT_SKILLS_STATE</code></td><td>client</td><td>skills sync state (default <code>~/.config/stift/state.json</code>)</td></tr>
       <tr><td class="m"><code>STIFT_STATE</code></td><td>daemon</td><td>sync-state cache path (default <code>~/.cache/stift/sync-state.json</code>)</td></tr>
       <tr><td class="m"><code>STIFT_LISTEN</code>, <code>STIFT_DATA</code></td><td>server</td><td>listen address / data directory</td></tr>
       <tr><td class="m"><code>STIFT_ADMIN_TOKEN</code></td><td>server</td><td>register a fixed admin token at startup</td></tr>
@@ -692,6 +725,9 @@ stift token revoke &lt;id&gt;">copy</button></div>
       <tr><td class="m"><span class="red">GET</span> /v1/sessions/{id}</td><td>metadata (id prefixes accepted)</td></tr>
       <tr><td class="m"><span class="red">GET</span> /v1/sessions/{id}/archive</td><td>download tar.gz</td></tr>
       <tr><td class="m"><span class="red">DELETE</span> /v1/sessions/{id}</td><td>delete</td></tr>
+      <tr><td class="m"><span class="red">POST</span> /v1/blobs/check · <span class="red">PUT/GET</span> /v1/blobs/{sha}</td><td>content-addressed files for skills</td></tr>
+      <tr><td class="m"><span class="red">GET</span> /v1/bundles?scope=&amp;agent=&amp;project=&amp;name=</td><td>list skill units (current versions)</td></tr>
+      <tr><td class="m"><span class="red">PUT/GET/DELETE</span> /v1/bundles/{scope}/{agent}/{name}</td><td>one unit; <code>?version=</code>, <code>?history=1</code>, <code>?force=1</code>; 409 when stale</td></tr>
       <tr><td class="m"><span class="red">GET</span> /v1/whoami</td><td>token name + role</td></tr>
       <tr><td class="m"><span class="red">GET/POST/DELETE</span> /v1/tokens</td><td>token management (admin only)</td></tr>
       <tr><td class="m"><span class="red">GET</span> /healthz</td><td>liveness (no auth)</td></tr>
