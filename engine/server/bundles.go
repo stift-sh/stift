@@ -66,7 +66,7 @@ const MaxNameSegments = 3
 // clean relative forward-slash path of 1 to MaxNameSegments segments using
 // the same character rules as manifest file paths.
 func ValidUnitName(name string) bool {
-	if !validBundlePath(name) {
+	if !ValidBundlePath(name) {
 		return false
 	}
 	if n := strings.Count(name, "/") + 1; n > MaxNameSegments {
@@ -80,7 +80,8 @@ func ValidUnitName(name string) bool {
 	return true
 }
 
-func validSHA(sha string) bool {
+// ValidSHA reports whether sha is a lowercase hex SHA-256 digest.
+func ValidSHA(sha string) bool {
 	if len(sha) != 64 {
 		return false
 	}
@@ -92,8 +93,8 @@ func validSHA(sha string) bool {
 	return true
 }
 
-// validSegment guards scope/agent names used as path segments.
-func validSegment(seg string) bool {
+// ValidSegment guards scope/agent names used as path segments.
+func ValidSegment(seg string) bool {
 	if seg == "" {
 		return false
 	}
@@ -105,13 +106,14 @@ func validSegment(seg string) bool {
 	return seg != "." && seg != ".."
 }
 
-func validKey(k BundleKey) error {
+// ValidKey reports whether k names a storable bundle (scope, agent, project, unit name).
+func ValidKey(k BundleKey) error {
 	switch k.Scope {
 	case "user", "project", "org":
 	default:
 		return fmt.Errorf("invalid scope %q", k.Scope)
 	}
-	if !validSegment(k.Agent) {
+	if !ValidSegment(k.Agent) {
 		return fmt.Errorf("invalid agent %q", k.Agent)
 	}
 	if (k.Scope == "project") != (k.Project != "") {
@@ -123,8 +125,8 @@ func validKey(k BundleKey) error {
 	return nil
 }
 
-// validBundlePath accepts clean, relative, forward-slash paths only.
-func validBundlePath(p string) bool {
+// ValidBundlePath accepts clean, relative, forward-slash paths only.
+func ValidBundlePath(p string) bool {
 	if p == "" || strings.HasPrefix(p, "/") || strings.Contains(p, "\\") || strings.ContainsRune(p, 0) {
 		return false
 	}
@@ -149,12 +151,12 @@ func validBundlePath(p string) bool {
 // ---- blobs ----
 
 func (s *DiskStore) HasBlobs(tenant string, shas []string) ([]string, error) {
-	if !validTenant(tenant) {
+	if !ValidTenant(tenant) {
 		return nil, fmt.Errorf("invalid tenant %q", tenant)
 	}
 	missing := []string{}
 	for _, sha := range shas {
-		if !validSHA(sha) {
+		if !ValidSHA(sha) {
 			return nil, fmt.Errorf("invalid sha256 %q", sha)
 		}
 		if _, err := os.Stat(s.blobFile(tenant, sha)); err != nil {
@@ -165,10 +167,10 @@ func (s *DiskStore) HasBlobs(tenant string, shas []string) ([]string, error) {
 }
 
 func (s *DiskStore) PutBlob(tenant, sha string, r io.Reader, size int64) error {
-	if !validTenant(tenant) {
+	if !ValidTenant(tenant) {
 		return fmt.Errorf("invalid tenant %q", tenant)
 	}
-	if !validSHA(sha) {
+	if !ValidSHA(sha) {
 		return fmt.Errorf("invalid sha256 %q", sha)
 	}
 	dst := s.blobFile(tenant, sha)
@@ -207,7 +209,7 @@ func (s *DiskStore) PutBlob(tenant, sha string, r io.Reader, size int64) error {
 }
 
 func (s *DiskStore) OpenBlob(tenant, sha string) (io.ReadCloser, error) {
-	if !validTenant(tenant) || !validSHA(sha) {
+	if !ValidTenant(tenant) || !ValidSHA(sha) {
 		return nil, os.ErrNotExist
 	}
 	return os.Open(s.blobFile(tenant, sha))
@@ -255,7 +257,7 @@ func (s *DiskStore) loadBundleTenant(tenant, dir string) error {
 			return nil
 		}
 		k := BundleKey{Scope: b.Scope, Agent: b.Agent, Project: b.Project, Name: b.Name}
-		if validKey(k) != nil {
+		if ValidKey(k) != nil {
 			return nil
 		}
 		s.headsFor(tenant)[k] = &b
@@ -299,22 +301,22 @@ func (s *DiskStore) headsFor(tenant string) map[BundleKey]*api.Bundle {
 }
 
 func (s *DiskStore) PutBundle(tenant string, k BundleKey, b api.Bundle, force bool) (api.Bundle, error) {
-	if !validTenant(tenant) {
+	if !ValidTenant(tenant) {
 		return api.Bundle{}, fmt.Errorf("invalid tenant %q", tenant)
 	}
-	if err := validKey(k); err != nil {
+	if err := ValidKey(k); err != nil {
 		return api.Bundle{}, err
 	}
 	seen := map[string]bool{}
 	for _, f := range b.Files {
-		if !validBundlePath(f.Path) {
+		if !ValidBundlePath(f.Path) {
 			return api.Bundle{}, fmt.Errorf("invalid file path %q", f.Path)
 		}
 		if seen[f.Path] {
 			return api.Bundle{}, fmt.Errorf("duplicate file path %q", f.Path)
 		}
 		seen[f.Path] = true
-		if !validSHA(f.SHA256) {
+		if !ValidSHA(f.SHA256) {
 			return api.Bundle{}, fmt.Errorf("invalid sha256 %q for %s", f.SHA256, f.Path)
 		}
 	}
@@ -382,7 +384,7 @@ func (s *DiskStore) PutBundle(tenant string, k BundleKey, b api.Bundle, force bo
 }
 
 func (s *DiskStore) GetBundle(tenant string, k BundleKey, version int) (api.Bundle, bool) {
-	if !validTenant(tenant) || validKey(k) != nil {
+	if !ValidTenant(tenant) || ValidKey(k) != nil {
 		return api.Bundle{}, false
 	}
 	s.bmu.Lock()
@@ -402,7 +404,7 @@ func (s *DiskStore) GetBundle(tenant string, k BundleKey, version int) (api.Bund
 
 func (s *DiskStore) ListBundles(tenant string, f BundleFilter) []api.Bundle {
 	out := []api.Bundle{}
-	if !validTenant(tenant) {
+	if !ValidTenant(tenant) {
 		return out
 	}
 	s.bmu.Lock()
@@ -440,7 +442,7 @@ func (s *DiskStore) ListBundles(tenant string, f BundleFilter) []api.Bundle {
 
 func (s *DiskStore) BundleHistory(tenant string, k BundleKey) []api.Bundle {
 	out := []api.Bundle{}
-	if !validTenant(tenant) || validKey(k) != nil {
+	if !ValidTenant(tenant) || ValidKey(k) != nil {
 		return out
 	}
 	s.bmu.Lock()
@@ -459,10 +461,10 @@ func (s *DiskStore) BundleHistory(tenant string, k BundleKey) []api.Bundle {
 }
 
 func (s *DiskStore) DeleteBundle(tenant string, k BundleKey) error {
-	if !validTenant(tenant) {
+	if !ValidTenant(tenant) {
 		return fmt.Errorf("invalid tenant %q", tenant)
 	}
-	if err := validKey(k); err != nil {
+	if err := ValidKey(k); err != nil {
 		return err
 	}
 	s.bmu.Lock()
@@ -512,7 +514,7 @@ func (s *DiskStore) parseSkills(tenant string, files []api.BundleFile) ([]api.Sk
 		if err != nil {
 			return nil, fmt.Errorf("%w: %s", ErrMissingBlob, f.SHA256)
 		}
-		name, desc := parseFrontmatter(io.LimitReader(rc, 64<<10))
+		name, desc := ParseFrontmatter(io.LimitReader(rc, 64<<10))
 		rc.Close()
 		skills = append(skills, api.SkillMeta{Path: f.Path, Name: name, Description: desc})
 	}
@@ -520,10 +522,10 @@ func (s *DiskStore) parseSkills(tenant string, files []api.BundleFile) ([]api.Sk
 	return skills, nil
 }
 
-// parseFrontmatter reads a leading "---" YAML-ish block and returns the
+// ParseFrontmatter reads a leading "---" YAML-ish block and returns the
 // top-level name and description scalars. Only simple "key: value" lines are
 // understood; quotes around the value are stripped.
-func parseFrontmatter(r io.Reader) (name, desc string) {
+func ParseFrontmatter(r io.Reader) (name, desc string) {
 	sc := bufio.NewScanner(r)
 	sc.Buffer(make([]byte, 64<<10), 64<<10)
 	if !sc.Scan() || strings.TrimSpace(strings.TrimPrefix(sc.Text(), "\ufeff")) != "---" {

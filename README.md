@@ -78,7 +78,15 @@ detached process where neither exists) runs every ~30s and:
 - **pushes** every changed agent session across *all* your projects, and
 - **pulls** sessions for projects you're actively working on here, restoring
   them so the local agent sees them — **never overwriting a live local file**
-  (conflicts are logged, not applied).
+  (conflicts are logged, not applied), and
+- **syncs skills and agent config** (see [Skills](#skills-and-agent-configuration)):
+  units in user scope and in every project seen here are pushed once they have
+  been unchanged for 2 minutes (`STIFT_SKILLS_DEBOUNCE`), so half-edited skills
+  are not published; newer server versions are pulled when your local copy is
+  untouched since the last sync, and org units are always applied and linked.
+  A unit that changed on both sides is logged once and left alone — resolve
+  with `stift pull --skills` / `stift push --skills`; the daemon never forces.
+  Set `STIFT_SYNC_SKILLS=0` to sync sessions only.
 
 On a second machine, point stift at a folder and it pulls that project's history
 right away; later sessions keep syncing automatically:
@@ -256,6 +264,8 @@ stift token revoke <id>
 | `STIFT_SERVER`, `STIFT_TOKEN` | client | override saved login (handy for CI) |
 | `STIFT_CONFIG` | client | config file path (default `~/.config/stift/config.json`) |
 | `STIFT_SYNC_INTERVAL` | daemon | background sync interval (default `30s`) |
+| `STIFT_SYNC_SKILLS` | daemon | `0` disables skills/agent-config sync in the daemon |
+| `STIFT_SKILLS_DEBOUNCE` | daemon | how long a unit must be unchanged before the daemon pushes it (default `2m`) |
 | `STIFT_HOST` | client/daemon | override this machine's host label (default OS hostname) |
 | `STIFT_STATE` | daemon | sync-state cache path (default `~/.cache/stift/sync-state.json`) |
 | `STIFT_SKILLS_STATE` | client | skills sync state (default `~/.config/stift/state.json`) |

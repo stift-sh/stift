@@ -102,7 +102,7 @@ Client:
   stift token create|list|revoke    Manage access tokens (admin)
 
 Background sync:
-  stift start | stop | restart      Control the background auto-sync service
+  stift start | stop | restart      Control the background auto-sync service (sessions + skills)
   stift status                      Show sync status
   stift link [project-id]           Link this project & pull its sessions here
   stift unlink | links              Remove / list project links
@@ -112,7 +112,8 @@ cursor (Cursor CLI), opencode, aider. Add your own in
 ~/.config/stift/agents.json — see the Custom agents section of the README.
 
 Environment: STIFT_SERVER, STIFT_TOKEN, STIFT_CONFIG, STIFT_AGENTS, STIFT_SKILLS_STATE,
-STIFT_DATA, STIFT_ADMIN_TOKEN (serve), STIFT_SYNC_INTERVAL, STIFT_STATE.
+STIFT_DATA, STIFT_ADMIN_TOKEN (serve), STIFT_SYNC_INTERVAL, STIFT_STATE,
+STIFT_SYNC_SKILLS (0 = sessions only), STIFT_SKILLS_DEBOUNCE (default 2m).
 
 Run "stift COMMAND -h" for command flags.
 `)

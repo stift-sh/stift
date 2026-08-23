@@ -166,9 +166,9 @@ func newID() string {
 	return hex.EncodeToString(b)
 }
 
-// validTenant guards tenant names used as on-disk path segments against
+// ValidTenant guards tenant names used as on-disk path segments against
 // traversal and separators.
-func validTenant(tenant string) bool {
+func ValidTenant(tenant string) bool {
 	if tenant == "" {
 		return true
 	}
@@ -199,7 +199,7 @@ func (s *DiskStore) scopeLocked(tenant string) *scope {
 }
 
 func (s *DiskStore) Put(tenant string, meta api.Session, archive io.Reader) (api.Session, string, error) {
-	if !validTenant(tenant) {
+	if !ValidTenant(tenant) {
 		return api.Session{}, "", fmt.Errorf("invalid tenant %q", tenant)
 	}
 	dir := s.tenantDir(tenant)

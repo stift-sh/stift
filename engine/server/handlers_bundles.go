@@ -63,7 +63,7 @@ func (s *Server) handleBlobsCheck(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleBlobPut(w http.ResponseWriter, r *http.Request) {
 	sha := r.PathValue("sha")
-	if !validSHA(sha) {
+	if !ValidSHA(sha) {
 		writeErr(w, http.StatusBadRequest, "invalid sha256 in path")
 		return
 	}
@@ -92,7 +92,7 @@ func (s *Server) handleBlobPut(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleBlobGet(w http.ResponseWriter, r *http.Request) {
 	sha := r.PathValue("sha")
-	if !validSHA(sha) {
+	if !ValidSHA(sha) {
 		writeErr(w, http.StatusBadRequest, "invalid sha256 in path")
 		return
 	}

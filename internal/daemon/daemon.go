@@ -26,6 +26,7 @@ type Daemon struct {
 	home   string
 	host   string
 	state  *State
+	skills *skillsSync // nil when STIFT_SYNC_SKILLS=0
 	log    *log.Logger
 }
 
@@ -35,7 +36,11 @@ func New(c *client.Client, home, host string, logger *log.Logger) (*Daemon, erro
 	if err != nil {
 		return nil, err
 	}
-	return &Daemon{client: c, home: home, host: host, state: st, log: logger}, nil
+	d := &Daemon{client: c, home: home, host: host, state: st, log: logger}
+	if skillsEnabled() {
+		d.skills = newSkillsSync(skillsDebounce())
+	}
+	return d, nil
 }
 
 // Run performs an immediate sync, then repeats every interval until ctx is done.
@@ -43,7 +48,11 @@ func (d *Daemon) Run(ctx context.Context, interval time.Duration) {
 	if interval <= 0 {
 		interval = DefaultInterval
 	}
-	d.log.Printf("stift daemon started (interval %s, host %s)", interval, d.host)
+	skills := "off"
+	if d.skills != nil {
+		skills = "debounce " + d.skills.deb.window.String()
+	}
+	d.log.Printf("stift daemon started (interval %s, host %s, skills %s)", interval, d.host, skills)
 	d.SyncOnce()
 	t := time.NewTicker(interval)
 	defer t.Stop()
@@ -58,7 +67,8 @@ func (d *Daemon) Run(ctx context.Context, interval time.Duration) {
 	}
 }
 
-// SyncOnce runs one push pass followed by one reconcile pass and persists state.
+// SyncOnce runs one push pass, one reconcile pass and one skills pass, then
+// persists state.
 func (d *Daemon) SyncOnce() {
 	targets := d.pushPass()
 	links, err := client.LoadLinks()
@@ -71,6 +81,7 @@ func (d *Daemon) SyncOnce() {
 		}
 	}
 	d.reconcilePass(targets)
+	d.skillsPass(targets)
 	if err := d.state.Save(); err != nil {
 		d.log.Printf("state save: %v", err)
 	}
