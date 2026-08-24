@@ -523,20 +523,36 @@ func (s *DiskStore) parseSkills(tenant string, files []api.BundleFile) ([]api.Sk
 }
 
 // ParseFrontmatter reads a leading "---" YAML-ish block and returns the
-// top-level name and description scalars. Only simple "key: value" lines are
-// understood; quotes around the value are stripped.
+// top-level name and description scalars. Simple "key: value" lines and
+// ">" / "|" block scalars (folded to one line) are understood; quotes around
+// the value are stripped.
 func ParseFrontmatter(r io.Reader) (name, desc string) {
 	sc := bufio.NewScanner(r)
 	sc.Buffer(make([]byte, 64<<10), 64<<10)
 	if !sc.Scan() || strings.TrimSpace(strings.TrimPrefix(sc.Text(), "\ufeff")) != "---" {
 		return "", ""
 	}
+	var block *string // target of a ">" / "|" block scalar being collected
+	var blockLines []string
+	flush := func() {
+		if block != nil {
+			*block = strings.TrimSpace(strings.Join(blockLines, " "))
+		}
+		block, blockLines = nil, nil
+	}
 	for sc.Scan() {
 		line := sc.Text()
 		if strings.TrimSpace(line) == "---" {
 			break
 		}
-		if line == "" || line[0] == ' ' || line[0] == '\t' || line[0] == '#' {
+		if line == "" || line[0] == ' ' || line[0] == '\t' {
+			if block != nil && strings.TrimSpace(line) != "" {
+				blockLines = append(blockLines, strings.TrimSpace(line))
+			}
+			continue
+		}
+		flush()
+		if line[0] == '#' {
 			continue
 		}
 		key, val, ok := strings.Cut(line, ":")
@@ -544,6 +560,15 @@ func ParseFrontmatter(r io.Reader) (name, desc string) {
 			continue
 		}
 		val = strings.TrimSpace(val)
+		if val == ">" || val == "|" || val == ">-" || val == "|-" {
+			switch strings.TrimSpace(key) {
+			case "name":
+				block = &name
+			case "description":
+				block = &desc
+			}
+			continue
+		}
 		if len(val) >= 2 && (val[0] == '"' && val[len(val)-1] == '"' || val[0] == '\'' && val[len(val)-1] == '\'') {
 			val = val[1 : len(val)-1]
 		}
@@ -554,5 +579,6 @@ func ParseFrontmatter(r io.Reader) (name, desc string) {
 			desc = val
 		}
 	}
+	flush()
 	return name, desc
 }
