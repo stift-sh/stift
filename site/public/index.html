@@ -150,11 +150,7 @@ button.copy.done{background:var(--graphite);color:var(--canvas)}
 
 /* ascii figure */
 figure.fig{margin:28px 0;max-width:860px;background:var(--fog);border-radius:6px 0 0 0}
-figure.fig pre{
-  padding:36px 20px;overflow-x:auto;text-align:center;font-family:var(--mono);
-  font-size:clamp(10px,1.5vw,13px);line-height:1.5;color:var(--steel);
-}
-figure.fig .arrow{color:var(--ember)}
+figure.fig svg{display:block;width:100%;height:auto;padding:24px 20px 8px}
 figure.fig figcaption{
   padding:0 20px 16px;font-family:var(--display);
   font-size:13px;letter-spacing:-0.02em;color:var(--brass);
@@ -291,17 +287,47 @@ footer a:hover{color:var(--ember)}
   <h2>How it works</h2>
   <div class="sec-sub">one server, every machine in sync</div>
   <p>
-    Deploy a single binary (or container) on any server. On first start it prints
-    an admin token. Every dev machine logs in once, then pushes and pulls sessions
-    for the project it is standing in.
+    Every dev machine logs in once with <code>stift login</code>. That starts a
+    background service which watches your agents' session directories and syncs
+    them to the server, and restores sessions other machines have pushed. The
+    server is either <strong>Stift Cloud</strong> (hosted) or a single MIT binary you
+    run yourself. Same engine, same client.
   </p>
   <figure class="fig">
-    <pre>
-     laptop <span class="arrow">──push──▶</span> ┌───────────────┐ <span class="arrow">◀──push──</span> desktop
-                      │     stift     │
-workstation <span class="arrow">◀──pull──</span> │  your server  │ <span class="arrow">──pull──▶</span> new machine
-                      └───────────────┘</pre>
-    <figcaption>fig. 1 — sync topology</figcaption>
+    <svg viewBox="0 0 760 300" role="img" aria-label="laptop, desktop and a new machine each run a background sync service that talks to one stift server" xmlns="http://www.w3.org/2000/svg" font-family="Inter,system-ui,sans-serif" font-size="13">
+      <defs><marker id="ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" fill="#ff682c"/></marker></defs>
+      <g fill="#ffffff" stroke="#e8e8e8">
+        <rect x="20" y="40" width="170" height="64" rx="6"/>
+        <rect x="20" y="120" width="170" height="64" rx="6"/>
+        <rect x="20" y="200" width="170" height="64" rx="6"/>
+        <rect x="500" y="80" width="240" height="144" rx="6"/>
+      </g>
+      <g fill="#202020">
+        <text x="36" y="66">laptop</text>
+        <text x="36" y="146">desktop</text>
+        <text x="36" y="226">new machine</text>
+        <text x="520" y="110" font-size="15">stift server</text>
+      </g>
+      <g fill="#828282" font-size="12">
+        <text x="36" y="86">stift daemon · claude, codex, …</text>
+        <text x="36" y="166">stift daemon · cursor, gemini, …</text>
+        <text x="36" y="246">stift login → sessions restored</text>
+        <text x="520" y="134">Stift Cloud, or self-hosted binary</text>
+        <text x="520" y="170">sessions · tar.gz + metadata</text>
+        <text x="520" y="190">skills &amp; agent config · versioned</text>
+        <text x="520" y="210">tokens · hashed, per machine</text>
+      </g>
+      <g fill="none" stroke="#ff682c" stroke-width="1.2" marker-start="url(#ah)" marker-end="url(#ah)">
+        <path d="M196 72 C 330 72, 360 116, 494 116"/>
+        <path d="M196 152 L 494 152"/>
+        <path d="M196 232 C 330 232, 360 188, 494 188"/>
+      </g>
+      <g fill="#816729" font-size="12">
+        <text x="345" y="60" text-anchor="middle">background sync, every 30s</text>
+        <text x="345" y="264" text-anchor="middle">push / pull on demand</text>
+      </g>
+    </svg>
+    <figcaption>fig. 1 — every machine syncs with one server, in the background</figcaption>
   </figure>
   <p>
     Zero runtime dependencies (pure Go stdlib), no database server — sessions are
