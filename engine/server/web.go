@@ -41,13 +41,14 @@ const webUI = `<!doctype html>
   #token { width: 28rem; max-width: 60vw; font-family: var(--mono); font-size: 13px; }
   button { font-family: var(--display); font-size: 15px; font-weight: 400; letter-spacing: -0.02em; line-height: 1;
            background: var(--ink); color: #fff; border: 1px solid var(--ink); border-radius: 0;
+           text-decoration: underline; text-decoration-color: var(--ember); text-decoration-thickness: 1px; text-underline-offset: 3px;
            padding: 10px 20px; cursor: pointer; transition: background .12s, color .12s, border-color .12s; }
   button:hover { background: var(--steel); border-color: var(--steel); }
-  td button { background: transparent; color: var(--ink); border-color: var(--slate); padding: 6px 12px; font-size: 13px; }
-  td button:hover { background: transparent; color: var(--ember); border-color: var(--ember); }
+  td button { background: transparent; color: var(--ink); border-color: var(--ink); text-decoration: none; padding: 6px 12px; font-size: 13px; }
+  td button:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
   table { border-collapse: collapse; width: 100%; margin-top: 40px; font-size: 15px; }
   th { font-family: var(--display); font-weight: 400; font-size: 13px; letter-spacing: -0.02em; color: var(--slate); }
-  th, td { text-align: left; padding: 14px 16px; border-bottom: 1px solid var(--mist); white-space: nowrap; }
+  th, td { text-align: left; vertical-align: middle; padding: 14px 16px; border-bottom: 1px solid var(--mist); white-space: nowrap; }
   tr:hover td { background: var(--fog); }
   td:first-child { font-family: var(--mono); font-size: 13px; color: var(--steel); }
   td.title { white-space: normal; max-width: 24rem; color: var(--steel); }
@@ -97,8 +98,11 @@ async function load() {
       const cells = [s.id.slice(0,8), s.agent, s.host, s.project || '—', s.title || '—',
                      hsize(s.size), new Date(s.updated_at).toLocaleString()];
       tr.innerHTML = cells.map((c,i) =>
-        '<td class="' + (i===1?'agent':i===4?'title':'') + '"></td>').join('');
-      [...tr.children].forEach((td,i) => td.textContent = cells[i]);
+        '<td class="' + (i===4?'title':'') + '"></td>').join('');
+      [...tr.children].forEach((td,i) => {
+        if (i === 1) { const b = document.createElement('span'); b.className = 'agent'; b.textContent = cells[i]; td.appendChild(b); }
+        else td.textContent = cells[i];
+      });
       const act = document.createElement('td');
       const dl = document.createElement('button'); dl.textContent = 'Download';
       dl.title = 'Download archive';
