@@ -105,3 +105,55 @@ export const Version = z
   .object({ version: z.string(), api: z.int().describe("API major version") })
   .meta({ id: "Version" });
 export type Version = z.infer<typeof Version>;
+
+/** Multipart `meta` part of POST /v1/sessions: what the client sends. */
+export const PushMeta = Session.omit({ id: true, sha256: true, size: true, created_at: true, updated_at: true })
+  .partial({ files: true, mod_time: true })
+  .meta({ id: "PushMeta" });
+export type PushMeta = z.infer<typeof PushMeta>;
+
+/** Query filters for GET /v1/sessions. */
+export const SessionFilter = z
+  .object({
+    agent: z.string().optional(),
+    project: z.string().optional(),
+    host: z.string().optional(),
+    q: z.string().optional().describe("substring match on title, project or session_id"),
+  })
+  .meta({ id: "SessionFilter" });
+export type SessionFilter = z.infer<typeof SessionFilter>;
+
+/** Body of POST /v1/blobs/check. */
+export const BlobsCheckRequest = z.object({ shas: z.array(z.string()) }).meta({ id: "BlobsCheckRequest" });
+export type BlobsCheckRequest = z.infer<typeof BlobsCheckRequest>;
+
+/** Returned by POST /v1/blobs/check: digests the server does not have. */
+export const BlobsCheckResponse = z.object({ missing: z.array(z.string()) }).meta({ id: "BlobsCheckResponse" });
+export type BlobsCheckResponse = z.infer<typeof BlobsCheckResponse>;
+
+/** Returned by PUT /v1/blobs/{sha}. */
+export const BlobPutResponse = z.object({ sha: z.string() }).meta({ id: "BlobPutResponse" });
+export type BlobPutResponse = z.infer<typeof BlobPutResponse>;
+
+/** Query filters for GET /v1/bundles. */
+export const BundleFilter = z
+  .object({
+    scope: z.string().optional(),
+    agent: z.string().optional(),
+    project: z.string().optional(),
+    name: z.string().optional(),
+  })
+  .meta({ id: "BundleFilter" });
+export type BundleFilter = z.infer<typeof BundleFilter>;
+
+/** Body of PUT /v1/bundles/…: key fields come from the path and are ignored. */
+export const BundleInput = Bundle.pick({ parent: true, host: true, author: true, files: true })
+  .partial()
+  .meta({ id: "BundleInput" });
+export type BundleInput = z.infer<typeof BundleInput>;
+
+/** Body of POST /v1/tokens. */
+export const TokenCreateRequest = z
+  .object({ name: z.string(), admin: z.boolean().optional() })
+  .meta({ id: "TokenCreateRequest" });
+export type TokenCreateRequest = z.infer<typeof TokenCreateRequest>;

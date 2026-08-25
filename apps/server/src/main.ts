@@ -3,6 +3,9 @@ import { createApp } from "./app.js";
 import { bootstrap } from "./auth/bootstrap.js";
 import { authFromEnv } from "./auth/config.js";
 import { connect, runMigrations } from "./db/client.js";
+import { limitsFromEnv } from "./limits.js";
+import { BlobStore, blobConfigFromEnv } from "./storage/blobs.js";
+import { PgStore } from "./storage/store.js";
 
 const version = process.env.STIFT_VERSION ?? "dev";
 const port = Number(process.env.PORT ?? 8580);
@@ -13,7 +16,9 @@ const { db } = connect(dbUrl);
 await runMigrations(db);
 const auth = authFromEnv(db);
 if (auth.local) await bootstrap(db);
+const limits = limitsFromEnv();
+const store = new PgStore(db, new BlobStore(blobConfigFromEnv()));
 
-serve({ fetch: createApp({ version, auth: auth.authenticator }).fetch, port }, (info) => {
+serve({ fetch: createApp({ version, auth: auth.authenticator, store, db, limits }).fetch, port }, (info) => {
   console.log(`stift server ${version} listening on :${info.port}`);
 });
