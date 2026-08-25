@@ -12,6 +12,15 @@ export type Version = {
     api: number;
 };
 
+export type Whoami = {
+    name: string;
+    admin: boolean;
+};
+
+export type _Error = {
+    error: string;
+};
+
 export type GetHealthzData = {
     body?: never;
     path?: never;
@@ -43,3 +52,28 @@ export type GetApiVersionResponses = {
 };
 
 export type GetApiVersionResponse = GetApiVersionResponses[keyof GetApiVersionResponses];
+
+export type GetV1WhoamiData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/whoami';
+};
+
+export type GetV1WhoamiErrors = {
+    /**
+     * missing or invalid bearer token
+     */
+    401: _Error;
+};
+
+export type GetV1WhoamiError = GetV1WhoamiErrors[keyof GetV1WhoamiErrors];
+
+export type GetV1WhoamiResponses = {
+    /**
+     * the caller
+     */
+    200: Whoami;
+};
+
+export type GetV1WhoamiResponse = GetV1WhoamiResponses[keyof GetV1WhoamiResponses];

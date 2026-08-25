@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetApiVersionData, GetApiVersionResponses, GetHealthzData, GetHealthzResponses } from './types.gen';
+import type { GetApiVersionData, GetApiVersionResponses, GetHealthzData, GetHealthzResponses, GetV1WhoamiData, GetV1WhoamiErrors, GetV1WhoamiResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -28,6 +28,19 @@ export const getHealthz = <ThrowOnError extends boolean = false>(options?: Optio
 export const getApiVersion = <ThrowOnError extends boolean = false>(options?: Options<GetApiVersionData, ThrowOnError>) => {
     return (options?.client ?? client).get<GetApiVersionResponses, unknown, ThrowOnError>({
         url: '/api/version',
+        ...options
+    });
+};
+
+export const getV1Whoami = <ThrowOnError extends boolean = false>(options?: Options<GetV1WhoamiData, ThrowOnError>) => {
+    return (options?.client ?? client).get<GetV1WhoamiResponses, GetV1WhoamiErrors, ThrowOnError>({
+        security: [
+            {
+                scheme: 'bearer',
+                type: 'http'
+            }
+        ],
+        url: '/v1/whoami',
         ...options
     });
 };

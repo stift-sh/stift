@@ -5,6 +5,13 @@
     "version": "0.0.0"
   },
   "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "stift access token (stf_…)"
+      }
+    },
     "schemas": {
       "Version": {
         "type": "object",
@@ -20,6 +27,32 @@
         "required": [
           "version",
           "api"
+        ]
+      },
+      "Whoami": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "admin": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "admin"
+        ]
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
         ]
       }
     },
@@ -60,6 +93,40 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Version"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/whoami": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "the caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Whoami"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "missing or invalid bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }

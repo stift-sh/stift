@@ -271,6 +271,8 @@ stift token revoke <id>
 | `STIFT_SKILLS_STATE` | client | skills sync state (default `~/.config/stift/state.json`) |
 | `STIFT_LISTEN`, `STIFT_DATA` | server | listen address / data directory |
 | `STIFT_ADMIN_TOKEN` | server | register a fixed admin token at startup |
+| `STIFT_DATABASE_URL` | server (TS) | Postgres connection string (required) |
+| `STIFT_AUTH` | server (TS) | comma-separated authenticators (default `local`) |
 
 ## Server: deploy in one minute
 
