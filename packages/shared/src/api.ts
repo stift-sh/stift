@@ -1,0 +1,107 @@
+// Wire types shared by the stift server, web app and generated clients.
+// Mirrors cli/engine/api/types.go field for field; the Go side will be
+// generated from the OpenAPI document emitted by the server.
+import { z } from "zod";
+
+const timestamp = z.iso.datetime({ offset: true });
+
+/** One uploaded agent session. */
+export const Session = z
+  .object({
+    id: z.string(),
+    key: z.string(),
+    agent: z.string(),
+    session_id: z.string(),
+    project: z.string().optional(),
+    project_id: z.string().optional().describe("repo name, for cross-machine matching"),
+    repo: z.string().optional().describe("normalized git remote URL (secondary signal)"),
+    host: z.string(),
+    title: z.string().optional(),
+    base: z.enum(["home", "project"]).describe("what archive paths are relative to"),
+    files: z.int(),
+    size: z.int(),
+    sha256: z.string(),
+    mod_time: timestamp,
+    created_at: timestamp,
+    updated_at: timestamp,
+  })
+  .meta({ id: "Session" });
+export type Session = z.infer<typeof Session>;
+
+/** Returned by POST /v1/sessions. */
+export const PushResult = z
+  .object({
+    session: Session,
+    status: z.enum(["created", "updated", "unchanged"]),
+  })
+  .meta({ id: "PushResult" });
+export type PushResult = z.infer<typeof PushResult>;
+
+/** An access token (the secret itself is never stored). */
+export const TokenInfo = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    admin: z.boolean(),
+    created_at: timestamp,
+  })
+  .meta({ id: "TokenInfo" });
+export type TokenInfo = z.infer<typeof TokenInfo>;
+
+/** Returned by POST /v1/tokens; `token` is shown exactly once. */
+export const TokenCreated = TokenInfo.extend({ token: z.string() }).meta({ id: "TokenCreated" });
+export type TokenCreated = z.infer<typeof TokenCreated>;
+
+/** Returned by GET /v1/whoami. */
+export const Whoami = z.object({ name: z.string(), admin: z.boolean() }).meta({ id: "Whoami" });
+export type Whoami = z.infer<typeof Whoami>;
+
+/** JSON error envelope. */
+export const ApiError = z.object({ error: z.string() }).meta({ id: "Error" });
+export type ApiError = z.infer<typeof ApiError>;
+
+/** One file entry in a Bundle manifest. */
+export const BundleFile = z
+  .object({
+    path: z.string().describe("relative, forward slashes, no '..' / abs"),
+    sha256: z.string(),
+    size: z.int(),
+    mode: z.int().describe("only the exec bit is honoured"),
+  })
+  .meta({ id: "BundleFile" });
+export type BundleFile = z.infer<typeof BundleFile>;
+
+/** Frontmatter summary of one SKILL.md inside a bundle. */
+export const SkillMeta = z
+  .object({ path: z.string(), name: z.string(), description: z.string() })
+  .meta({ id: "SkillMeta" });
+export type SkillMeta = z.infer<typeof SkillMeta>;
+
+/**
+ * One versioned manifest of a single unit of agent configuration (a skill,
+ * a subagent, a command file, a CLAUDE.md, ...) identified by
+ * (scope, agent, project?, name). File contents live in content-addressed
+ * blobs referenced by sha256.
+ */
+export const Bundle = z
+  .object({
+    scope: z.enum(["user", "project", "org"]),
+    agent: z.string(),
+    project: z.string().optional().describe("abs path (scope=project)"),
+    name: z.string().describe("unit name, 1-3 clean path segments"),
+    version: z.int(),
+    parent: z.int().describe("version this was based on"),
+    host: z.string(),
+    author: z.string(),
+    created: timestamp,
+    files: z.array(BundleFile),
+    skills: z.array(SkillMeta).describe("parsed SKILL.md frontmatter, for listing"),
+  })
+  .meta({ id: "Bundle" });
+export type Bundle = z.infer<typeof Bundle>;
+
+/** Returned by GET /api/version. */
+export const Version = z
+  .object({ version: z.string(), api: z.int().describe("API major version") })
+  .meta({ id: "Version" });
+export type Version = z.infer<typeof Version>;

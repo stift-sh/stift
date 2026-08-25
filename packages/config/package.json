@@ -1,1 +1,6 @@
-{"name":"@stift/config","private":true}
+{
+  "name": "@stift/config",
+  "private": true,
+  "version": "0.0.0",
+  "files": ["tsconfig.base.json"]
+}

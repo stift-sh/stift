@@ -1,0 +1,5 @@
+{
+  "extends": "@stift/config/tsconfig.base.json",
+  "compilerOptions": { "rootDir": ".", "outDir": "dist", "types": ["node"] },
+  "include": ["src", "scripts"]
+}
