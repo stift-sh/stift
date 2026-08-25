@@ -5,21 +5,29 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/main.ts",
-    "start": "node dist/main.js",
-    "build": "tsc -p tsconfig.json && node dist/scripts/emit-openapi.js",
+    "start": "node dist/src/main.js",
+    "build": "tsc -p tsconfig.json && cp -r src/db/migrations dist/src/db/ && node dist/scripts/emit-openapi.js",
     "lint": "tsc -p tsconfig.json --noEmit",
-    "test": "node --test --import tsx src/**/*.test.ts"
+    "test": "node --test --import tsx \"src/**/*.test.ts\"",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/db/migrate.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1118.0",
+    "@aws-sdk/lib-storage": "^3.1118.0",
     "@hono/node-server": "^1.19.0",
     "@hono/zod-openapi": "^1.1.0",
     "@stift/shared": "workspace:*",
+    "drizzle-orm": "^0.45.2",
     "hono": "^4.9.0",
+    "pg": "^8.23.0",
     "zod": "^4.1.0"
   },
   "devDependencies": {
     "@stift/config": "workspace:*",
     "@types/node": "^22.0.0",
+    "@types/pg": "^8.23.1",
+    "drizzle-kit": "^0.31.10",
     "tsx": "^4.20.0",
     "typescript": "^5.9.0"
   }

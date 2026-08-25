@@ -10,3 +10,7 @@ node_modules/
 /apps/website/public/install.sh
 /apps/website/public/proxmox.sh
 /stift-data/
+
+# local env
+.env
+.env.local

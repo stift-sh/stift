@@ -1,0 +1,52 @@
+# Local development and the self-host quickstart: Postgres for metadata,
+# MinIO for blobs. The server reads DATABASE_URL and STIFT_S3_* (see
+# apps/server/.env.example).
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: stift
+      POSTGRES_PASSWORD: stift
+      POSTGRES_DB: stift
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stift"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: stift
+      MINIO_ROOT_PASSWORD: stiftstift
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  # One-shot: creates the bucket the server expects, then exits.
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 stift stiftstift &&
+      mc mb --ignore-existing local/stift
+      "
+
+volumes:
+  postgres:
+  minio:

@@ -1,0 +1,54 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: stift
+          POSTGRES_PASSWORD: stift
+          POSTGRES_DB: stift
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U stift" --health-interval 2s
+          --health-timeout 5s --health-retries 30
+      minio:
+        image: bitnami/minio:latest
+        env:
+          MINIO_ROOT_USER: stift
+          MINIO_ROOT_PASSWORD: stiftstift
+          MINIO_DEFAULT_BUCKETS: stift
+        ports: ["9000:9000"]
+        options: >-
+          --health-cmd "curl -f http://localhost:9000/minio/health/live" --health-interval 2s
+          --health-timeout 5s --health-retries 30
+    env:
+      STIFT_TEST_DATABASE_URL: postgres://stift:stift@localhost:5432/stift
+      STIFT_S3_BUCKET: stift
+      STIFT_S3_ENDPOINT: http://localhost:9000
+      STIFT_S3_ACCESS_KEY: stift
+      STIFT_S3_SECRET_KEY: stiftstift
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+      - run: pnpm install --frozen-lockfile
+      - name: Build and check generated clients are current
+        run: pnpm check:generated
+      - name: Lint
+        run: pnpm lint
+      - name: Test (includes the storage contract suite against Postgres + MinIO)
+        run: pnpm test
