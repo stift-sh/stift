@@ -1,0 +1,5 @@
+# oapi-codegen config; input is apps/server/openapi.gen.json.
+package: api
+output: gen.go
+generate:
+  models: true

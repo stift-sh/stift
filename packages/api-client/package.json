@@ -1,1 +1,19 @@
-{"name":"@stift/api-client","private":true}
+{
+  "name": "@stift/api-client",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "scripts": {
+    "generate": "openapi-ts",
+    "build": "openapi-ts && tsc -p tsconfig.json",
+    "lint": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": { "@hey-api/client-fetch": "^0.13.0" },
+  "devDependencies": {
+    "@hey-api/openapi-ts": "^0.84.0",
+    "@stift/config": "workspace:*",
+    "@stift/server": "workspace:*",
+    "typescript": "^5.9.0"
+  }
+}

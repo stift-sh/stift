@@ -5,7 +5,8 @@
   "scripts": {
     "build": "turbo run build",
     "test": "turbo run test",
-    "lint": "turbo run lint"
+    "lint": "turbo run lint",
+    "check:generated": "turbo run build && git diff --exit-code -- apps/server/openapi.gen.json packages/api-client/src/generated cli/internal/api/gen.go"
   },
   "devDependencies": {
     "turbo": "^2.5.6"

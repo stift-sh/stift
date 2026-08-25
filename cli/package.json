@@ -2,8 +2,12 @@
   "name": "@stift/cli",
   "private": true,
   "scripts": {
-    "build": "CGO_ENABLED=0 go build -trimpath -o bin/stift .",
+    "build": "go generate ./internal/api && CGO_ENABLED=0 go build -trimpath -o bin/stift .",
     "test": "go test ./...",
-    "lint": "go vet ./..."
+    "lint": "go vet ./...",
+    "generate": "go generate ./internal/api"
+  },
+  "devDependencies": {
+    "@stift/server": "workspace:*"
   }
 }
