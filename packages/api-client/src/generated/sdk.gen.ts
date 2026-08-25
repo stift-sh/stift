@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { DeleteV1TokensByIdData, DeleteV1TokensByIdErrors, DeleteV1TokensByIdResponses, GetApiVersionData, GetApiVersionResponses, GetHealthzData, GetHealthzResponses, GetV1TokensData, GetV1TokensErrors, GetV1TokensResponses, GetV1WhoamiData, GetV1WhoamiErrors, GetV1WhoamiResponses, PostV1TokensData, PostV1TokensErrors, PostV1TokensResponses } from './types.gen';
+import type { DeleteV1TokensByIdData, DeleteV1TokensByIdErrors, DeleteV1TokensByIdResponses, GetApiVersionData, GetApiVersionResponses, GetHealthzData, GetHealthzResponses, GetV1BlobsByShaData, GetV1BlobsByShaErrors, GetV1BlobsByShaResponses, GetV1TokensData, GetV1TokensErrors, GetV1TokensResponses, GetV1WhoamiData, GetV1WhoamiErrors, GetV1WhoamiResponses, PostV1BlobsCheckData, PostV1BlobsCheckErrors, PostV1BlobsCheckResponses, PostV1TokensData, PostV1TokensErrors, PostV1TokensResponses, PutV1BlobsByShaData, PutV1BlobsByShaErrors, PutV1BlobsByShaResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -42,6 +42,54 @@ export const getV1Whoami = <ThrowOnError extends boolean = false>(options?: Opti
         ],
         url: '/v1/whoami',
         ...options
+    });
+};
+
+export const postV1BlobsCheck = <ThrowOnError extends boolean = false>(options: Options<PostV1BlobsCheckData, ThrowOnError>) => {
+    return (options.client ?? client).post<PostV1BlobsCheckResponses, PostV1BlobsCheckErrors, ThrowOnError>({
+        security: [
+            {
+                scheme: 'bearer',
+                type: 'http'
+            }
+        ],
+        url: '/v1/blobs/check',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+export const getV1BlobsBySha = <ThrowOnError extends boolean = false>(options: Options<GetV1BlobsByShaData, ThrowOnError>) => {
+    return (options.client ?? client).get<GetV1BlobsByShaResponses, GetV1BlobsByShaErrors, ThrowOnError>({
+        security: [
+            {
+                scheme: 'bearer',
+                type: 'http'
+            }
+        ],
+        url: '/v1/blobs/{sha}',
+        ...options
+    });
+};
+
+export const putV1BlobsBySha = <ThrowOnError extends boolean = false>(options: Options<PutV1BlobsByShaData, ThrowOnError>) => {
+    return (options.client ?? client).put<PutV1BlobsByShaResponses, PutV1BlobsByShaErrors, ThrowOnError>({
+        bodySerializer: null,
+        security: [
+            {
+                scheme: 'bearer',
+                type: 'http'
+            }
+        ],
+        url: '/v1/blobs/{sha}',
+        ...options,
+        headers: {
+            'Content-Type': 'application/octet-stream',
+            ...options.headers
+        }
     });
 };
 

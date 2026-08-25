@@ -1,6 +1,7 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { Authenticator } from "./auth/authenticator.js";
 import { bearer, requireAdmin, type AuthEnv } from "./auth/middleware.js";
+import { blobs } from "./routes/blobs.js";
 import { health } from "./routes/health.js";
 import { tokens } from "./routes/tokens.js";
 import { whoami } from "./routes/whoami.js";
@@ -45,8 +46,7 @@ export function createApp(opts: AppOptions) {
   const db = opts.db ?? unavailable<Db>("database");
   const store = opts.store ?? unavailable<Store>("store");
   const limits = opts.limits ?? DEFAULT_LIMITS;
-  void store;
-  void limits;
+  app.route("/", blobs(store, limits));
 
   app.use("/v1/tokens", requireAdmin);
   app.use("/v1/tokens/*", requireAdmin);

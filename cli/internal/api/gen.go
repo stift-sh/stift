@@ -7,6 +7,21 @@ import (
 	"time"
 )
 
+// BlobPutResponse defines model for BlobPutResponse.
+type BlobPutResponse struct {
+	Sha string `json:"sha"`
+}
+
+// BlobsCheckRequest defines model for BlobsCheckRequest.
+type BlobsCheckRequest struct {
+	Shas []string `json:"shas"`
+}
+
+// BlobsCheckResponse defines model for BlobsCheckResponse.
+type BlobsCheckResponse struct {
+	Missing []string `json:"missing"`
+}
+
 // Error defines model for Error.
 type Error struct {
 	Error string `json:"error"`
@@ -47,6 +62,9 @@ type Whoami struct {
 	Admin bool   `json:"admin"`
 	Name  string `json:"name"`
 }
+
+// PostV1BlobsCheckJSONRequestBody defines body for PostV1BlobsCheck for application/json ContentType.
+type PostV1BlobsCheckJSONRequestBody = BlobsCheckRequest
 
 // PostV1TokensJSONRequestBody defines body for PostV1Tokens for application/json ContentType.
 type PostV1TokensJSONRequestBody = TokenCreateRequest

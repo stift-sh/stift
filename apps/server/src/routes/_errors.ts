@@ -1,6 +1,8 @@
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { ApiError } from "@stift/shared";
+import { HashMismatchError } from "../storage/blobs.js";
+import { MissingBlobError, NotFoundError, StaleError } from "../storage/errors.js";
 
 /** `{"error": msg}` with the exact Go server wording; the CLI prints it. */
 export const err = <S extends ContentfulStatusCode>(c: Context, status: S, error: string) => c.json({ error }, status);
@@ -19,3 +21,12 @@ export const errors = {
   413: json("payload too large"),
   500: json("server error"),
 } as const;
+
+/** Maps storage errors to the Go server's status codes; rethrows the rest. */
+export function storeError(c: Context, e: unknown) {
+  if (e instanceof NotFoundError) return err(c, 404, e.message);
+  if (e instanceof StaleError) return err(c, 409, e.message);
+  if (e instanceof MissingBlobError) return err(c, 412, e.message);
+  if (e instanceof HashMismatchError) return err(c, 400, e.message);
+  throw e;
+}

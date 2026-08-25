@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { Readable, Transform } from "node:stream";
+import { Readable, Transform, pipeline } from "node:stream";
 import {
   CopyObjectCommand,
   DeleteObjectCommand,
@@ -101,9 +101,11 @@ export class BlobStore {
         cb(null, chunk);
       },
     });
+    // pipeline (not pipe) forwards source errors, e.g. an aborted or over-limit
+    // upload, into `tap` so upload.done() rejects instead of hanging.
     const upload = new Upload({
       client: this.client,
-      params: { Bucket: this.bucket, Key: tmp, Body: body.pipe(tap) },
+      params: { Bucket: this.bucket, Key: tmp, Body: pipeline(body, tap, () => {}) },
     });
     try {
       await upload.done();

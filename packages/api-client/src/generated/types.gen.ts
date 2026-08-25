@@ -21,6 +21,18 @@ export type _Error = {
     error: string;
 };
 
+export type BlobsCheckResponse = {
+    missing: Array<string>;
+};
+
+export type BlobsCheckRequest = {
+    shas: Array<string>;
+};
+
+export type BlobPutResponse = {
+    sha: string;
+};
+
 export type TokenInfo = {
     id: string;
     name: string;
@@ -97,6 +109,115 @@ export type GetV1WhoamiResponses = {
 };
 
 export type GetV1WhoamiResponse = GetV1WhoamiResponses[keyof GetV1WhoamiResponses];
+
+export type PostV1BlobsCheckData = {
+    body: BlobsCheckRequest;
+    path?: never;
+    query?: never;
+    url: '/v1/blobs/check';
+};
+
+export type PostV1BlobsCheckErrors = {
+    /**
+     * bad request
+     */
+    400: _Error;
+    /**
+     * missing or invalid bearer token
+     */
+    401: _Error;
+};
+
+export type PostV1BlobsCheckError = PostV1BlobsCheckErrors[keyof PostV1BlobsCheckErrors];
+
+export type PostV1BlobsCheckResponses = {
+    /**
+     * digests the server does not have
+     */
+    200: BlobsCheckResponse;
+};
+
+export type PostV1BlobsCheckResponse = PostV1BlobsCheckResponses[keyof PostV1BlobsCheckResponses];
+
+export type GetV1BlobsByShaData = {
+    body?: never;
+    path: {
+        /**
+         * hex sha256 of the content
+         */
+        sha: string;
+    };
+    query?: never;
+    url: '/v1/blobs/{sha}';
+};
+
+export type GetV1BlobsByShaErrors = {
+    /**
+     * bad request
+     */
+    400: _Error;
+    /**
+     * missing or invalid bearer token
+     */
+    401: _Error;
+    /**
+     * not found
+     */
+    404: _Error;
+};
+
+export type GetV1BlobsByShaError = GetV1BlobsByShaErrors[keyof GetV1BlobsByShaErrors];
+
+export type GetV1BlobsByShaResponses = {
+    /**
+     * blob content
+     */
+    200: Blob | File;
+};
+
+export type GetV1BlobsByShaResponse = GetV1BlobsByShaResponses[keyof GetV1BlobsByShaResponses];
+
+export type PutV1BlobsByShaData = {
+    body: Blob | File;
+    path: {
+        /**
+         * hex sha256 of the content
+         */
+        sha: string;
+    };
+    query?: never;
+    url: '/v1/blobs/{sha}';
+};
+
+export type PutV1BlobsByShaErrors = {
+    /**
+     * bad request
+     */
+    400: _Error;
+    /**
+     * missing or invalid bearer token
+     */
+    401: _Error;
+    /**
+     * Content-Length required
+     */
+    411: _Error;
+    /**
+     * payload too large
+     */
+    413: _Error;
+};
+
+export type PutV1BlobsByShaError = PutV1BlobsByShaErrors[keyof PutV1BlobsByShaErrors];
+
+export type PutV1BlobsByShaResponses = {
+    /**
+     * stored (or already present)
+     */
+    200: BlobPutResponse;
+};
+
+export type PutV1BlobsByShaResponse = PutV1BlobsByShaResponses[keyof PutV1BlobsByShaResponses];
 
 export type GetV1TokensData = {
     body?: never;
