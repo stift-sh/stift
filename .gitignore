@@ -1,10 +1,12 @@
-/bin/
-/dist/
-/stift-data/
-stift
+node_modules/
+.turbo/
+/cli/bin/
+/cli/dist/
+/cli/stift-data/
 *.tar.gz
 
 # generated site assets (make site-assets)
-/site/public/dl/
-/site/public/install.sh
-/site/public/proxmox.sh
+/apps/website/public/dl/
+/apps/website/public/install.sh
+/apps/website/public/proxmox.sh
+/stift-data/

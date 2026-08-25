@@ -57,9 +57,9 @@ https://stift.sh/dl/latest/stift-<os>-<arch>      binaries (+ .sha256 each)
 https://stift.sh/dl/<version>/stift-<os>-<arch>   pinned versions
 ```
 
-The stift.sh site itself lives in [`site/`](site/) — a Cloudflare Worker
+The stift.sh site itself lives in [`apps/website/`](apps/website/) — a Cloudflare Worker
 serving the docs page, both scripts, and the `dist/` binaries as static
-assets. `make site-deploy` assembles `site/public/` from `dist/` and runs
+assets. `make site-deploy` assembles `apps/website/public/` from `dist/` and runs
 `wrangler deploy`.
 
 ## Background sync
@@ -277,7 +277,7 @@ stift token revoke <id>
 ### Binary
 
 ```sh
-make build                      # or: go build -o bin/stift .
+make build                      # or: cd cli && go build -o bin/stift .
 ./bin/stift serve --data /var/lib/stift
 ```
 
@@ -313,7 +313,7 @@ downloading), `--token`, `--yes`. See `--help`.
 ### Docker
 
 ```sh
-docker compose up -d            # uses docker-compose.yml in this repo
+docker compose up -d            # uses cli/docker-compose.yml
 docker compose logs stift   # grab the first-boot admin token
 ```
 
@@ -365,7 +365,7 @@ All `/v1` endpoints require `Authorization: Bearer <token>`.
 
 ```sh
 make test      # unit + API tests
-make build     # bin/stift
+make build     # cli/bin/stift
 make release   # cross-compile dist/ for linux/darwin/windows, amd64/arm64
 make docker    # build the container image
 ```

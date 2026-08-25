@@ -1,0 +1,9 @@
+{
+  "name": "@stift/cli",
+  "private": true,
+  "scripts": {
+    "build": "CGO_ENABLED=0 go build -trimpath -o bin/stift .",
+    "test": "go test ./...",
+    "lint": "go vet ./..."
+  }
+}
