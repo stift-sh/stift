@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetApiVersionData, GetApiVersionResponses, GetHealthzData, GetHealthzResponses, GetV1WhoamiData, GetV1WhoamiErrors, GetV1WhoamiResponses } from './types.gen';
+import type { DeleteV1TokensByIdData, DeleteV1TokensByIdErrors, DeleteV1TokensByIdResponses, GetApiVersionData, GetApiVersionResponses, GetHealthzData, GetHealthzResponses, GetV1TokensData, GetV1TokensErrors, GetV1TokensResponses, GetV1WhoamiData, GetV1WhoamiErrors, GetV1WhoamiResponses, PostV1TokensData, PostV1TokensErrors, PostV1TokensResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -41,6 +41,49 @@ export const getV1Whoami = <ThrowOnError extends boolean = false>(options?: Opti
             }
         ],
         url: '/v1/whoami',
+        ...options
+    });
+};
+
+export const getV1Tokens = <ThrowOnError extends boolean = false>(options?: Options<GetV1TokensData, ThrowOnError>) => {
+    return (options?.client ?? client).get<GetV1TokensResponses, GetV1TokensErrors, ThrowOnError>({
+        security: [
+            {
+                scheme: 'bearer',
+                type: 'http'
+            }
+        ],
+        url: '/v1/tokens',
+        ...options
+    });
+};
+
+export const postV1Tokens = <ThrowOnError extends boolean = false>(options: Options<PostV1TokensData, ThrowOnError>) => {
+    return (options.client ?? client).post<PostV1TokensResponses, PostV1TokensErrors, ThrowOnError>({
+        security: [
+            {
+                scheme: 'bearer',
+                type: 'http'
+            }
+        ],
+        url: '/v1/tokens',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+export const deleteV1TokensById = <ThrowOnError extends boolean = false>(options: Options<DeleteV1TokensByIdData, ThrowOnError>) => {
+    return (options.client ?? client).delete<DeleteV1TokensByIdResponses, DeleteV1TokensByIdErrors, ThrowOnError>({
+        security: [
+            {
+                scheme: 'bearer',
+                type: 'http'
+            }
+        ],
+        url: '/v1/tokens/{id}',
         ...options
     });
 };

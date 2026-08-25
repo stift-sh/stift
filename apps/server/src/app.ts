@@ -1,7 +1,8 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { Authenticator } from "./auth/authenticator.js";
-import { bearer, type AuthEnv } from "./auth/middleware.js";
+import { bearer, requireAdmin, type AuthEnv } from "./auth/middleware.js";
 import { health } from "./routes/health.js";
+import { tokens } from "./routes/tokens.js";
 import { whoami } from "./routes/whoami.js";
 import type { Store } from "./storage/store.js";
 import type { Db } from "./db/client.js";
@@ -23,6 +24,16 @@ export type AppOptions = {
 
 const denyAll: Authenticator = { authenticate: async () => null };
 
+/** Stand-in for a dependency the OpenAPI emitter does not provide: routes
+ *  still register, any call throws. */
+function unavailable<T extends object>(what: string): T {
+  return new Proxy({} as T, {
+    get() {
+      throw new Error(`${what} not configured`);
+    },
+  });
+}
+
 /** Builds the HTTP app. Kept separate from main.ts so tests and the
  *  OpenAPI emitter can construct it without starting a listener. */
 export function createApp(opts: AppOptions) {
@@ -31,9 +42,15 @@ export function createApp(opts: AppOptions) {
 
   app.use("/v1/*", bearer(opts.auth ?? denyAll));
   app.route("/", whoami());
-  // Route modules (sessions, blobs, bundles, tokens) mount here; each takes
-  // opts.store / opts.db and opts.limits ?? DEFAULT_LIMITS.
-  void DEFAULT_LIMITS;
+  const db = opts.db ?? unavailable<Db>("database");
+  const store = opts.store ?? unavailable<Store>("store");
+  const limits = opts.limits ?? DEFAULT_LIMITS;
+  void store;
+  void limits;
+
+  app.use("/v1/tokens", requireAdmin);
+  app.use("/v1/tokens/*", requireAdmin);
+  app.route("/", tokens(db));
 
   app.openAPIRegistry.registerComponent("securitySchemes", "bearerAuth", {
     type: "http",

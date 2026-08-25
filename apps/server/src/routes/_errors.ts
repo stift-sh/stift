@@ -3,7 +3,7 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { ApiError } from "@stift/shared";
 
 /** `{"error": msg}` with the exact Go server wording; the CLI prints it. */
-export const err = (c: Context, status: ContentfulStatusCode, error: string) => c.json({ error }, status);
+export const err = <S extends ContentfulStatusCode>(c: Context, status: S, error: string) => c.json({ error }, status);
 
 const json = (description: string) => ({ description, content: { "application/json": { schema: ApiError } } });
 

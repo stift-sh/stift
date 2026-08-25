@@ -21,6 +21,26 @@ export type _Error = {
     error: string;
 };
 
+export type TokenInfo = {
+    id: string;
+    name: string;
+    admin: boolean;
+    created_at: string;
+};
+
+export type TokenCreated = {
+    id: string;
+    name: string;
+    admin: boolean;
+    created_at: string;
+    token: string;
+};
+
+export type TokenCreateRequest = {
+    name: string;
+    admin?: boolean;
+};
+
 export type GetHealthzData = {
     body?: never;
     path?: never;
@@ -77,3 +97,104 @@ export type GetV1WhoamiResponses = {
 };
 
 export type GetV1WhoamiResponse = GetV1WhoamiResponses[keyof GetV1WhoamiResponses];
+
+export type GetV1TokensData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/tokens';
+};
+
+export type GetV1TokensErrors = {
+    /**
+     * missing or invalid bearer token
+     */
+    401: _Error;
+    /**
+     * forbidden
+     */
+    403: _Error;
+};
+
+export type GetV1TokensError = GetV1TokensErrors[keyof GetV1TokensErrors];
+
+export type GetV1TokensResponses = {
+    /**
+     * all tokens
+     */
+    200: Array<TokenInfo>;
+};
+
+export type GetV1TokensResponse = GetV1TokensResponses[keyof GetV1TokensResponses];
+
+export type PostV1TokensData = {
+    body: TokenCreateRequest;
+    path?: never;
+    query?: never;
+    url: '/v1/tokens';
+};
+
+export type PostV1TokensErrors = {
+    /**
+     * bad request
+     */
+    400: _Error;
+    /**
+     * missing or invalid bearer token
+     */
+    401: _Error;
+    /**
+     * forbidden
+     */
+    403: _Error;
+};
+
+export type PostV1TokensError = PostV1TokensErrors[keyof PostV1TokensErrors];
+
+export type PostV1TokensResponses = {
+    /**
+     * the new token; `token` is shown once
+     */
+    201: TokenCreated;
+};
+
+export type PostV1TokensResponse = PostV1TokensResponses[keyof PostV1TokensResponses];
+
+export type DeleteV1TokensByIdData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/v1/tokens/{id}';
+};
+
+export type DeleteV1TokensByIdErrors = {
+    /**
+     * bad request
+     */
+    400: _Error;
+    /**
+     * missing or invalid bearer token
+     */
+    401: _Error;
+    /**
+     * forbidden
+     */
+    403: _Error;
+    /**
+     * not found
+     */
+    404: _Error;
+};
+
+export type DeleteV1TokensByIdError = DeleteV1TokensByIdErrors[keyof DeleteV1TokensByIdErrors];
+
+export type DeleteV1TokensByIdResponses = {
+    /**
+     * revoked
+     */
+    204: void;
+};
+
+export type DeleteV1TokensByIdResponse = DeleteV1TokensByIdResponses[keyof DeleteV1TokensByIdResponses];
