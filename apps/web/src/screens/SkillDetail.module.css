@@ -1,0 +1,30 @@
+.crumb { margin: 0 0 12px; font-size: 14px; }
+.crumb span { color: var(--ink-faint); }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; align-items: start; }
+@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+.side { display: flex; flex-direction: column; gap: 20px; }
+.plateHead { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-faint); font-family: var(--mono); margin: 0 0 6px; }
+.plate {
+  background: var(--plate); color: var(--plate-text); font-family: var(--mono); font-size: 13px; line-height: 1.5;
+  padding: 16px 20px; border-radius: var(--radius-cards); overflow-x: auto; margin: 0 0 20px; white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.kv { margin: 0; display: grid; gap: 10px 0; font-size: 14px; }
+.row { display: grid; grid-template-columns: 90px 1fr; gap: 12px; align-items: baseline; }
+.row dt { font-size: 13px; color: var(--ink-faint); }
+.row dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.confirm { display: inline-flex; gap: 8px; align-items: center; font-size: 14px; }
+.error { color: var(--accent); font-size: 14px; margin: 0 0 16px; }
+.history { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 13px; }
+.version { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: baseline; }
+.version .meta { color: var(--ink-faint); font-size: 12px; }
+.version .links { display: inline-flex; gap: 10px; font-size: 12px; }
+.current { font-weight: 600; }
+.notice { font-size: 13px; color: var(--ink-soft); background: var(--surface-warm); padding: 8px 12px; border-radius: var(--radius-cards); margin: 0 0 16px; }
+.diffFile { margin: 0 0 20px; }
+.diffHead { display: flex; gap: 10px; align-items: baseline; font-family: var(--mono); font-size: 13px; margin: 0 0 6px; }
+.diffHead .kind { font-size: 11px; text-transform: uppercase; color: var(--ink-faint); }
+.diff { background: var(--plate); color: var(--plate-text); font-family: var(--mono); font-size: 12.5px; line-height: 1.5; border-radius: var(--radius-cards); overflow-x: auto; margin: 0; padding: 8px 0; }
+.diff div { padding: 0 16px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.diff .add { background: rgba(76, 175, 80, 0.22); }
+.diff .del { background: rgba(255, 104, 44, 0.25); }
+.diff .same { color: var(--plate-dim); }

@@ -12,6 +12,8 @@ export const handlers = [
   http.get("*/v1/whoami", ({ request }) =>
     request.headers.get("authorization")?.startsWith("Bearer stf_") ? HttpResponse.json(admin) : unauthorized(),
   ),
+  http.get("*/v1/sessions", () => HttpResponse.json([])),
+  http.get("*/v1/bundles", () => HttpResponse.json([])),
 ];
 export const server = setupServer(...handlers);
 export { http, HttpResponse };

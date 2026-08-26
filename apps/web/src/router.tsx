@@ -5,6 +5,8 @@ import { NotFound, PageHeader } from "./components/States";
 import { Login } from "./screens/Login";
 import { Sessions } from "./screens/Sessions";
 import { SessionDetail } from "./screens/SessionDetail";
+import { Skills } from "./screens/Skills";
+import { SkillDetail } from "./screens/SkillDetail";
 
 function RequireAuth() {
   const token = useToken();
@@ -21,7 +23,6 @@ function RequireAdmin() {
 
 // Placeholders until each screen's own work item lands (web-app.md).
 const placeholder = (title: string) => () => <PageHeader title={title} subtitle="Coming soon." />;
-const Skills = placeholder("Skills");
 const Tokens = placeholder("Tokens");
 const Billing = placeholder("Billing");
 const GettingStarted = placeholder("Get started");
@@ -38,6 +39,7 @@ export const routes: RouteObject[] = [
           { path: "sessions", Component: Sessions },
           { path: "sessions/:id", Component: SessionDetail },
           { path: "skills", Component: Skills },
+          { path: "skills/:scope/:agent/*", Component: SkillDetail },
           { element: <RequireAdmin />, children: [{ path: "tokens", Component: Tokens }] },
           { path: "billing", Component: Billing },
           { path: "start", Component: GettingStarted },
