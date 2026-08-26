@@ -1,4 +1,4 @@
-import { Readable } from "node:stream";
+import type { Readable } from "node:stream";
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { stream } from "hono/streaming";
 import { BlobPutResponse, BlobsCheckRequest, BlobsCheckResponse } from "@stift/shared";
@@ -7,6 +7,7 @@ import type { Limits } from "../limits.js";
 import type { Store } from "../storage/store.js";
 import { validSha } from "../storage/validate.js";
 import { HashMismatchError } from "../storage/blobs.js";
+import { TooLargeError, limited } from "./_body.js";
 import { err, errors } from "./_errors.js";
 
 /** Go: maxBlobCheck / maxBundleManifest. */
@@ -19,36 +20,6 @@ const json = <T extends z.ZodTypeAny>(description: string, schema: T) => ({
   content: { "application/json": { schema } },
 });
 const shaParam = z.object({ sha: z.string().openapi({ description: "hex sha256 of the content" }) });
-
-/** Thrown by the counting limiter when the body outgrows the limit. */
-class TooLargeError extends Error {
-  constructor(readonly limit: number) {
-    super(`blob exceeds limit of ${limit} bytes`);
-  }
-}
-
-/** Port of http.MaxBytesReader: counts bytes and fails once `limit` is passed,
- *  so a lying Content-Length cannot smuggle a larger body through. */
-function limited(body: ReadableStream<Uint8Array>, limit: number): Readable {
-  let seen = 0;
-  const reader = body.getReader();
-  return new Readable({
-    async read() {
-      try {
-        const { done, value } = await reader.read();
-        if (done) return this.push(null);
-        seen += value.byteLength;
-        if (seen > limit) {
-          await reader.cancel().catch(() => {});
-          return this.destroy(new TooLargeError(limit));
-        }
-        this.push(Buffer.from(value));
-      } catch (e) {
-        this.destroy(e as Error);
-      }
-    },
-  });
-}
 
 /** Content-addressed bundle file storage. Mount behind `bearer`. */
 export function blobs(store: Store, limits: Limits) {
@@ -109,11 +80,11 @@ export function blobs(store: Store, limits: Limits) {
       const length = lengthHeader === undefined ? -1 : Number(lengthHeader);
       if (!Number.isInteger(length) || length < 0) return err(c, 411, "Content-Length is required");
       if (length > limits.maxBlobBytes) return err(c, 413, `blob exceeds limit of ${limits.maxBlobBytes} bytes`);
-      const body = limited(c.req.raw.body ?? new ReadableStream({ start: (ctl) => ctl.close() }), limits.maxBlobBytes);
+      const body = limited(c.req.raw.body, limits.maxBlobBytes);
       try {
         await store.putBlob(c.var.identity.tenant, sha, body, length);
       } catch (e) {
-        if (e instanceof TooLargeError) return err(c, 413, e.message);
+        if (e instanceof TooLargeError) return err(c, 413, `blob exceeds limit of ${e.limit} bytes`);
         if (e instanceof HashMismatchError) return err(c, 400, e.message);
         throw e;
       }

@@ -4,8 +4,90 @@
 package api
 
 import (
+	"encoding/json"
 	"time"
+
+	"github.com/oapi-codegen/runtime"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
+
+// Defines values for BundleScope.
+const (
+	BundleScopeOrg     BundleScope = "org"
+	BundleScopeProject BundleScope = "project"
+	BundleScopeUser    BundleScope = "user"
+)
+
+// Valid indicates whether the value is a known member of the BundleScope enum.
+func (e BundleScope) Valid() bool {
+	switch e {
+	case BundleScopeOrg:
+		return true
+	case BundleScopeProject:
+		return true
+	case BundleScopeUser:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PushMetaBase.
+const (
+	PushMetaBaseHome    PushMetaBase = "home"
+	PushMetaBaseProject PushMetaBase = "project"
+)
+
+// Valid indicates whether the value is a known member of the PushMetaBase enum.
+func (e PushMetaBase) Valid() bool {
+	switch e {
+	case PushMetaBaseHome:
+		return true
+	case PushMetaBaseProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PushResultStatus.
+const (
+	Created   PushResultStatus = "created"
+	Unchanged PushResultStatus = "unchanged"
+	Updated   PushResultStatus = "updated"
+)
+
+// Valid indicates whether the value is a known member of the PushResultStatus enum.
+func (e PushResultStatus) Valid() bool {
+	switch e {
+	case Created:
+		return true
+	case Unchanged:
+		return true
+	case Updated:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SessionBase.
+const (
+	SessionBaseHome    SessionBase = "home"
+	SessionBaseProject SessionBase = "project"
+)
+
+// Valid indicates whether the value is a known member of the SessionBase enum.
+func (e SessionBase) Valid() bool {
+	switch e {
+	case SessionBaseHome:
+		return true
+	case SessionBaseProject:
+		return true
+	default:
+		return false
+	}
+}
 
 // BlobPutResponse defines model for BlobPutResponse.
 type BlobPutResponse struct {
@@ -22,9 +104,125 @@ type BlobsCheckResponse struct {
 	Missing []string `json:"missing"`
 }
 
+// Bundle defines model for Bundle.
+type Bundle struct {
+	Agent   string       `json:"agent"`
+	Author  string       `json:"author"`
+	Created time.Time    `json:"created"`
+	Files   []BundleFile `json:"files"`
+	Host    string       `json:"host"`
+
+	// Name unit name, 1-3 clean path segments
+	Name string `json:"name"`
+
+	// Parent version this was based on
+	Parent int `json:"parent"`
+
+	// Project abs path (scope=project)
+	Project *string     `json:"project,omitempty"`
+	Scope   BundleScope `json:"scope"`
+
+	// Skills parsed SKILL.md frontmatter, for listing
+	Skills  []SkillMeta `json:"skills"`
+	Version int         `json:"version"`
+}
+
+// BundleScope defines model for Bundle.Scope.
+type BundleScope string
+
+// BundleFile defines model for BundleFile.
+type BundleFile struct {
+	// Mode only the exec bit is honoured
+	Mode int `json:"mode"`
+
+	// Path relative, forward slashes, no '..' / abs
+	Path   string `json:"path"`
+	Sha256 string `json:"sha256"`
+	Size   int    `json:"size"`
+}
+
+// BundleInput defines model for BundleInput.
+type BundleInput struct {
+	Author *string       `json:"author,omitempty"`
+	Files  *[]BundleFile `json:"files,omitempty"`
+	Host   *string       `json:"host,omitempty"`
+
+	// Parent version this was based on
+	Parent *int `json:"parent,omitempty"`
+}
+
 // Error defines model for Error.
 type Error struct {
 	Error string `json:"error"`
+}
+
+// PushMeta JSON; must precede archive
+type PushMeta struct {
+	Agent string `json:"agent"`
+
+	// Base what archive paths are relative to
+	Base    PushMetaBase `json:"base"`
+	Files   *int         `json:"files,omitempty"`
+	Host    string       `json:"host"`
+	Key     string       `json:"key"`
+	ModTime *time.Time   `json:"mod_time,omitempty"`
+	Project *string      `json:"project,omitempty"`
+
+	// ProjectId repo name, for cross-machine matching
+	ProjectId *string `json:"project_id,omitempty"`
+
+	// Repo normalized git remote URL (secondary signal)
+	Repo      *string `json:"repo,omitempty"`
+	SessionId string  `json:"session_id"`
+	Title     *string `json:"title,omitempty"`
+}
+
+// PushMetaBase what archive paths are relative to
+type PushMetaBase string
+
+// PushResult defines model for PushResult.
+type PushResult struct {
+	Session Session          `json:"session"`
+	Status  PushResultStatus `json:"status"`
+}
+
+// PushResultStatus defines model for PushResult.Status.
+type PushResultStatus string
+
+// Session defines model for Session.
+type Session struct {
+	Agent string `json:"agent"`
+
+	// Base what archive paths are relative to
+	Base      SessionBase `json:"base"`
+	CreatedAt time.Time   `json:"created_at"`
+	Files     int         `json:"files"`
+	Host      string      `json:"host"`
+	Id        string      `json:"id"`
+	Key       string      `json:"key"`
+	ModTime   time.Time   `json:"mod_time"`
+	Project   *string     `json:"project,omitempty"`
+
+	// ProjectId repo name, for cross-machine matching
+	ProjectId *string `json:"project_id,omitempty"`
+
+	// Repo normalized git remote URL (secondary signal)
+	Repo      *string   `json:"repo,omitempty"`
+	SessionId string    `json:"session_id"`
+	Sha256    string    `json:"sha256"`
+	Size      int       `json:"size"`
+	Title     *string   `json:"title,omitempty"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// SessionBase what archive paths are relative to
+type SessionBase string
+
+// SkillMeta defines model for SkillMeta.
+type SkillMeta struct {
+	Description string `json:"description"`
+	Name        string `json:"name"`
+	Path        string `json:"path"`
 }
 
 // TokenCreateRequest defines model for TokenCreateRequest.
@@ -63,8 +261,143 @@ type Whoami struct {
 	Name  string `json:"name"`
 }
 
+// GetV1BundlesParams defines parameters for GetV1Bundles.
+type GetV1BundlesParams struct {
+	Scope   *string `form:"scope,omitempty" json:"scope,omitempty"`
+	Agent   *string `form:"agent,omitempty" json:"agent,omitempty"`
+	Project *string `form:"project,omitempty" json:"project,omitempty"`
+	Name    *string `form:"name,omitempty" json:"name,omitempty"`
+}
+
+// DeleteV1BundlesScopeAgentNameParams defines parameters for DeleteV1BundlesScopeAgentName.
+type DeleteV1BundlesScopeAgentNameParams struct {
+	// Project abs path, required when scope=project
+	Project *string `form:"project,omitempty" json:"project,omitempty"`
+}
+
+// GetV1BundlesScopeAgentNameParams defines parameters for GetV1BundlesScopeAgentName.
+type GetV1BundlesScopeAgentNameParams struct {
+	// Project abs path, required when scope=project
+	Project *string `form:"project,omitempty" json:"project,omitempty"`
+
+	// Version 0 or absent for HEAD
+	Version *string `form:"version,omitempty" json:"version,omitempty"`
+
+	// History 1 for every version, newest first
+	History *string `form:"history,omitempty" json:"history,omitempty"`
+}
+
+// GetV1BundlesScopeAgentName200JSONResponseBody1 defines parameters for GetV1BundlesScopeAgentName.
+type GetV1BundlesScopeAgentName200JSONResponseBody1 = []Bundle
+
+// GetV1BundlesScopeAgentName200JSONResponseBody defines parameters for GetV1BundlesScopeAgentName.
+type GetV1BundlesScopeAgentName200JSONResponseBody struct {
+	union json.RawMessage
+}
+
+// PutV1BundlesScopeAgentNameParams defines parameters for PutV1BundlesScopeAgentName.
+type PutV1BundlesScopeAgentNameParams struct {
+	// Project abs path, required when scope=project
+	Project *string `form:"project,omitempty" json:"project,omitempty"`
+
+	// Force 1 to overwrite a stale parent
+	Force *string `form:"force,omitempty" json:"force,omitempty"`
+}
+
+// GetV1SessionsParams defines parameters for GetV1Sessions.
+type GetV1SessionsParams struct {
+	Agent   *string `form:"agent,omitempty" json:"agent,omitempty"`
+	Project *string `form:"project,omitempty" json:"project,omitempty"`
+	Host    *string `form:"host,omitempty" json:"host,omitempty"`
+
+	// Q substring match on title, project or session_id
+	Q *string `form:"q,omitempty" json:"q,omitempty"`
+}
+
+// PostV1SessionsMultipartBody defines parameters for PostV1Sessions.
+type PostV1SessionsMultipartBody struct {
+	// Archive tar.gz of the session files
+	Archive openapi_types.File `json:"archive"`
+
+	// Meta JSON; must precede archive
+	Meta PushMeta `json:"meta"`
+}
+
+// GetV1SessionsIdArchiveParams defines parameters for GetV1SessionsIdArchive.
+type GetV1SessionsIdArchiveParams struct {
+	Range *string `json:"range,omitempty"`
+}
+
 // PostV1BlobsCheckJSONRequestBody defines body for PostV1BlobsCheck for application/json ContentType.
 type PostV1BlobsCheckJSONRequestBody = BlobsCheckRequest
 
+// PutV1BundlesScopeAgentNameJSONRequestBody defines body for PutV1BundlesScopeAgentName for application/json ContentType.
+type PutV1BundlesScopeAgentNameJSONRequestBody = BundleInput
+
+// PostV1SessionsMultipartRequestBody defines body for PostV1Sessions for multipart/form-data ContentType.
+type PostV1SessionsMultipartRequestBody PostV1SessionsMultipartBody
+
 // PostV1TokensJSONRequestBody defines body for PostV1Tokens for application/json ContentType.
 type PostV1TokensJSONRequestBody = TokenCreateRequest
+
+// AsBundle returns the union data inside the GetV1BundlesScopeAgentName200JSONResponseBody as a Bundle
+func (t GetV1BundlesScopeAgentName200JSONResponseBody) AsBundle() (Bundle, error) {
+	var body Bundle
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromBundle overwrites any union data inside the GetV1BundlesScopeAgentName200JSONResponseBody as the provided Bundle
+func (t *GetV1BundlesScopeAgentName200JSONResponseBody) FromBundle(v Bundle) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeBundle performs a merge with any union data inside the GetV1BundlesScopeAgentName200JSONResponseBody, using the provided Bundle
+func (t *GetV1BundlesScopeAgentName200JSONResponseBody) MergeBundle(v Bundle) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetV1BundlesScopeAgentName200JSONResponseBody1 returns the union data inside the GetV1BundlesScopeAgentName200JSONResponseBody as a GetV1BundlesScopeAgentName200JSONResponseBody1
+func (t GetV1BundlesScopeAgentName200JSONResponseBody) AsGetV1BundlesScopeAgentName200JSONResponseBody1() (GetV1BundlesScopeAgentName200JSONResponseBody1, error) {
+	var body GetV1BundlesScopeAgentName200JSONResponseBody1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetV1BundlesScopeAgentName200JSONResponseBody1 overwrites any union data inside the GetV1BundlesScopeAgentName200JSONResponseBody as the provided GetV1BundlesScopeAgentName200JSONResponseBody1
+func (t *GetV1BundlesScopeAgentName200JSONResponseBody) FromGetV1BundlesScopeAgentName200JSONResponseBody1(v GetV1BundlesScopeAgentName200JSONResponseBody1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetV1BundlesScopeAgentName200JSONResponseBody1 performs a merge with any union data inside the GetV1BundlesScopeAgentName200JSONResponseBody, using the provided GetV1BundlesScopeAgentName200JSONResponseBody1
+func (t *GetV1BundlesScopeAgentName200JSONResponseBody) MergeGetV1BundlesScopeAgentName200JSONResponseBody1(v GetV1BundlesScopeAgentName200JSONResponseBody1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t GetV1BundlesScopeAgentName200JSONResponseBody) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *GetV1BundlesScopeAgentName200JSONResponseBody) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}

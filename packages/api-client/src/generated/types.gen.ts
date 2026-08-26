@@ -21,6 +21,65 @@ export type _Error = {
     error: string;
 };
 
+export type PushResult = {
+    session: Session;
+    status: 'created' | 'updated' | 'unchanged';
+};
+
+export type Session = {
+    id: string;
+    key: string;
+    agent: string;
+    session_id: string;
+    project?: string;
+    /**
+     * repo name, for cross-machine matching
+     */
+    project_id?: string;
+    /**
+     * normalized git remote URL (secondary signal)
+     */
+    repo?: string;
+    host: string;
+    title?: string;
+    /**
+     * what archive paths are relative to
+     */
+    base: 'home' | 'project';
+    files: number;
+    size: number;
+    sha256: string;
+    mod_time: string;
+    created_at: string;
+    updated_at: string;
+};
+
+/**
+ * JSON; must precede archive
+ */
+export type PushMeta = {
+    key: string;
+    agent: string;
+    session_id: string;
+    project?: string;
+    /**
+     * repo name, for cross-machine matching
+     */
+    project_id?: string;
+    /**
+     * normalized git remote URL (secondary signal)
+     */
+    repo?: string;
+    host: string;
+    title?: string;
+    /**
+     * what archive paths are relative to
+     */
+    base: 'home' | 'project';
+    files?: number;
+    mod_time?: string;
+};
+
 export type BlobsCheckResponse = {
     missing: Array<string>;
 };
@@ -31,6 +90,61 @@ export type BlobsCheckRequest = {
 
 export type BlobPutResponse = {
     sha: string;
+};
+
+export type Bundle = {
+    scope: 'user' | 'project' | 'org';
+    agent: string;
+    /**
+     * abs path (scope=project)
+     */
+    project?: string;
+    /**
+     * unit name, 1-3 clean path segments
+     */
+    name: string;
+    version: number;
+    /**
+     * version this was based on
+     */
+    parent: number;
+    host: string;
+    author: string;
+    created: string;
+    files: Array<BundleFile>;
+    /**
+     * parsed SKILL.md frontmatter, for listing
+     */
+    skills: Array<SkillMeta>;
+};
+
+export type BundleFile = {
+    /**
+     * relative, forward slashes, no '..' / abs
+     */
+    path: string;
+    sha256: string;
+    size: number;
+    /**
+     * only the exec bit is honoured
+     */
+    mode: number;
+};
+
+export type SkillMeta = {
+    path: string;
+    name: string;
+    description: string;
+};
+
+export type BundleInput = {
+    /**
+     * version this was based on
+     */
+    parent?: number;
+    host?: string;
+    author?: string;
+    files?: Array<BundleFile>;
 };
 
 export type TokenInfo = {
@@ -109,6 +223,211 @@ export type GetV1WhoamiResponses = {
 };
 
 export type GetV1WhoamiResponse = GetV1WhoamiResponses[keyof GetV1WhoamiResponses];
+
+export type GetV1SessionsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        agent?: string;
+        project?: string;
+        host?: string;
+        /**
+         * substring match on title, project or session_id
+         */
+        q?: string;
+    };
+    url: '/v1/sessions';
+};
+
+export type GetV1SessionsErrors = {
+    /**
+     * missing or invalid bearer token
+     */
+    401: _Error;
+};
+
+export type GetV1SessionsError = GetV1SessionsErrors[keyof GetV1SessionsErrors];
+
+export type GetV1SessionsResponses = {
+    /**
+     * sessions, most recently updated first
+     */
+    200: Array<Session>;
+};
+
+export type GetV1SessionsResponse = GetV1SessionsResponses[keyof GetV1SessionsResponses];
+
+export type PostV1SessionsData = {
+    body: {
+        meta: PushMeta;
+        /**
+         * tar.gz of the session files
+         */
+        archive: Blob | File;
+    };
+    path?: never;
+    query?: never;
+    url: '/v1/sessions';
+};
+
+export type PostV1SessionsErrors = {
+    /**
+     * bad request
+     */
+    400: _Error;
+    /**
+     * missing or invalid bearer token
+     */
+    401: _Error;
+    /**
+     * payload too large
+     */
+    413: _Error;
+    /**
+     * server error
+     */
+    500: _Error;
+};
+
+export type PostV1SessionsError = PostV1SessionsErrors[keyof PostV1SessionsErrors];
+
+export type PostV1SessionsResponses = {
+    /**
+     * updated or unchanged
+     */
+    200: PushResult;
+    /**
+     * created
+     */
+    201: PushResult;
+};
+
+export type PostV1SessionsResponse = PostV1SessionsResponses[keyof PostV1SessionsResponses];
+
+export type DeleteV1SessionsByIdData = {
+    body?: never;
+    path: {
+        /**
+         * session id or unambiguous prefix
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/v1/sessions/{id}';
+};
+
+export type DeleteV1SessionsByIdErrors = {
+    /**
+     * bad request
+     */
+    400: _Error;
+    /**
+     * missing or invalid bearer token
+     */
+    401: _Error;
+    /**
+     * not found
+     */
+    404: _Error;
+};
+
+export type DeleteV1SessionsByIdError = DeleteV1SessionsByIdErrors[keyof DeleteV1SessionsByIdErrors];
+
+export type DeleteV1SessionsByIdResponses = {
+    /**
+     * deleted
+     */
+    204: void;
+};
+
+export type DeleteV1SessionsByIdResponse = DeleteV1SessionsByIdResponses[keyof DeleteV1SessionsByIdResponses];
+
+export type GetV1SessionsByIdData = {
+    body?: never;
+    path: {
+        /**
+         * session id or unambiguous prefix
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/v1/sessions/{id}';
+};
+
+export type GetV1SessionsByIdErrors = {
+    /**
+     * bad request
+     */
+    400: _Error;
+    /**
+     * missing or invalid bearer token
+     */
+    401: _Error;
+    /**
+     * not found
+     */
+    404: _Error;
+};
+
+export type GetV1SessionsByIdError = GetV1SessionsByIdErrors[keyof GetV1SessionsByIdErrors];
+
+export type GetV1SessionsByIdResponses = {
+    /**
+     * the session
+     */
+    200: Session;
+};
+
+export type GetV1SessionsByIdResponse = GetV1SessionsByIdResponses[keyof GetV1SessionsByIdResponses];
+
+export type GetV1SessionsByIdArchiveData = {
+    body?: never;
+    headers?: {
+        range?: string;
+    };
+    path: {
+        /**
+         * session id or unambiguous prefix
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/v1/sessions/{id}/archive';
+};
+
+export type GetV1SessionsByIdArchiveErrors = {
+    /**
+     * bad request
+     */
+    400: _Error;
+    /**
+     * missing or invalid bearer token
+     */
+    401: _Error;
+    /**
+     * not found
+     */
+    404: _Error;
+    /**
+     * range not satisfiable
+     */
+    416: unknown;
+};
+
+export type GetV1SessionsByIdArchiveError = GetV1SessionsByIdArchiveErrors[keyof GetV1SessionsByIdArchiveErrors];
+
+export type GetV1SessionsByIdArchiveResponses = {
+    /**
+     * the tar.gz archive
+     */
+    200: Blob | File;
+    /**
+     * partial content
+     */
+    206: Blob | File;
+};
+
+export type GetV1SessionsByIdArchiveResponse = GetV1SessionsByIdArchiveResponses[keyof GetV1SessionsByIdArchiveResponses];
 
 export type PostV1BlobsCheckData = {
     body: BlobsCheckRequest;
@@ -218,6 +537,204 @@ export type PutV1BlobsByShaResponses = {
 };
 
 export type PutV1BlobsByShaResponse = PutV1BlobsByShaResponses[keyof PutV1BlobsByShaResponses];
+
+export type GetV1BundlesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        scope?: string;
+        agent?: string;
+        project?: string;
+        name?: string;
+    };
+    url: '/v1/bundles';
+};
+
+export type GetV1BundlesErrors = {
+    /**
+     * missing or invalid bearer token
+     */
+    401: _Error;
+};
+
+export type GetV1BundlesError = GetV1BundlesErrors[keyof GetV1BundlesErrors];
+
+export type GetV1BundlesResponses = {
+    /**
+     * HEAD manifest of every matching bundle
+     */
+    200: Array<Bundle>;
+};
+
+export type GetV1BundlesResponse = GetV1BundlesResponses[keyof GetV1BundlesResponses];
+
+export type DeleteV1BundlesByScopeByAgentByNameData = {
+    body?: never;
+    path: {
+        /**
+         * user | project | org
+         */
+        scope: string;
+        agent: string;
+        /**
+         * unit name, 1-3 path segments
+         */
+        name: string;
+    };
+    query?: {
+        /**
+         * abs path, required when scope=project
+         */
+        project?: string;
+    };
+    url: '/v1/bundles/{scope}/{agent}/{name}';
+};
+
+export type DeleteV1BundlesByScopeByAgentByNameErrors = {
+    /**
+     * bad request
+     */
+    400: _Error;
+    /**
+     * missing or invalid bearer token
+     */
+    401: _Error;
+    /**
+     * forbidden
+     */
+    403: _Error;
+    /**
+     * not found
+     */
+    404: _Error;
+};
+
+export type DeleteV1BundlesByScopeByAgentByNameError = DeleteV1BundlesByScopeByAgentByNameErrors[keyof DeleteV1BundlesByScopeByAgentByNameErrors];
+
+export type DeleteV1BundlesByScopeByAgentByNameResponses = {
+    /**
+     * deleted
+     */
+    204: void;
+};
+
+export type DeleteV1BundlesByScopeByAgentByNameResponse = DeleteV1BundlesByScopeByAgentByNameResponses[keyof DeleteV1BundlesByScopeByAgentByNameResponses];
+
+export type GetV1BundlesByScopeByAgentByNameData = {
+    body?: never;
+    path: {
+        /**
+         * user | project | org
+         */
+        scope: string;
+        agent: string;
+        /**
+         * unit name, 1-3 path segments
+         */
+        name: string;
+    };
+    query?: {
+        /**
+         * abs path, required when scope=project
+         */
+        project?: string;
+        /**
+         * 0 or absent for HEAD
+         */
+        version?: string;
+        /**
+         * 1 for every version, newest first
+         */
+        history?: string;
+    };
+    url: '/v1/bundles/{scope}/{agent}/{name}';
+};
+
+export type GetV1BundlesByScopeByAgentByNameErrors = {
+    /**
+     * bad request
+     */
+    400: _Error;
+    /**
+     * missing or invalid bearer token
+     */
+    401: _Error;
+    /**
+     * not found
+     */
+    404: _Error;
+};
+
+export type GetV1BundlesByScopeByAgentByNameError = GetV1BundlesByScopeByAgentByNameErrors[keyof GetV1BundlesByScopeByAgentByNameErrors];
+
+export type GetV1BundlesByScopeByAgentByNameResponses = {
+    /**
+     * one manifest, or `Bundle[]` with ?history=1
+     */
+    200: Bundle | Array<Bundle>;
+};
+
+export type GetV1BundlesByScopeByAgentByNameResponse = GetV1BundlesByScopeByAgentByNameResponses[keyof GetV1BundlesByScopeByAgentByNameResponses];
+
+export type PutV1BundlesByScopeByAgentByNameData = {
+    body: BundleInput;
+    path: {
+        /**
+         * user | project | org
+         */
+        scope: string;
+        agent: string;
+        /**
+         * unit name, 1-3 path segments
+         */
+        name: string;
+    };
+    query?: {
+        /**
+         * abs path, required when scope=project
+         */
+        project?: string;
+        /**
+         * 1 to overwrite a stale parent
+         */
+        force?: string;
+    };
+    url: '/v1/bundles/{scope}/{agent}/{name}';
+};
+
+export type PutV1BundlesByScopeByAgentByNameErrors = {
+    /**
+     * bad request
+     */
+    400: _Error;
+    /**
+     * missing or invalid bearer token
+     */
+    401: _Error;
+    /**
+     * forbidden
+     */
+    403: _Error;
+    /**
+     * conflict
+     */
+    409: _Error;
+    /**
+     * precondition failed
+     */
+    412: _Error;
+};
+
+export type PutV1BundlesByScopeByAgentByNameError = PutV1BundlesByScopeByAgentByNameErrors[keyof PutV1BundlesByScopeByAgentByNameErrors];
+
+export type PutV1BundlesByScopeByAgentByNameResponses = {
+    /**
+     * the stored version
+     */
+    201: Bundle;
+};
+
+export type PutV1BundlesByScopeByAgentByNameResponse = PutV1BundlesByScopeByAgentByNameResponses[keyof PutV1BundlesByScopeByAgentByNameResponses];
 
 export type GetV1TokensData = {
     body?: never;

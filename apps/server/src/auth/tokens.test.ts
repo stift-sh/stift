@@ -25,7 +25,7 @@ describe("local tokens", { skip: dbUrl ? false : "STIFT_TEST_DATABASE_URL not se
     assert.match(info.id, /^[0-9a-f]{8}$/);
     const auth = new TokenAuthenticator(conn.db);
     assert.deepEqual(await auth.authenticate(raw), { id: info.id, tenant: "", name: "ci", admin: false });
-    assert.equal(await auth.authenticate(raw.slice(0, -1) + "0"), null);
+    assert.equal(await auth.authenticate(raw.slice(0, -1) + (raw.endsWith("0") ? "1" : "0")), null);
     assert.equal(await auth.authenticate("nope"), null);
   });
 

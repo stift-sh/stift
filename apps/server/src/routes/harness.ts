@@ -16,6 +16,9 @@ export const skip = dbUrl ? false : "STIFT_TEST_DATABASE_URL not set";
 
 export type TestApp = { app: App; admin: string; db: Db; close: () => Promise<void> };
 
+/** Empties every table, like a fresh data dir per Go test. */
+export const resetDb = (db: Db) => db.execute(sql`truncate sessions, blobs, bundles, bundle_versions`);
+
 export async function createTestApp(limits: Partial<Limits> = {}): Promise<TestApp> {
   const conn = connect(dbUrl!);
   await runMigrations(conn.db);

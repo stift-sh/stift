@@ -55,6 +55,157 @@
           "error"
         ]
       },
+      "PushResult": {
+        "type": "object",
+        "properties": {
+          "session": {
+            "$ref": "#/components/schemas/Session"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "created",
+              "updated",
+              "unchanged"
+            ]
+          }
+        },
+        "required": [
+          "session",
+          "status"
+        ]
+      },
+      "Session": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "agent": {
+            "type": "string"
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "project": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string",
+            "description": "repo name, for cross-machine matching"
+          },
+          "repo": {
+            "type": "string",
+            "description": "normalized git remote URL (secondary signal)"
+          },
+          "host": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "base": {
+            "type": "string",
+            "enum": [
+              "home",
+              "project"
+            ],
+            "description": "what archive paths are relative to"
+          },
+          "files": {
+            "type": "integer"
+          },
+          "size": {
+            "type": "integer"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "mod_time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "agent",
+          "session_id",
+          "host",
+          "base",
+          "files",
+          "size",
+          "sha256",
+          "mod_time",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "PushMeta": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "agent": {
+            "type": "string"
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "project": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string",
+            "description": "repo name, for cross-machine matching"
+          },
+          "repo": {
+            "type": "string",
+            "description": "normalized git remote URL (secondary signal)"
+          },
+          "host": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "base": {
+            "type": "string",
+            "enum": [
+              "home",
+              "project"
+            ],
+            "description": "what archive paths are relative to"
+          },
+          "files": {
+            "type": "integer"
+          },
+          "mod_time": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "key",
+          "agent",
+          "session_id",
+          "host",
+          "base"
+        ],
+        "description": "JSON; must precede archive"
+      },
       "BlobsCheckResponse": {
         "type": "object",
         "properties": {
@@ -93,6 +244,137 @@
         "required": [
           "sha"
         ]
+      },
+      "Bundle": {
+        "type": "object",
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": [
+              "user",
+              "project",
+              "org"
+            ]
+          },
+          "agent": {
+            "type": "string"
+          },
+          "project": {
+            "type": "string",
+            "description": "abs path (scope=project)"
+          },
+          "name": {
+            "type": "string",
+            "description": "unit name, 1-3 clean path segments"
+          },
+          "version": {
+            "type": "integer"
+          },
+          "parent": {
+            "type": "integer",
+            "description": "version this was based on"
+          },
+          "host": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
+          },
+          "created": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BundleFile"
+            }
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SkillMeta"
+            },
+            "description": "parsed SKILL.md frontmatter, for listing"
+          }
+        },
+        "required": [
+          "scope",
+          "agent",
+          "name",
+          "version",
+          "parent",
+          "host",
+          "author",
+          "created",
+          "files",
+          "skills"
+        ]
+      },
+      "BundleFile": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "relative, forward slashes, no '..' / abs"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer"
+          },
+          "mode": {
+            "type": "integer",
+            "description": "only the exec bit is honoured"
+          }
+        },
+        "required": [
+          "path",
+          "sha256",
+          "size",
+          "mode"
+        ]
+      },
+      "SkillMeta": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "name",
+          "description"
+        ]
+      },
+      "BundleInput": {
+        "type": "object",
+        "properties": {
+          "parent": {
+            "type": "integer",
+            "description": "version this was based on"
+          },
+          "host": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BundleFile"
+            }
+          }
+        }
       },
       "TokenInfo": {
         "type": "object",
@@ -235,6 +517,387 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/v1/sessions": {
+      "post": {
+        "tags": [
+          "sessions"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "meta": {
+                    "$ref": "#/components/schemas/PushMeta"
+                  },
+                  "archive": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "tar.gz of the session files"
+                  }
+                },
+                "required": [
+                  "meta",
+                  "archive"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "updated or unchanged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushResult"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "missing or invalid bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "payload too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "sessions"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "agent",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "project",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "host",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "substring match on title, project or session_id"
+            },
+            "required": false,
+            "description": "substring match on title, project or session_id",
+            "name": "q",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "sessions, most recently updated first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Session"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "missing or invalid bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{id}": {
+      "get": {
+        "tags": [
+          "sessions"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "session id or unambiguous prefix"
+            },
+            "required": true,
+            "description": "session id or unambiguous prefix",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "the session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "missing or invalid bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "sessions"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "session id or unambiguous prefix"
+            },
+            "required": true,
+            "description": "session id or unambiguous prefix",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "deleted"
+          },
+          "400": {
+            "description": "bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "missing or invalid bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{id}/archive": {
+      "get": {
+        "tags": [
+          "sessions"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "session id or unambiguous prefix"
+            },
+            "required": true,
+            "description": "session id or unambiguous prefix",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "range",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "the tar.gz archive",
+            "content": {
+              "application/gzip": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "206": {
+            "description": "partial content",
+            "content": {
+              "application/gzip": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "missing or invalid bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "416": {
+            "description": "range not satisfiable"
           }
         }
       }
@@ -424,6 +1087,428 @@
           },
           "401": {
             "description": "missing or invalid bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/bundles": {
+      "get": {
+        "tags": [
+          "bundles"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "scope",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "agent",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "project",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "name",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HEAD manifest of every matching bundle",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Bundle"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "missing or invalid bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/bundles/{scope}/{agent}/{name}": {
+      "put": {
+        "tags": [
+          "bundles"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "user | project | org"
+            },
+            "required": true,
+            "description": "user | project | org",
+            "name": "scope",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "agent",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "unit name, 1-3 path segments"
+            },
+            "required": true,
+            "description": "unit name, 1-3 path segments",
+            "name": "name",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "abs path, required when scope=project"
+            },
+            "required": false,
+            "description": "abs path, required when scope=project",
+            "name": "project",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "1 to overwrite a stale parent"
+            },
+            "required": false,
+            "description": "1 to overwrite a stale parent",
+            "name": "force",
+            "in": "query"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BundleInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "the stored version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Bundle"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "missing or invalid bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "precondition failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "bundles"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "user | project | org"
+            },
+            "required": true,
+            "description": "user | project | org",
+            "name": "scope",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "agent",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "unit name, 1-3 path segments"
+            },
+            "required": true,
+            "description": "unit name, 1-3 path segments",
+            "name": "name",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "abs path, required when scope=project"
+            },
+            "required": false,
+            "description": "abs path, required when scope=project",
+            "name": "project",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "0 or absent for HEAD"
+            },
+            "required": false,
+            "description": "0 or absent for HEAD",
+            "name": "version",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "1 for every version, newest first"
+            },
+            "required": false,
+            "description": "1 for every version, newest first",
+            "name": "history",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "one manifest, or `Bundle[]` with ?history=1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/Bundle"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Bundle"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "missing or invalid bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "bundles"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "user | project | org"
+            },
+            "required": true,
+            "description": "user | project | org",
+            "name": "scope",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "agent",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "unit name, 1-3 path segments"
+            },
+            "required": true,
+            "description": "unit name, 1-3 path segments",
+            "name": "name",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "abs path, required when scope=project"
+            },
+            "required": false,
+            "description": "abs path, required when scope=project",
+            "name": "project",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "deleted"
+          },
+          "400": {
+            "description": "bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "missing or invalid bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {

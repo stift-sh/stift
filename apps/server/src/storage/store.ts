@@ -31,7 +31,8 @@ export type BundleInput = Partial<Pick<Bundle, "parent" | "host" | "author" | "f
 export interface Store {
   put(tenant: string, meta: SessionInput, archive: Readable): Promise<{ session: Session; status: PutStatus }>;
   get(tenant: string, id: string): Promise<Session | undefined>;
-  openArchive(tenant: string, id: string): Promise<{ body: Readable; session: Session }>;
+  /** `range` is an HTTP Range header value forwarded to the object store. */
+  openArchive(tenant: string, id: string, range?: string): Promise<{ body: Readable; session: Session }>;
   delete(tenant: string, id: string): Promise<void>;
   list(tenant: string, f?: ListFilter): Promise<Session[]>;
   /** Accepts a full or unambiguous-prefix session id. */
@@ -181,10 +182,10 @@ export class PgStore implements Store {
     return row ? toSession(row) : undefined;
   }
 
-  async openArchive(tenant: string, id: string) {
+  async openArchive(tenant: string, id: string, range?: string) {
     const session = await this.get(tenant, id);
     if (!session) throw new NotFoundError(`session ${id} not found`);
-    const obj = await this.blobStore.get(this.blobStore.sessionKey(tenant, id));
+    const obj = await this.blobStore.get(this.blobStore.sessionKey(tenant, id), { range });
     if (!obj) throw new NotFoundError(`archive for session ${id} not found`);
     return { body: obj.body, session };
   }
