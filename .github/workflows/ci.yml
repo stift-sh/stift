@@ -52,3 +52,5 @@ jobs:
         run: pnpm lint
       - name: Test (includes the storage contract suite against Postgres + MinIO)
         run: pnpm test
+      - name: CLI smoke (Go CLI against the TypeScript server)
+        run: ./scripts/cli-smoke.sh
