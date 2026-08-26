@@ -7,6 +7,7 @@ import { Sessions } from "./screens/Sessions";
 import { SessionDetail } from "./screens/SessionDetail";
 import { Skills } from "./screens/Skills";
 import { SkillDetail } from "./screens/SkillDetail";
+import { NewSkill } from "./screens/NewSkill";
 import { Tokens } from "./screens/Tokens";
 import { GettingStarted } from "./screens/GettingStarted";
 
@@ -38,6 +39,7 @@ export const routes: RouteObject[] = [
           { path: "sessions", Component: Sessions },
           { path: "sessions/:id", Component: SessionDetail },
           { path: "skills", Component: Skills },
+          { path: "skills/new", Component: NewSkill },
           { path: "skills/:scope/:agent/*", Component: SkillDetail },
           { element: <RequireAdmin />, children: [{ path: "tokens", Component: Tokens }] },
           { path: "billing", Component: Billing },

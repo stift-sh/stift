@@ -60,7 +60,15 @@ export function Skills() {
 
   return (
     <section>
-      <PageHeader title="Skills" subtitle="Skills, agents, commands and instruction files synced to this server, by scope." />
+      <PageHeader
+        title="Skills"
+        subtitle="Skills, agents, commands and instruction files synced to this server, by scope."
+        actions={
+          <Link to="/skills/new" className="btn btn--sm btn--primary">
+            New skill
+          </Link>
+        }
+      />
       <div className={s.filters} role="search">
         <div className={s.rail} role="tablist" aria-label="Scope">
           {SCOPES.map(([label, key]) => (
@@ -167,7 +175,9 @@ function NothingMatches({ onClear }: { onClear: () => void }) {
 function NoSkills() {
   return (
     <EmptyState title="No skills yet">
-      <p>Push your agent configuration from the CLI and it shows up here, versioned:</p>
+      <p>
+        <Link to="/skills/new">Create one in the browser</Link>, or push your agent configuration from the CLI and it shows up here, versioned:
+      </p>
       <pre className={s.snippet}>
         <code>stift push --skills --scope user</code>
       </pre>

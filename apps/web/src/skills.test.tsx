@@ -65,8 +65,23 @@ beforeEach(() => {
       return HttpResponse.json(next, { status: 201 });
     }),
     http.get("*/v1/blobs/:sha", ({ params }) => new HttpResponse(blobs[String(params.sha)], { headers: { "content-type": "application/octet-stream" } })),
+    http.put("*/v1/blobs/:sha", async ({ request, params }) => {
+      const sha = String(params.sha);
+      uploads[sha] = await request.text();
+      return HttpResponse.json({ sha });
+    }),
   );
 });
+let uploads: Record<string, string> = {};
+beforeEach(() => {
+  uploads = {};
+});
+const expectUploaded = async (text: string) => {
+  const { sha256Hex } = await import("./api/skills");
+  const sha = await sha256Hex(text);
+  expect(uploads[sha]).toBe(text);
+  return sha;
+};
 
 test("lists skills and filters scope and agent through the query string", async () => {
   const { router } = renderApp({ path: "/skills" });
@@ -161,4 +176,79 @@ test("delete confirms inline, calls DELETE and returns to the list", async () =>
   await userEvent.click(screen.getByRole("button", { name: "Confirm" }));
   await waitFor(() => expect(router.state.location.pathname).toBe("/skills"));
   expect(deleted).toMatch(/\/v1\/bundles\/user\/claude\/skills(\/|%2F)hello$/);
+});
+
+test("editing SKILL.md uploads the blob and publishes on top of head", async () => {
+  const { router } = renderApp({ path: "/skills/user/claude/skills/hello" });
+  await screen.findByTestId("rendered");
+  await userEvent.click(screen.getAllByRole("link", { name: "edit" })[0]);
+  await waitFor(() => expect(router.state.location.search).toBe("?edit=SKILL.md"));
+  const ta = await screen.findByRole("textbox", { name: "SKILL.md source" });
+  await waitFor(() => expect(ta).toHaveValue(blobs[SHA2]));
+  expect(screen.getByRole("button", { name: "Save as v3" })).toBeDisabled();
+  await userEvent.type(ta, "edited\n");
+  await userEvent.click(screen.getByRole("button", { name: "Save as v3" }));
+  await waitFor(() => expect(router.state.location.search).toBe(""));
+  const sha = await expectUploaded(blobs[SHA2] + "edited\n");
+  expect(puts).toEqual([{ parent: 2, host: "web", files: [{ path: "SKILL.md", sha256: sha, size: 61, mode: 0o644 }] }]);
+  expect(await screen.findByText("v3 (from v2)")).toBeInTheDocument();
+});
+
+test("a stale save offers overwrite, which retries with force=1", async () => {
+  let forced: string | null = null;
+  server.use(
+    http.put("*/v1/bundles/:scope/:agent/*", async ({ request }) => {
+      const url = new URL(request.url);
+      forced = url.searchParams.get("force");
+      if (forced !== "1") return HttpResponse.json({ error: "stale: current head is version 3, bundle parent is 2" }, { status: 409 });
+      const body = (await request.json()) as { parent: number; files: Bundle["files"] };
+      puts.push(body);
+      return HttpResponse.json(bundle({ version: 4, parent: body.parent, files: body.files }), { status: 201 });
+    }),
+  );
+  renderApp({ path: "/skills/user/claude/skills/hello?edit=SKILL.md" });
+  const ta = await screen.findByRole("textbox", { name: "SKILL.md source" });
+  await waitFor(() => expect(ta).toHaveValue(blobs[SHA2]));
+  await userEvent.type(ta, "x");
+  await userEvent.click(screen.getByRole("button", { name: "Save as v3" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent(/Someone published/);
+  await userEvent.click(screen.getByRole("button", { name: "Overwrite" }));
+  await waitFor(() => expect(forced).toBe("1"));
+  await waitFor(() => expect(puts).toHaveLength(1));
+});
+
+test("add and remove a file publish new versions with the right file sets", async () => {
+  const { router } = renderApp({ path: "/skills/user/claude/skills/hello" });
+  await screen.findByTestId("rendered");
+  await userEvent.click(screen.getByRole("link", { name: "+ add file" }));
+  await userEvent.type(await screen.findByPlaceholderText("reference/notes.md"), "notes.md");
+  await userEvent.type(screen.getByRole("textbox", { name: "file contents" }), "# Notes");
+  await userEvent.click(screen.getByRole("button", { name: "Save as v3" }));
+  await waitFor(() => expect(router.state.location.search).toBe(""));
+  const sha = await expectUploaded("# Notes");
+  expect(puts[0]).toEqual({ parent: 2, host: "web", files: [{ path: "SKILL.md", sha256: SHA2, size: 53, mode: 0o644 }, { path: "notes.md", sha256: sha, size: 7, mode: 0o644 }] });
+
+  const row = (await screen.findByRole("cell", { name: "notes.md" })).closest("tr")!;
+  await userEvent.click(within(row).getByRole("button", { name: "remove" }));
+  await userEvent.click(within(row).getByRole("button", { name: "confirm" }));
+  await waitFor(() => expect(puts).toHaveLength(2));
+  expect(puts[1]).toEqual({ parent: 3, host: "web", files: [{ path: "SKILL.md", sha256: SHA2, size: 53, mode: 0o644 }] });
+  await waitFor(() => expect(screen.queryByRole("cell", { name: "notes.md" })).not.toBeInTheDocument());
+});
+
+test("new skill publishes v1 of skills/<name> and lands on its page", async () => {
+  server.use(
+    http.put("*/v1/bundles/:scope/:agent/*", async ({ request, params }) => {
+      const body = (await request.json()) as { parent: number; files: Bundle["files"] };
+      puts.push({ ...body, name: params["1"], scope: params.scope });
+      return HttpResponse.json(bundle({ name: String(params["1"]), files: body.files }), { status: 201 });
+    }),
+  );
+  const { router } = renderApp({ path: "/skills/new" });
+  await userEvent.type(await screen.findByPlaceholderText("deploy-checklist"), "greet");
+  const ta = screen.getByRole("textbox", { name: "SKILL.md source" });
+  expect(ta).toHaveValue("---\nname: greet\ndescription: \n---\n# greet\n");
+  await userEvent.click(screen.getByRole("button", { name: "Publish v1" }));
+  await waitFor(() => expect(router.state.location.pathname).toBe("/skills/user/claude/skills/greet"));
+  expect(puts[0]).toMatchObject({ parent: 0, host: "web", name: "skills/greet", scope: "user" });
 });

@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { ApiError } from "../api/auth";
-import { fetchBlobText, keyHref, type SkillKey, unitLabel, useBlobText, useBundle, useBundleHistory, useDeleteBundle, useRollback } from "../api/skills";
+import { fetchBlobText, isEditable, keyHref, type SkillKey, unitLabel, useBlobText, useBundle, useBundleHistory, useDeleteBundle, usePublish, useRollback } from "../api/skills";
+import { SkillEditor } from "./SkillEditor";
 import { ErrorState, NotFound, PageHeader, Spinner } from "../components/States";
 import { diffLines, diffManifests, type FileChange, isBinary, MAX_TEXT_DIFF } from "../lib/diff";
 import { ago, fmtBytes, fmtTime } from "../lib/format";
@@ -24,6 +25,8 @@ export function SkillDetail() {
   const [search] = useSearchParams();
   const wanted = num(search.get("v"));
   const diffTo = num(search.get("diff"));
+  const editPath = search.get("edit") ?? undefined;
+  const adding = search.get("add") === "1";
   const navigate = useNavigate();
 
   const head = useBundle(key, 0);
@@ -31,9 +34,14 @@ export function SkillDetail() {
   const history = useBundleHistory(key);
   const rollback = useRollback();
   const del = useDeleteBundle();
+  const removeFile = usePublish();
   const [confirm, setConfirm] = useState<"delete" | "rollback" | null>(null);
+  const [removing, setRemoving] = useState<string | null>(null);
   const [raw, setRaw] = useState(false);
-  useEffect(() => setConfirm(null), [wanted, diffTo]);
+  useEffect(() => {
+    setConfirm(null);
+    setRemoving(null);
+  }, [wanted, diffTo, editPath, adding]);
 
   if (head.isPending || shown.isPending) return <Spinner />;
   if (head.isError || shown.isError) {
@@ -55,8 +63,12 @@ export function SkillDetail() {
   function doDelete() {
     del.mutate(key, { onSuccess: () => navigate("/skills") });
   }
-  const busy = rollback.isPending || del.isPending;
-  const actionError = rollback.error?.message ?? del.error?.message;
+  function doRemove(path: string) {
+    removeFile.mutate({ key, parent: current.version, keep: it.files.filter((f) => f.path !== path), write: [] }, { onSuccess: () => setRemoving(null) });
+  }
+  const busy = rollback.isPending || del.isPending || removeFile.isPending;
+  const actionError = rollback.error?.message ?? del.error?.message ?? removeFile.error?.message;
+  const editing = editPath !== undefined || adding;
 
   const rows: [string, React.ReactNode][] = [
     ["Scope", <span className={it.scope === "org" ? "badge badge--admin" : "badge"}>{it.scope}</span>],
@@ -126,7 +138,9 @@ export function SkillDetail() {
 
       <div className={s.grid}>
         <div>
-          {diffTo ? (
+          {editing ? (
+            <SkillEditor key={editPath ?? "+"} skillKey={key} from={it} head={current} path={adding ? undefined : editPath} />
+          ) : diffTo ? (
             <DiffView key={diffTo} skillKey={key} to={diffTo} />
           ) : (
             <>
@@ -137,6 +151,7 @@ export function SkillDetail() {
                       {md.path} · {fmtBytes(md.size)}
                     </span>
                     <span className={s.toggle} role="group" aria-label="View">
+                      <Link to={keyHref(key, { v: wanted || undefined, edit: md.path })}>edit</Link>
                       <button type="button" className={raw ? "" : s.on} aria-pressed={!raw} onClick={() => setRaw(false)}>rendered</button>
                       <button type="button" className={raw ? s.on : ""} aria-pressed={raw} onClick={() => setRaw(true)}>raw</button>
                     </span>
@@ -151,6 +166,9 @@ export function SkillDetail() {
                       <th>File</th>
                       <th className="num">Size</th>
                       <th className="num">Mode</th>
+                      <th className="num">
+                        <Link to={keyHref(key, { v: wanted || undefined, add: true })}>+ add file</Link>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -159,6 +177,26 @@ export function SkillDetail() {
                         <td className="mono">{f.path}</td>
                         <td className="num mono dim">{fmtBytes(f.size)}</td>
                         <td className="num mono dim">{modeString(f.mode)}</td>
+                        <td className="num">
+                          {removing === f.path ? (
+                            <span className={s.rowActions}>
+                              remove in v{current.version + 1}?
+                              <button type="button" onClick={() => doRemove(f.path)} disabled={busy}>
+                                {removeFile.isPending ? "saving…" : "confirm"}
+                              </button>
+                              <button type="button" onClick={() => setRemoving(null)}>cancel</button>
+                            </span>
+                          ) : (
+                            <span className={s.rowActions}>
+                              {isEditable(f.path) && <Link to={keyHref(key, { v: wanted || undefined, edit: f.path })}>edit</Link>}
+                              {it.files.length > 1 && (
+                                <button type="button" onClick={() => setRemoving(f.path)} disabled={busy}>
+                                  remove
+                                </button>
+                              )}
+                            </span>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
