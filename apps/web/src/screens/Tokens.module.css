@@ -1,0 +1,6 @@
+.form { margin-bottom: 24px; max-width: 640px; }
+.check { display: flex; gap: 8px; align-items: center; font-size: 14px; margin: 0 0 16px; }
+.actions { display: flex; gap: 12px; }
+.confirm { display: inline-flex; gap: 8px; align-items: center; font-size: 14px; }
+.error { color: var(--accent); font-size: 14px; margin: 0 0 12px; }
+.warn { background: var(--surface-warm); padding: 12px 16px; font-size: 14px; margin: 0 0 8px; }

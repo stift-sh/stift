@@ -1,0 +1,25 @@
+.field { margin: 16px 0; border-radius: var(--radius-cards); overflow: hidden; background: var(--plate); }
+.label { display: block; padding: 8px 16px 0; font-size: 12px; font-weight: 500; color: var(--plate-dim); }
+.row { display: flex; align-items: stretch; overflow: hidden; }
+.code {
+  flex: 1;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.7;
+  padding: 10px 16px;
+  overflow-x: auto;
+  white-space: nowrap;
+  color: var(--plate-text);
+}
+.prompt { color: var(--plate-accent); user-select: none; }
+.btn {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--plate-dim);
+  font: inherit;
+  font-size: 13px;
+  padding: 0 16px;
+  cursor: pointer;
+}
+.btn:hover { color: var(--plate-text); }

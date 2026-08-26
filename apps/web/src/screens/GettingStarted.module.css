@@ -1,0 +1,18 @@
+.steps { list-style: none; margin: 0 0 40px; padding: 0; display: flex; flex-direction: column; gap: var(--gap); }
+.step { display: flex; gap: 24px; align-items: flex-start; }
+.step:nth-child(even) { background: var(--surface-warm); }
+.num {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-pill);
+  font-size: 15px;
+}
+.body { flex: 1; min-width: 0; font-size: 15px; }
+.body p { margin: 0 0 8px; }
+.h3 { margin: 6px 0 8px; font-size: 18px; font-weight: 500; }
+.h2 { font-size: 22px; font-weight: 500; margin: 0 0 16px; }
+.note { color: var(--ink-soft); font-size: 14px; margin: 24px 0 12px; }

@@ -7,6 +7,8 @@ import { Sessions } from "./screens/Sessions";
 import { SessionDetail } from "./screens/SessionDetail";
 import { Skills } from "./screens/Skills";
 import { SkillDetail } from "./screens/SkillDetail";
+import { Tokens } from "./screens/Tokens";
+import { GettingStarted } from "./screens/GettingStarted";
 
 function RequireAuth() {
   const token = useToken();
@@ -21,11 +23,8 @@ function RequireAdmin() {
   return me.data?.admin ? <Outlet /> : <NotFound />;
 }
 
-// Placeholders until each screen's own work item lands (web-app.md).
-const placeholder = (title: string) => () => <PageHeader title={title} subtitle="Coming soon." />;
-const Tokens = placeholder("Tokens");
-const Billing = placeholder("Billing");
-const GettingStarted = placeholder("Get started");
+// Placeholder until the cloud billing screen lands (ADR 0001 step 5).
+const Billing = () => <PageHeader title="Billing" subtitle="Coming soon." />;
 
 export const routes: RouteObject[] = [
   { path: "/login", element: <Login /> },

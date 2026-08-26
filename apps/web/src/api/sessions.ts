@@ -3,23 +3,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { deleteV1SessionsById, getV1Sessions, getV1SessionsById, getV1SessionsByIdArchive } from "@stift/api-client";
 import type { Session } from "@stift/shared";
-import { ApiError } from "./auth";
+import { unwrap } from "./unwrap";
 import "./client";
 
 export type SessionFilter = { agent?: string; project?: string; host?: string; q?: string };
-
-type Result<T> = { data?: T; error?: unknown; response: Response };
-
-async function unwrap<T>(call: Promise<Result<T>>, fallback: string): Promise<T> {
-  const res = await call.catch(() => undefined);
-  if (!res) throw new ApiError(0, "could not reach the server");
-  if (res.error !== undefined || (res.data === undefined && res.response.status !== 204)) {
-    const err = res.error;
-    const msg = err && typeof err === "object" && "error" in err && typeof err.error === "string" ? err.error : fallback;
-    throw new ApiError(res.response.status, msg);
-  }
-  return res.data as T;
-}
 
 /** Drops empty filter values so the query key and the URL stay canonical. */
 export function cleanFilter(f: SessionFilter): SessionFilter {
