@@ -1,5 +1,5 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { TokenInfo } from "@stift/shared";
 import type { Db } from "../db/client.js";
 import { tokens } from "../db/schema.js";
@@ -13,7 +13,13 @@ export const TOKEN_PREFIX = "stf_";
 export const hashToken = (raw: string) => createHash("sha256").update(raw).digest("hex");
 
 type Row = typeof tokens.$inferSelect;
-const info = (r: Row): TokenInfo => ({ id: r.id, name: r.name, admin: r.admin, created_at: r.createdAt.toISOString() });
+const info = (r: Row): TokenInfo => ({
+  id: r.id,
+  name: r.name,
+  admin: r.admin,
+  created_at: r.createdAt.toISOString(),
+  last_used_at: r.lastUsedAt ? r.lastUsedAt.toISOString() : null,
+});
 
 /** Mints a new token; the raw secret is returned exactly once. */
 export async function createToken(db: Db, tenant: string, name: string, admin: boolean) {
@@ -59,6 +65,13 @@ export class TokenAuthenticator implements Authenticator {
     const hash = hashToken(raw);
     const row = await this.db.query.tokens.findFirst({ where: eq(tokens.hash, hash) });
     if (!row || !timingSafeEqual(Buffer.from(row.hash), Buffer.from(hash))) return null;
+    // Fire-and-forget, coarse (once a minute) so a chatty daemon does not
+    // write a row per request; errors must never fail the request.
+    void this.db
+      .update(tokens)
+      .set({ lastUsedAt: sql`now()` })
+      .where(and(eq(tokens.id, row.id), sql`(${tokens.lastUsedAt} is null or ${tokens.lastUsedAt} < now() - interval '1 minute')`))
+      .catch(() => {});
     return { id: row.id, tenant: row.tenant, name: row.name, admin: row.admin };
   }
 }

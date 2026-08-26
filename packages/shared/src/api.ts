@@ -44,6 +44,8 @@ export const TokenInfo = z
     name: z.string(),
     admin: z.boolean(),
     created_at: timestamp,
+    /** Null until the token authenticates a request; updated at most once a minute. */
+    last_used_at: timestamp.nullable(),
   })
   .meta({ id: "TokenInfo" });
 export type TokenInfo = z.infer<typeof TokenInfo>;

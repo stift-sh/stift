@@ -44,9 +44,13 @@ func cmdToken(args []string) error {
 			return err
 		}
 		w := tabwriter.NewWriter(os.Stdout, 2, 4, 2, ' ', 0)
-		fmt.Fprintln(w, "ID\tNAME\tADMIN\tCREATED")
+		fmt.Fprintln(w, "ID\tNAME\tADMIN\tCREATED\tLAST USED")
 		for _, t := range tokens {
-			fmt.Fprintf(w, "%s\t%s\t%v\t%s\n", t.ID, t.Name, t.Admin, t.CreatedAt.Local().Format("2006-01-02 15:04"))
+			last := "never"
+			if t.LastUsedAt != nil {
+				last = t.LastUsedAt.Local().Format("2006-01-02 15:04")
+			}
+			fmt.Fprintf(w, "%s\t%s\t%v\t%s\t%s\n", t.ID, t.Name, t.Admin, t.CreatedAt.Local().Format("2006-01-02 15:04"), last)
 		}
 		return w.Flush()
 	case "revoke":

@@ -33,12 +33,16 @@ test("a token created in the UI works in the CLI until revoked", async ({ page }
   const secret = (await created.locator("code").first().textContent())!.trim();
   expect(secret).toMatch(/^stf_/);
   await created.getByRole("button", { name: "Done" }).click();
+  const row = page.getByRole("row").filter({ hasText: "playwright" });
+  await expect(row).toContainText("never");
 
   const env = { ...process.env, HOME: work, STIFT_CONFIG: join(work, "config.json"), STIFT_STATE: join(work, "state") };
   // `stift login` validates the token against /v1/whoami and prints the name.
   expect(execFileSync(stift, ["login", serverUrl!, "--token", secret, "--no-daemon"], { env }).toString()).toContain("playwright");
 
-  const row = page.getByRole("row").filter({ hasText: "playwright" });
+  // The CLI login touched last_used_at; a reload shows it.
+  await page.reload();
+  await expect(row).toContainText("just now");
   await row.getByRole("button", { name: "Revoke" }).click();
   await row.getByRole("button", { name: "Confirm" }).click();
   await expect(row).toHaveCount(0);

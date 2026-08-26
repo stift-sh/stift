@@ -12,14 +12,14 @@ let tokens: TokenInfo[];
 beforeEach(() => {
   setToken(TOKEN);
   tokens = [
-    { id: "t1", name: "laptop", admin: false, created_at: "2026-08-27T10:00:00Z" },
-    { id: "t2", name: "root", admin: true, created_at: "2026-08-20T10:00:00Z" },
+    { id: "t1", name: "laptop", admin: false, created_at: "2026-08-27T10:00:00Z", last_used_at: null },
+    { id: "t2", name: "root", admin: true, created_at: "2026-08-20T10:00:00Z", last_used_at: "2026-08-20T12:00:00Z" },
   ];
   server.use(
     http.get("*/v1/tokens", () => HttpResponse.json(tokens)),
     http.post("*/v1/tokens", async ({ request }) => {
       const body = (await request.json()) as { name: string; admin?: boolean };
-      const info = { id: "t3", name: body.name, admin: body.admin ?? false, created_at: "2026-08-27T11:00:00Z" };
+      const info = { id: "t3", name: body.name, admin: body.admin ?? false, created_at: "2026-08-27T11:00:00Z", last_used_at: null };
       tokens = [...tokens, info];
       return HttpResponse.json({ ...info, token: SECRET }, { status: 201 });
     }),
@@ -36,6 +36,8 @@ test("lists tokens with their role", async () => {
   expect(await screen.findByText("laptop")).toBeInTheDocument();
   expect(screen.getByText("member")).toBeInTheDocument();
   expect(screen.getByText("admin", { selector: ".badge" })).toBeInTheDocument();
+  expect(screen.getByText("never")).toBeInTheDocument();
+  expect(screen.getByText("root", { selector: "td" }).closest("tr")).toHaveTextContent(/never|ago/);
 });
 
 test("empty list explains the secret is shown once", async () => {

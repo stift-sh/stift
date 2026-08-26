@@ -399,13 +399,21 @@
           "created_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "last_used_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           }
         },
         "required": [
           "id",
           "name",
           "admin",
-          "created_at"
+          "created_at",
+          "last_used_at"
         ]
       },
       "TokenCreated": {
@@ -424,6 +432,13 @@
             "type": "string",
             "format": "date-time"
           },
+          "last_used_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
           "token": {
             "type": "string"
           }
@@ -433,6 +448,7 @@
           "name",
           "admin",
           "created_at",
+          "last_used_at",
           "token"
         ]
       },

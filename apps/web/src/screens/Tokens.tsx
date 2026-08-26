@@ -53,6 +53,7 @@ export function Tokens() {
                 <th>Role</th>
                 <th>Id</th>
                 <th className="num">Created</th>
+                <th className="num">Last used</th>
                 <th aria-label="Actions" />
               </tr>
             </thead>
@@ -145,6 +146,9 @@ function Row({ token }: { token: TokenInfo }) {
       <td className="mono dim">{token.id}</td>
       <td className="num dim" title={fmtTime(token.created_at)}>
         {ago(token.created_at)}
+      </td>
+      <td className="num dim" title={token.last_used_at ? fmtTime(token.last_used_at) : undefined}>
+        {token.last_used_at ? ago(token.last_used_at) : "never"}
       </td>
       <td className="num">
         {revoke.isError && (

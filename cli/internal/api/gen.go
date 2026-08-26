@@ -233,19 +233,21 @@ type TokenCreateRequest struct {
 
 // TokenCreated defines model for TokenCreated.
 type TokenCreated struct {
-	Admin     bool      `json:"admin"`
-	CreatedAt time.Time `json:"created_at"`
-	Id        string    `json:"id"`
-	Name      string    `json:"name"`
-	Token     string    `json:"token"`
+	Admin      bool       `json:"admin"`
+	CreatedAt  time.Time  `json:"created_at"`
+	Id         string     `json:"id"`
+	LastUsedAt *time.Time `json:"last_used_at"`
+	Name       string     `json:"name"`
+	Token      string     `json:"token"`
 }
 
 // TokenInfo defines model for TokenInfo.
 type TokenInfo struct {
-	Admin     bool      `json:"admin"`
-	CreatedAt time.Time `json:"created_at"`
-	Id        string    `json:"id"`
-	Name      string    `json:"name"`
+	Admin      bool       `json:"admin"`
+	CreatedAt  time.Time  `json:"created_at"`
+	Id         string     `json:"id"`
+	LastUsedAt *time.Time `json:"last_used_at"`
+	Name       string     `json:"name"`
 }
 
 // Version defines model for Version.

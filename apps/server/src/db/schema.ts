@@ -93,6 +93,7 @@ export const tokens = pgTable(
     hash: text("hash").notNull(),
     admin: boolean("admin").notNull().default(false),
     createdAt: ts("created_at").notNull().defaultNow(),
+    lastUsedAt: ts("last_used_at"),
   },
   (t) => [index("tokens_tenant").on(t.tenant), uniqueIndex("tokens_hash").on(t.hash)],
 );

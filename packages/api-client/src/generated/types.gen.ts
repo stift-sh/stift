@@ -156,6 +156,7 @@ export type TokenInfo = {
     name: string;
     admin: boolean;
     created_at: string;
+    last_used_at: string | null;
 };
 
 export type TokenCreated = {
@@ -163,6 +164,7 @@ export type TokenCreated = {
     name: string;
     admin: boolean;
     created_at: string;
+    last_used_at: string | null;
     token: string;
 };
 

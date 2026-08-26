@@ -33,8 +33,10 @@ type PushResult struct {
 type TokenInfo struct {
 	ID        string    `json:"id"`
 	Name      string    `json:"name"`
-	Admin     bool      `json:"admin"`
-	CreatedAt time.Time `json:"created_at"`
+	Admin     bool       `json:"admin"`
+	CreatedAt time.Time  `json:"created_at"`
+	// LastUsedAt is nil until the token authenticates a request.
+	LastUsedAt *time.Time `json:"last_used_at"`
 }
 
 // TokenCreated is returned by POST /v1/tokens; Token is shown exactly once.
