@@ -98,13 +98,22 @@ test("empty list teaches the CLI", async () => {
   expect(screen.getByText(/stift push --skills/)).toBeInTheDocument();
 });
 
-test("detail shows SKILL.md, files and history; 404s for unknown names", async () => {
+test("detail renders SKILL.md with a raw toggle, files and an audit timeline; 404s for unknown names", async () => {
   const first = renderApp({ path: "/skills/user/claude/skills/hello" });
   expect(await screen.findByRole("heading", { name: "hello" })).toBeInTheDocument();
+  const rendered = await screen.findByTestId("rendered");
+  expect(within(rendered).getByRole("heading", { level: 1, name: "Hello" })).toBeInTheDocument();
+  expect(within(rendered).getByText("says hi")).toBeInTheDocument(); // front matter
+  expect(pre()).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "raw" }));
   await waitFor(() => expect(pre()).toHaveTextContent(/# Hello more/));
+  await userEvent.click(screen.getByRole("button", { name: "rendered" }));
   expect(screen.getByText("53 B")).toBeInTheDocument();
   const history = await screen.findByRole("list", { name: "Versions" });
   expect(within(history).getAllByRole("link", { name: /^v\d$/ })).toHaveLength(2);
+  expect(within(history).getByLabelText("0 added, 1 changed, 0 removed")).toHaveTextContent("~1");
+  expect(within(history).getByLabelText("1 added, 0 changed, 0 removed")).toHaveTextContent("+1");
+  expect(within(history).getAllByText("mac")).toHaveLength(2);
   expect(screen.queryByRole("button", { name: /Roll back/ })).not.toBeInTheDocument();
   first.unmount();
   renderApp({ path: "/skills/user/claude/skills/nope" });
@@ -117,7 +126,7 @@ test("viewing an old version shows its content and offers rollback with the righ
   await userEvent.click(within(history).getByRole("link", { name: "v1" }));
   await waitFor(() => expect(router.state.location.search).toBe("?v=1"));
   expect(await screen.findByText(/Viewing v1/)).toBeInTheDocument();
-  await waitFor(() => expect(pre()).toHaveTextContent(/# Hello$/));
+  await waitFor(() => expect(screen.getByTestId("rendered")).not.toHaveTextContent("more"));
 
   await userEvent.click(screen.getByRole("button", { name: "Roll back to v1" }));
   expect(await screen.findByText("Republish v1 as v3?")).toBeInTheDocument();

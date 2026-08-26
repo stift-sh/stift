@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
-import type { Bundle } from "@stift/shared";
 import { ApiError } from "../api/auth";
 import { fetchBlobText, keyHref, type SkillKey, unitLabel, useBlobText, useBundle, useBundleHistory, useDeleteBundle, useRollback } from "../api/skills";
 import { ErrorState, NotFound, PageHeader, Spinner } from "../components/States";
 import { diffLines, diffManifests, type FileChange, isBinary, MAX_TEXT_DIFF } from "../lib/diff";
 import { ago, fmtBytes, fmtTime } from "../lib/format";
+import { auditTimeline } from "../lib/audit";
+import { renderMarkdown, splitFrontMatter } from "../lib/markdown";
 import s from "./SkillDetail.module.css";
 
 const num = (v: string | null) => (v && /^\d+$/.test(v) ? Number(v) : 0);
@@ -31,6 +32,7 @@ export function SkillDetail() {
   const rollback = useRollback();
   const del = useDeleteBundle();
   const [confirm, setConfirm] = useState<"delete" | "rollback" | null>(null);
+  const [raw, setRaw] = useState(false);
   useEffect(() => setConfirm(null), [wanted, diffTo]);
 
   if (head.isPending || shown.isPending) return <Spinner />;
@@ -134,9 +136,12 @@ export function SkillDetail() {
                     <span>
                       {md.path} · {fmtBytes(md.size)}
                     </span>
-                    <span>v{it.version}</span>
+                    <span className={s.toggle} role="group" aria-label="View">
+                      <button type="button" className={raw ? "" : s.on} aria-pressed={!raw} onClick={() => setRaw(false)}>rendered</button>
+                      <button type="button" className={raw ? s.on : ""} aria-pressed={raw} onClick={() => setRaw(true)}>raw</button>
+                    </span>
                   </p>
-                  <Plate sha={md.sha256} />
+                  <Plate sha={md.sha256} raw={raw} />
                 </>
               )}
               <div className="table-wrap">
@@ -181,15 +186,22 @@ export function SkillDetail() {
             {history.isError && <p className={s.error}>{history.error.message}</p>}
             {history.data && (
               <ol className={s.history} aria-label="Versions">
-                {history.data.map((v: Bundle) => (
+                {auditTimeline(history.data).map(({ version: v, added, changed, removed, paths }) => (
                   <li key={v.version} className={s.version}>
                     <Link to={keyHref(key, { v: v.version === current.version ? undefined : v.version })} className={`mono ${v.version === it.version && !diffTo ? s.current : ""}`}>
                       v{v.version}
                     </Link>
-                    <span className="meta" title={fmtTime(v.created)}>
-                      {v.author} · {ago(v.created)}
+                    <span className={s.who}>
+                      {v.author} <span className="dim">from</span> <span className="mono">{v.host}</span>
                     </span>
-                    <span className="links">
+                    <time className={s.when} dateTime={v.created} title={fmtTime(v.created)}>
+                      {ago(v.created)}
+                    </time>
+                    <span className={s.delta} title={paths.join("\n")} aria-label={`${added} added, ${changed} changed, ${removed} removed`}>
+                      {added > 0 && <span className={s.add}>+{added}</span>}
+                      {changed > 0 && <span className={s.mod}>~{changed}</span>}
+                      {removed > 0 && <span className={s.del}>−{removed}</span>}
+                      {added + changed + removed === 0 && <span className="dim">no file changes</span>}
                       {v.version > 1 && <Link to={keyHref(key, { v: wanted || undefined, diff: v.version })}>diff</Link>}
                     </span>
                   </li>
@@ -203,11 +215,33 @@ export function SkillDetail() {
   );
 }
 
-function Plate({ sha }: { sha: string }) {
+function Plate({ sha, raw }: { sha: string; raw: boolean }) {
   const text = useBlobText(sha);
   if (text.isPending) return <Spinner label="Loading file…" />;
   if (text.isError) return <p className={s.error}>{text.error.message}</p>;
-  return <pre className={s.plate}>{isBinary(text.data) ? "(binary file)" : text.data}</pre>;
+  if (raw || isBinary(text.data)) return <pre className={s.plate}>{isBinary(text.data) ? "(binary file)" : text.data}</pre>;
+  const { frontMatter, body } = splitFrontMatter(text.data);
+  const fm = frontMatter
+    ? frontMatter
+        .split("\n")
+        .map((l) => /^([\w-]+):\s*(.*)$/.exec(l))
+        .filter((m): m is RegExpExecArray => !!m)
+    : [];
+  return (
+    <div className={s.rendered} data-testid="rendered">
+      {fm.length > 0 && (
+        <dl className={s.fm}>
+          {fm.map(([, k, v]) => (
+            <div key={k}>
+              <dt>{k}</dt>
+              <dd>{v}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      <div className={s.prose}>{renderMarkdown(body)}</div>
+    </div>
+  );
 }
 
 /** Changes from v(to-1) to v(to): manifest diff, plus line diffs for text files. */
