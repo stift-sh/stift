@@ -17,6 +17,7 @@ export STIFT_S3_FORCE_PATH_STYLE=true
 export STIFT_S3_PREFIX=${STIFT_S3_PREFIX:-with-server}
 export STIFT_ADMIN_TOKEN=stf_$(printf 'b%.0s' $(seq 48))
 export PORT=${PORT:-8582}
+export STIFT_WEB_DIR=${STIFT_WEB_DIR:-$PWD/apps/web/dist}
 
 LOG=$(mktemp)
 cleanup() { kill "${SERVER_PID:-}" 2>/dev/null || true; rm -f "$LOG"; }

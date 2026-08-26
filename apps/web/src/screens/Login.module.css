@@ -1,0 +1,19 @@
+.screen {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 40px;
+  padding: 40px 24px;
+}
+.hero { text-align: center; }
+.hero h1 {
+  margin: 16px 0 8px;
+  font-size: clamp(40px, 6vw, 66px);
+  line-height: 0.91;
+  letter-spacing: -0.02em;
+}
+.hero p { margin: 0; color: var(--ink-soft); font-size: 18px; line-height: 1.25; }
+.card { width: min(100%, 440px); }
+.hint { margin: 16px 0 0; font-size: 14px; color: var(--ink-soft); }
+.error { margin: 12px 0 0; color: var(--accent); font-size: 14px; }

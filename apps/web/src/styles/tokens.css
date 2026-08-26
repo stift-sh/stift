@@ -1,0 +1,69 @@
+/* Design tokens, ported from the stift-cloud dashboard ("editorial data
+   observatory"): warm paper-white canvas, ash surfaces, whisper-weight
+   headings, one ember accent. Dark mode swaps the canvas for the graphite
+   plate palette. Fonts are system stacks: a self-hosted UI makes no request
+   to a font CDN. */
+:root {
+  color-scheme: light;
+
+  --color-graphite: #202020;
+  --color-canvas-white: #ffffff;
+  --color-ash: #efefef;
+  --color-fog: #f5f5f5;
+  --color-ivory: #ebe6dd;
+  --color-steel: #4d4d4d;
+  --color-slate: #828282;
+  --color-mist: #e8e8e8;
+  --color-ember-orange: #ff682c;
+  --color-brass: #816729;
+
+  --ink: var(--color-graphite);
+  --ink-soft: var(--color-steel);
+  --ink-faint: var(--color-slate);
+  --canvas: var(--color-canvas-white);
+  --surface: var(--color-ash);
+  --surface-nested: var(--color-fog);
+  --surface-warm: var(--color-ivory);
+  --rule: var(--color-mist);
+  --accent: var(--color-ember-orange);
+  --accent-2: var(--color-brass);
+  --accent-soft: rgba(255, 104, 44, 0.12);
+
+  --plate: #202020;
+  --plate-text: #efefef;
+  --plate-dim: #828282;
+  --plate-accent: #ff682c;
+  --plate-key: #c9a961;
+
+  --font-polysans: "Inter Tight", "Space Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-inter: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  --radius-cards: 8px;
+  --radius-asym: 6px 0 0;
+  --radius-data: 20px;
+  --radius-pill: 200px;
+  --radius-tags: 20px;
+
+  --page-max-width: 1200px;
+  --gap: 20px;
+  --card-padding: 40px;
+  --section-gap: 80px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --ink: #efefef;
+    --ink-soft: #b8b8b8;
+    --ink-faint: #828282;
+    --canvas: #161616;
+    --surface: #202020;
+    --surface-nested: #1b1b1b;
+    --surface-warm: #26231d;
+    --rule: #2e2e2e;
+    --accent-2: #c9a961;
+    --accent-soft: rgba(255, 104, 44, 0.18);
+    --plate: #0f0f0f;
+  }
+}

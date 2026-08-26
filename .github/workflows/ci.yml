@@ -58,3 +58,7 @@ jobs:
         run: ./scripts/cli-smoke.sh
       - name: Server image builds
         run: docker build --build-arg VERSION=ci -t stift:ci .
+      - name: Web smoke (Playwright against the TypeScript server serving the built bundle)
+        run: |
+          pnpm --filter @stift/web exec playwright install --with-deps chromium
+          ./scripts/with-server.sh pnpm --filter @stift/web test:e2e

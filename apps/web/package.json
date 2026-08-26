@@ -8,7 +8,8 @@
     "build": "tsc -p tsconfig.json --noEmit && vite build",
     "lint": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@stift/api-client": "workspace:*",
@@ -19,9 +20,11 @@
     "react-router": "^7.9.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@stift/config": "workspace:*",
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.6",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "@vitejs/plugin-react": "^5.0.0",
