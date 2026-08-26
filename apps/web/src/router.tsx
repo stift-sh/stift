@@ -3,6 +3,8 @@ import { useIdentity, useToken } from "./api/auth";
 import { Shell } from "./components/Shell";
 import { NotFound, PageHeader } from "./components/States";
 import { Login } from "./screens/Login";
+import { Sessions } from "./screens/Sessions";
+import { SessionDetail } from "./screens/SessionDetail";
 
 function RequireAuth() {
   const token = useToken();
@@ -19,7 +21,6 @@ function RequireAdmin() {
 
 // Placeholders until each screen's own work item lands (web-app.md).
 const placeholder = (title: string) => () => <PageHeader title={title} subtitle="Coming soon." />;
-const Sessions = placeholder("Sessions");
 const Skills = placeholder("Skills");
 const Tokens = placeholder("Tokens");
 const Billing = placeholder("Billing");
@@ -35,6 +36,7 @@ export const routes: RouteObject[] = [
         children: [
           { index: true, element: <Navigate to="/sessions" replace /> },
           { path: "sessions", Component: Sessions },
+          { path: "sessions/:id", Component: SessionDetail },
           { path: "skills", Component: Skills },
           { element: <RequireAdmin />, children: [{ path: "tokens", Component: Tokens }] },
           { path: "billing", Component: Billing },
