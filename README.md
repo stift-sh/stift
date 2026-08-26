@@ -4,7 +4,7 @@ Self-hosted cloud storage for AI coding agent sessions.
 
 Your agent sessions — the full conversation history, context, and todo state — live in
 scattered dot-directories on whatever machine you happened to be using. **stift**
-gives them a home: deploy a single binary (or container) on any server, get a token,
+gives them a home: run the server (one container, Postgres, an S3 bucket), get a token,
 and log in once. After that a small background service **syncs your sessions
 automatically** — no manual push/pull. `stift push` / `stift pull` are still there
 when you want explicit control.
@@ -27,9 +27,10 @@ workstation ◀──pull── │  your server  │ ──pull──▶ new ma
 | opencode | `opencode` | session + messages + parts from `~/.local/share/opencode/storage` |
 | aider | `aider` | `.aider.chat.history.md`, `.aider.input.history` (in-project) |
 
-One binary, zero runtime dependencies (pure Go stdlib), no database server —
-sessions are stored as tar.gz blobs + JSON metadata on disk. The same binary is
-both server (`stift serve`) and client (`stift push` / `pull` / ...).
+The client is one static Go binary with zero runtime dependencies. The server
+is a TypeScript service shipped as a container image; it keeps metadata in
+Postgres and session archives / skill files as content-addressed blobs in any
+S3-compatible bucket (S3, R2, MinIO).
 
 Agents not listed above can be added as [custom agents](#custom-agents) — a
 name and a path pattern in a small JSON file.
@@ -46,21 +47,13 @@ otherwise `~/.local/bin`. Overrides: `STIFT_VERSION` (default `latest`),
 `STIFT_INSTALL_DIR`, `STIFT_BASE_URL`. Windows users: download
 `stift-windows-amd64.exe` from the releases and put it on `PATH`.
 
-Or build from source with `make build` (Go 1.26+). `make release` produces the
-artifacts the install script expects; hosting them just means serving the
-`dist/` directory at these paths:
+Binaries come from [GitHub releases](https://github.com/stift-sh/stift/releases)
+(`stift-<os>-<arch>` plus a `.sha256` each, built by GoReleaser on every `v*`
+tag). Or build from source with `make build` (Go 1.26+).
 
-```
-https://stift.sh/install.sh                       client installer
-https://stift.sh/proxmox.sh                       Proxmox LXC helper (see below)
-https://stift.sh/dl/latest/stift-<os>-<arch>      binaries (+ .sha256 each)
-https://stift.sh/dl/<version>/stift-<os>-<arch>   pinned versions
-```
-
-The stift.sh site itself lives in [`apps/website/`](apps/website/) — a Cloudflare Worker
-serving the docs page, both scripts, and the `dist/` binaries as static
-assets. `make site-deploy` assembles `apps/website/public/` from `dist/` and runs
-`wrangler deploy`.
+The stift.sh site lives in [`apps/website/`](apps/website/) — a Cloudflare
+Worker serving the docs page and the installer as static assets
+(`make site-deploy`).
 
 ## Background sync
 
@@ -269,66 +262,46 @@ stift token revoke <id>
 | `STIFT_HOST` | client/daemon | override this machine's host label (default OS hostname) |
 | `STIFT_STATE` | daemon | sync-state cache path (default `~/.cache/stift/sync-state.json`) |
 | `STIFT_SKILLS_STATE` | client | skills sync state (default `~/.config/stift/state.json`) |
-| `STIFT_LISTEN`, `STIFT_DATA` | server | listen address / data directory |
+| `PORT` | server | listen port (default `8580`) |
 | `STIFT_ADMIN_TOKEN` | server | register a fixed admin token at startup |
-| `STIFT_DATABASE_URL` | server (TS) | Postgres connection string (required) |
-| `STIFT_AUTH` | server (TS) | comma-separated authenticators (default `local`) |
+| `STIFT_DATABASE_URL` | server | Postgres connection string (required) |
+| `STIFT_S3_BUCKET`, `STIFT_S3_ENDPOINT`, `STIFT_S3_REGION`, `STIFT_S3_ACCESS_KEY`, `STIFT_S3_SECRET_KEY`, `STIFT_S3_FORCE_PATH_STYLE`, `STIFT_S3_PREFIX` | server | blob storage (any S3-compatible API) |
+| `STIFT_AUTH` | server | comma-separated authenticators (default `local`) |
 
 ## Server: deploy in one minute
 
-### Binary
+The server is published as `ghcr.io/stift-sh/stift` (tags: `latest`, `x.y.z`,
+`x.y`). It needs a Postgres database and an S3-compatible bucket.
+
+### Docker Compose (everything included)
 
 ```sh
-make build                      # or: cd cli && go build -o bin/stift .
-./bin/stift serve --data /var/lib/stift
+curl -fsSLO https://raw.githubusercontent.com/stift-sh/stift/main/docker-compose.yml
+docker compose up -d
+docker compose logs server      # grab the first-boot admin token
 ```
 
-On first start the server prints an **admin token once** — store it. Then it listens
-on `:8580`.
+This runs Postgres and MinIO next to the server with persistent volumes. On
+first start the server prints an **admin token once** — store it. Then it
+listens on `:8580`, ready for `stift login http://<host>:8580 --token stf_...`.
 
-For a permanent install on a Linux host (bare metal, VM, or LXC), use the
-hardened systemd unit in [`deploy/stift.service`](deploy/stift.service):
+### Your own database and bucket
+
+Point the image at whatever you already run (RDS + S3, Neon + R2, ...):
 
 ```sh
-cp dist/stift-linux-amd64 /usr/local/bin/stift && chmod +x /usr/local/bin/stift
-cp deploy/stift.service /etc/systemd/system/
-systemctl enable --now stift
-journalctl -u stift          # first-boot admin token is in here
+export STIFT_ADMIN_TOKEN="stf_$(openssl rand -hex 24)"   # optional: pin the token
+docker run -d -p 8580:8580 \
+  -e STIFT_DATABASE_URL=postgres://user:pass@db:5432/stift \
+  -e STIFT_S3_BUCKET=stift -e STIFT_S3_REGION=us-east-1 \
+  -e STIFT_S3_ACCESS_KEY=... -e STIFT_S3_SECRET_KEY=... \
+  -e STIFT_ADMIN_TOKEN \
+  ghcr.io/stift-sh/stift:latest
 ```
 
-### Proxmox VE
-
-One command on the Proxmox host creates an unprivileged Debian LXC
-(1 core / 512MB / 8GB by default), installs stift as a hardened systemd
-service, and prints the server URL + admin token, ready for `stift login`:
-
-```sh
-bash -c "$(curl -fsSL https://stift.sh/proxmox.sh)"
-```
-
-The script ([`deploy/proxmox.sh`](deploy/proxmox.sh)) asks for confirmation
-before creating anything. Flags: `--ctid`, `--hostname`, `--storage`,
-`--disk`, `--cores`, `--memory`, `--bridge`, `--ip CIDR --gw IP` (static
-instead of DHCP), `--binary PATH` (install a local build instead of
-downloading), `--token`, `--yes`. See `--help`.
-
-### Docker
-
-```sh
-docker compose up -d            # uses cli/docker-compose.yml
-docker compose logs stift   # grab the first-boot admin token
-```
-
-Or pin the token instead of fishing it out of logs:
-
-```sh
-export STIFT_ADMIN_TOKEN="stf_$(openssl rand -hex 24)"
-docker run -d -p 8580:8580 -v stift-data:/data \
-  -e STIFT_ADMIN_TOKEN stift:latest
-```
-
-A read-only web UI for browsing/downloading sessions is served at `/`
-(paste a token; it never leaves your browser).
+Set `STIFT_S3_ENDPOINT` (and `STIFT_S3_FORCE_PATH_STYLE=true`) for non-AWS
+providers. Migrations run automatically at startup. Put TLS in front with your
+usual reverse proxy; the server itself speaks plain HTTP.
 
 ## HTTP API
 
@@ -359,28 +332,40 @@ All `/v1` endpoints require `Authorization: Bearer <token>`.
 - Run behind TLS — a reverse proxy (Caddy, nginx, Traefik) or your tunnel of
   choice. The server itself speaks plain HTTP.
 - Session archives contain full conversation history, which often includes
-  source code and may include secrets your agent saw. Treat the data directory
+  source code and may include secrets your agent saw. Treat the database, the bucket
   and tokens accordingly.
 - Tar extraction rejects absolute paths and `..` traversal.
 
 ## Development
 
 ```sh
-make test      # unit + API tests
-make build     # cli/bin/stift
-make release   # cross-compile dist/ for linux/darwin/windows, amd64/arm64
-make docker    # build the container image
+docker compose up -d postgres minio minio-init   # backing services
+pnpm install && pnpm build                        # server, generated clients, CLI
+pnpm test                                         # TS tests + Go unit tests
+./scripts/with-server.sh sh -c 'cd cli && go test ./internal/daemon'  # Go tests needing a server
+./scripts/cli-smoke.sh                            # Go CLI end-to-end against the TS server
+make docker                                       # build the server image locally
+make release                                      # GoReleaser snapshot of the CLI into cli/dist/
 ```
 
-Layout: `internal/agents` (per-agent session detection), `internal/archive`
-(tar.gz pack/unpack), `internal/server` (HTTP API + storage + tokens),
-`internal/client` (API client + config), `internal/daemon` (background push +
-reconcile loop), `internal/service` (systemd/launchd/detached-process control),
-`internal/gitrepo` (cross-machine project identity), `cmd_*.go` (CLI subcommands).
+Turborepo monorepo: `apps/server` (Hono + zod-openapi on Node, drizzle on
+Postgres, S3 blob store), `packages/shared` (zod schemas, the API's source of
+truth), `packages/api-client` (generated TypeScript client), `cli/` (Go).
+`apps/server` emits `openapi.gen.json` at build; the TS client and
+`cli/internal/api` regenerate from it and CI fails if they are stale.
+
+CLI layout: `internal/agents` (per-agent session detection), `engine/archive`
+(tar.gz pack/unpack), `internal/client` (API client + config), `internal/daemon`
+(background push + reconcile loop), `internal/service`
+(systemd/launchd/detached-process control), `internal/gitrepo` (cross-machine
+project identity), `cmd_*.go` (CLI subcommands).
 
 Adding an agent = one file in `internal/agents` implementing
 `Detect(home, project) ([]LocalSession, error)` plus a registry entry in
 `agents.go`.
+
+Releases: tag `vX.Y.Z`; the release workflow runs GoReleaser for the CLI and
+pushes the multi-arch server image to GHCR with matching tags.
 
 ## License
 

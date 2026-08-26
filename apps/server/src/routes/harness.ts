@@ -1,5 +1,5 @@
 // Shared HTTP test harness: port of newTestServer/request/pushSession in
-// cli/engine/server/server_test.go. Needs the docker-compose services;
+// the former Go server (git history before 2026-08-27) engine/server/server_test.go. Needs the docker-compose services;
 // suites skip themselves when STIFT_TEST_DATABASE_URL is unset.
 import { sql } from "drizzle-orm";
 import type { PushMeta } from "@stift/shared";

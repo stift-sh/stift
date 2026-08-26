@@ -6,9 +6,7 @@ node_modules/
 *.tar.gz
 
 # generated site assets (make site-assets)
-/apps/website/public/dl/
 /apps/website/public/install.sh
-/apps/website/public/proxmox.sh
 /stift-data/
 
 # local env

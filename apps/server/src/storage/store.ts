@@ -24,7 +24,7 @@ export type BundleInput = Partial<Pick<Bundle, "parent" | "host" | "author" | "f
 
 /**
  * Storage abstraction the HTTP layer depends on. Every method is scoped to a
- * tenant ("" = default). Port of `Backend` in cli/engine/server/store.go:
+ * tenant ("" = default). Port of `Backend` in the former Go server (git history before 2026-08-27) engine/server/store.go:
  * session metadata, blob index and bundle manifests live in Postgres, session
  * archives and blob contents in an S3-compatible bucket.
  */

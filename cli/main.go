@@ -1,5 +1,5 @@
 // Command stift is a self-hosted session store for AI coding agents.
-// One binary is both the server (stift serve) and the client
+// stift client: syncs agent sessions and skills against a stift server
 // (stift push / pull / list).
 package main
 
@@ -20,8 +20,6 @@ func main() {
 	cmd, args := os.Args[1], os.Args[2:]
 	var err error
 	switch cmd {
-	case "serve":
-		err = cmdServe(args)
 	case "login":
 		err = cmdLogin(args)
 	case "push":
@@ -84,10 +82,6 @@ func resolveHost() string {
 func usage() {
 	fmt.Print(`stift — self-hosted session store for AI coding agents
 
-Server:
-  stift serve [--listen :8580] [--data DIR] [--max-upload-mb N]
-      Run the server. Prints an admin token on first start.
-
 Client:
   stift login URL --token TOKEN     Save server connection & start auto-sync
   stift push [flags]                Upload local agent sessions
@@ -112,7 +106,7 @@ cursor (Cursor CLI), opencode, aider. Add your own in
 ~/.config/stift/agents.json — see the Custom agents section of the README.
 
 Environment: STIFT_SERVER, STIFT_TOKEN, STIFT_CONFIG, STIFT_AGENTS, STIFT_SKILLS_STATE,
-STIFT_DATA, STIFT_ADMIN_TOKEN (serve), STIFT_SYNC_INTERVAL, STIFT_STATE,
+STIFT_SYNC_INTERVAL, STIFT_STATE,
 STIFT_SYNC_SKILLS (0 = sessions only), STIFT_SKILLS_DEBOUNCE (default 2m).
 
 Run "stift COMMAND -h" for command flags.

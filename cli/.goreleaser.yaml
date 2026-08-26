@@ -1,0 +1,38 @@
+# GoReleaser config for the CLI. Run from cli/ (the release workflow does):
+#   goreleaser release --clean
+# Publishes stift-<os>-<arch>[.exe] plus a .sha256 per binary to the GitHub
+# release, which is the layout cli/install.sh expects.
+version: 2
+project_name: stift
+
+builds:
+  - main: .
+    binary: stift
+    env: [CGO_ENABLED=0]
+    flags: [-trimpath]
+    ldflags: [-s -w -X main.version={{.Version}}]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ignore:
+      - goos: windows
+        goarch: arm64
+    hooks:
+      # One .sha256 next to each binary (install.sh verifies against it).
+      post:
+        - sh -c 'cd dist && sha256sum "../{{ .Path }}" | sed "s|.*  |{{ .Name }}-{{ .Os }}-{{ .Arch }}{{ .Ext }}|" > "{{ .Name }}-{{ .Os }}-{{ .Arch }}{{ .Ext }}.sha256"'
+
+archives:
+  - formats: [binary]
+    name_template: "stift-{{ .Os }}-{{ .Arch }}"
+
+checksum:
+  name_template: checksums.txt
+
+release:
+  extra_files:
+    - glob: dist/*.sha256
+
+changelog:
+  use: github
+  filters:
+    exclude: ["^docs:", "^chore:", "^test:"]

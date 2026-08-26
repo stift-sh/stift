@@ -1,4 +1,4 @@
-// Port of TestBlobValidation in cli/engine/server/handlers_bundles_test.go.
+// Port of TestBlobValidation in the former Go server (git history before 2026-08-27) engine/server/handlers_bundles_test.go.
 import { after, before, describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";

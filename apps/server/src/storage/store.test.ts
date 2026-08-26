@@ -1,4 +1,4 @@
-// Port of cli/engine/server/backendtest: the contract every Store must pass.
+// Port of the former Go server (git history before 2026-08-27) engine/server/backendtest: the contract every Store must pass.
 // Runs against the docker-compose services when STIFT_TEST_DATABASE_URL is
 // set; skipped otherwise.
 import { after, before, beforeEach, describe, test } from "node:test";

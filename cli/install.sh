@@ -8,15 +8,22 @@
 #   STIFT_VERSION      version to install (default: latest)
 #   STIFT_INSTALL_DIR  where to put the binary (default: /usr/local/bin if
 #                      writable, otherwise ~/.local/bin)
-#   STIFT_BASE_URL     download base (default: https://stift.sh/dl)
+#   STIFT_BASE_URL     mirror serving $STIFT_BASE_URL/$VERSION/stift-<os>-<arch>
+#                      (default: GitHub releases of stift-sh/stift)
 #
-# Expects binaries at: $STIFT_BASE_URL/$VERSION/stift-<os>-<arch>
-# with a matching .sha256 file next to each.
+# Binaries are published by GoReleaser with a .sha256 file next to each.
 
 set -eu
 
-BASE_URL="${STIFT_BASE_URL:-https://stift.sh/dl}"
 VERSION="${STIFT_VERSION:-latest}"
+if [ -n "${STIFT_BASE_URL:-}" ]; then
+  BASE_URL="$STIFT_BASE_URL"; DL_URL="$BASE_URL/$VERSION"
+elif [ "$VERSION" = latest ]; then
+  BASE_URL="https://github.com/stift-sh/stift/releases"; DL_URL="$BASE_URL/latest/download"
+else
+  case "$VERSION" in v*) ;; *) VERSION="v$VERSION" ;; esac
+  BASE_URL="https://github.com/stift-sh/stift/releases"; DL_URL="$BASE_URL/download/$VERSION"
+fi
 
 say()  { printf '%s\n' "$*" >&2; }
 fail() { say "stift install: error: $*"; exit 1; }
@@ -28,7 +35,7 @@ case "$os" in
   Darwin) os=darwin ;;
   CYGWIN*|MINGW*|MSYS*)
     fail "this script does not support Windows. Download stift-windows-amd64.exe
-from $BASE_URL/$VERSION/ and put it on your PATH." ;;
+from $DL_URL/ and put it on your PATH." ;;
   *) fail "unsupported operating system: $os" ;;
 esac
 
@@ -40,7 +47,7 @@ case "$arch" in
 esac
 
 artifact="stift-$os-$arch"
-url="$BASE_URL/$VERSION/$artifact"
+url="$DL_URL/$artifact"
 
 # --- fetcher -----------------------------------------------------------------
 if command -v curl >/dev/null 2>&1; then

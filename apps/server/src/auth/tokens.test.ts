@@ -7,7 +7,7 @@ import { TokenAuthenticator, createToken, hashToken, listTokens, registerToken, 
 
 const dbUrl = process.env.STIFT_TEST_DATABASE_URL;
 
-// Minted by the Go server (engine/server/tokens.go); hash must match exactly.
+// Minted by the Go server (former Go server, engine/server/tokens.go in git history); hash must match exactly.
 const GO_RAW = "stf_000102030405060708090a0b0c0d0e0f101112131415161718";
 
 describe("local tokens", { skip: dbUrl ? false : "STIFT_TEST_DATABASE_URL not set" }, () => {

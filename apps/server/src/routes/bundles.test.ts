@@ -1,5 +1,5 @@
 // Port of TestBundlePushFlow, TestBundleStaleAndMissingBlob and
-// TestBundleOrgScopeRequiresAdmin in cli/engine/server/handlers_bundles_test.go.
+// TestBundleOrgScopeRequiresAdmin in the former Go server (git history before 2026-08-27) engine/server/handlers_bundles_test.go.
 import { after, before, beforeEach, describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";

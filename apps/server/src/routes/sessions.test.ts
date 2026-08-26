@@ -1,5 +1,5 @@
 // Port of TestPushListDownloadDelete, TestUploadSizeLimit and
-// TestPushValidation in cli/engine/server/server_test.go.
+// TestPushValidation in the former Go server (git history before 2026-08-27) engine/server/server_test.go.
 import { after, before, describe, test } from "node:test";
 import assert from "node:assert/strict";
 import type { PushResult, Session } from "@stift/shared";

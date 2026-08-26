@@ -3,14 +3,12 @@ package daemon
 import (
 	"bytes"
 	"log"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/stift-sh/stift/engine/server"
 	"github.com/stift-sh/stift/internal/bundle"
 	"github.com/stift-sh/stift/internal/client"
 )
@@ -78,28 +76,30 @@ func TestManifestHash(t *testing.T) {
 	}
 }
 
-// newSkillsServer runs the real HTTP server on a DiskStore and returns a client.
-func newSkillsServer(t *testing.T) (*httptest.Server, *client.Client) {
+// newSkillsServer connects to the TypeScript server named by STIFT_TEST_SERVER
+// (admin token in STIFT_TEST_TOKEN; CI starts it via scripts/with-server.sh)
+// and skips the test when it is not set. Each call mints a fresh admin token
+// so the daemons under test are isolated from the caller's environment.
+func newSkillsServer(t *testing.T) *client.Client {
 	t.Helper()
-	dataDir := t.TempDir()
-	store, err := server.OpenStore(dataDir)
+	url, tok := os.Getenv("STIFT_TEST_SERVER"), os.Getenv("STIFT_TEST_TOKEN")
+	if url == "" || tok == "" {
+		t.Skip("STIFT_TEST_SERVER/STIFT_TEST_TOKEN not set")
+	}
+	c := client.New(url, tok)
+	heads, err := c.ListBundles(client.BundleFilter{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	tokens, err := server.OpenTokens(dataDir)
-	if err != nil {
-		t.Fatal(err)
+	for _, h := range heads {
+		if err := c.DeleteBundle(client.BundleKey{Scope: h.Scope, Agent: h.Agent, Project: h.Project, Name: h.Name}); err != nil {
+			t.Fatal(err)
+		}
 	}
-	tok, _, err := tokens.Create("admin", true)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ts := httptest.NewServer(server.New(server.Options{Store: store, Auth: tokens, Tokens: tokens}))
-	t.Cleanup(ts.Close)
-	t.Setenv("STIFT_SERVER", ts.URL)
+	t.Setenv("STIFT_SERVER", url)
 	t.Setenv("STIFT_TOKEN", tok)
-	t.Setenv("STIFT_AGENTS", filepath.Join(dataDir, "no-agents.json"))
-	return ts, client.New(ts.URL, tok)
+	t.Setenv("STIFT_AGENTS", filepath.Join(t.TempDir(), "no-agents.json"))
+	return c
 }
 
 // newSkillsDaemon builds a daemon with its own home and state files.
@@ -133,7 +133,7 @@ func writeSkill(t *testing.T, home, name, body string) string {
 }
 
 func TestSkillsPassPushAndPull(t *testing.T) {
-	_, c := newSkillsServer(t)
+	c := newSkillsServer(t)
 	a, homeA, logA := newSkillsDaemon(t, c, "alpha", 50*time.Millisecond)
 	writeSkill(t, homeA, "deploy", "---\nname: deploy\n---\nship it\n")
 

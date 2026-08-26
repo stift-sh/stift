@@ -1,7 +1,32 @@
-# Local development and the self-host quickstart: Postgres for metadata,
-# MinIO for blobs. The server reads DATABASE_URL and STIFT_S3_* (see
-# apps/server/.env.example).
+# Self-host quickstart and local development: Postgres for metadata, MinIO
+# for blobs, and the server image. `docker compose up -d` gives a working
+# server on :8580; for development run only the backing services
+# (`docker compose up -d postgres minio minio-init`) and `pnpm dev` the server
+# with apps/server/.env.example.
 services:
+  server:
+    image: ghcr.io/stift-sh/stift:latest
+    build: .
+    ports:
+      - "8580:8580"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    environment:
+      STIFT_DATABASE_URL: postgres://stift:stift@postgres:5432/stift
+      STIFT_S3_BUCKET: stift
+      STIFT_S3_ENDPOINT: http://minio:9000
+      STIFT_S3_REGION: us-east-1
+      STIFT_S3_ACCESS_KEY: stift
+      STIFT_S3_SECRET_KEY: stiftstift
+      STIFT_S3_FORCE_PATH_STYLE: "true"
+      # Optional: pin the admin token instead of reading it from first-boot logs.
+      # Generate one with: echo "stf_$(openssl rand -hex 24)"
+      # STIFT_ADMIN_TOKEN: stf_change-me
+    restart: unless-stopped
+
   postgres:
     image: postgres:17-alpine
     environment:

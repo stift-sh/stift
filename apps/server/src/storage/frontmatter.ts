@@ -2,7 +2,7 @@
  * Reads a leading "---" YAML-ish block and returns the top-level name and
  * description scalars. Simple "key: value" lines and ">" / "|" block scalars
  * (folded to one line) are understood; quotes around the value are stripped.
- * Port of ParseFrontmatter in cli/engine/server/bundles.go.
+ * Port of ParseFrontmatter in the former Go server (git history before 2026-08-27) engine/server/bundles.go.
  */
 export function parseFrontmatter(text: string): { name: string; description: string } {
   const out = { name: "", description: "" };

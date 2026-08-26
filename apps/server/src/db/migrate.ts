@@ -1,9 +1,9 @@
-// `pnpm db:migrate`: apply pending migrations to DATABASE_URL.
+// `pnpm db:migrate`: apply pending migrations to STIFT_DATABASE_URL.
 import { connect, runMigrations } from "./client.js";
 
-const url = process.env.DATABASE_URL;
+const url = process.env.STIFT_DATABASE_URL;
 if (!url) {
-  console.error("DATABASE_URL is not set");
+  console.error("STIFT_DATABASE_URL is not set");
   process.exit(1);
 }
 const { db, pool } = connect(url);

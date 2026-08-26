@@ -330,9 +330,9 @@ footer a:hover{color:var(--ember)}
     <figcaption>fig. 1 — every machine syncs with one server, in the background</figcaption>
   </figure>
   <p>
-    Zero runtime dependencies (pure Go stdlib), no database server — sessions are
-    stored as tar.gz blobs plus JSON metadata on disk. The same binary is both
-    server (<code>stift serve</code>) and client (<code>stift push</code> / <code>pull</code> / …).
+    The client is one static Go binary with zero runtime dependencies. The server
+    is a container image backed by Postgres and any S3-compatible bucket
+    (S3, R2, MinIO); sessions and skills are stored as content-addressed blobs.
   </p>
 
   <h3>Supported agents</h3>
@@ -455,7 +455,7 @@ stift push">copy</button></div>
     </tbody>
   </table>
   <p>
-    Windows: download <a href="/dl/latest/stift-windows-amd64.exe"><code>stift-windows-amd64.exe</code></a>
+    Windows: download <a href="https://github.com/stift-sh/stift/releases/latest/download/stift-windows-amd64.exe"><code>stift-windows-amd64.exe</code></a>
     and put it on <code>PATH</code>. Or build from source with <code>make build</code> (Go 1.26+).
   </p>
 
@@ -463,11 +463,11 @@ stift push">copy</button></div>
   <table class="tbl">
     <thead><tr><th>Platform</th><th>Binary</th><th>Checksum</th></tr></thead>
     <tbody>
-      <tr><td class="m">Linux x86-64</td><td><a href="/dl/latest/stift-linux-amd64">stift-linux-amd64</a></td><td><a href="/dl/latest/stift-linux-amd64.sha256">.sha256</a></td></tr>
-      <tr><td class="m">Linux arm64</td><td><a href="/dl/latest/stift-linux-arm64">stift-linux-arm64</a></td><td><a href="/dl/latest/stift-linux-arm64.sha256">.sha256</a></td></tr>
-      <tr><td class="m">macOS Intel</td><td><a href="/dl/latest/stift-darwin-amd64">stift-darwin-amd64</a></td><td><a href="/dl/latest/stift-darwin-amd64.sha256">.sha256</a></td></tr>
-      <tr><td class="m">macOS Apple Silicon</td><td><a href="/dl/latest/stift-darwin-arm64">stift-darwin-arm64</a></td><td><a href="/dl/latest/stift-darwin-arm64.sha256">.sha256</a></td></tr>
-      <tr><td class="m">Windows x86-64</td><td><a href="/dl/latest/stift-windows-amd64.exe">stift-windows-amd64.exe</a></td><td><a href="/dl/latest/stift-windows-amd64.exe.sha256">.sha256</a></td></tr>
+      <tr><td class="m">Linux x86-64</td><td><a href="https://github.com/stift-sh/stift/releases/latest/download/stift-linux-amd64">stift-linux-amd64</a></td><td><a href="https://github.com/stift-sh/stift/releases/latest/download/stift-linux-amd64.sha256">.sha256</a></td></tr>
+      <tr><td class="m">Linux arm64</td><td><a href="https://github.com/stift-sh/stift/releases/latest/download/stift-linux-arm64">stift-linux-arm64</a></td><td><a href="https://github.com/stift-sh/stift/releases/latest/download/stift-linux-arm64.sha256">.sha256</a></td></tr>
+      <tr><td class="m">macOS Intel</td><td><a href="https://github.com/stift-sh/stift/releases/latest/download/stift-darwin-amd64">stift-darwin-amd64</a></td><td><a href="https://github.com/stift-sh/stift/releases/latest/download/stift-darwin-amd64.sha256">.sha256</a></td></tr>
+      <tr><td class="m">macOS Apple Silicon</td><td><a href="https://github.com/stift-sh/stift/releases/latest/download/stift-darwin-arm64">stift-darwin-arm64</a></td><td><a href="https://github.com/stift-sh/stift/releases/latest/download/stift-darwin-arm64.sha256">.sha256</a></td></tr>
+      <tr><td class="m">Windows x86-64</td><td><a href="https://github.com/stift-sh/stift/releases/latest/download/stift-windows-amd64.exe">stift-windows-amd64.exe</a></td><td><a href="https://github.com/stift-sh/stift/releases/latest/download/stift-windows-amd64.exe.sha256">.sha256</a></td></tr>
     </tbody>
   </table>
 </section>
@@ -475,68 +475,40 @@ stift push">copy</button></div>
 <!-- ============ 04 server ============ -->
 <section class="sec" id="server">
   <h2>Self-host a server</h2>
-  <div class="sec-sub">binary · systemd · proxmox lxc · docker — one minute each · or use <a href="#cloud">Stift Cloud</a></div>
+  <div class="sec-sub">docker compose · or one container + your own postgres and bucket — one minute each · or use <a href="#cloud">Stift Cloud</a></div>
 
-  <h3>Binary</h3>
+  <h3>Docker Compose (everything included)</h3>
   <div class="plate">
-    <div class="plate-bar"><span>sh</span><button class="copy" data-copy="stift serve --data /var/lib/stift">copy</button></div>
-    <pre><code><span class="p">$</span> stift serve --data /var/lib/stift</code></pre>
+    <div class="plate-bar"><span>sh</span><button class="copy" data-copy="curl -fsSLO https://raw.githubusercontent.com/stift-sh/stift/main/docker-compose.yml
+docker compose up -d
+docker compose logs server">copy</button></div>
+    <pre><code><span class="p">$</span> curl -fsSLO https://raw.githubusercontent.com/stift-sh/stift/main/docker-compose.yml
+<span class="p">$</span> docker compose up -d
+<span class="p">$</span> docker compose logs server   <span class="c"># grab the first-boot admin token</span></code></pre>
   </div>
   <p>
-    On first start the server prints an <strong>admin token once</strong> — store it.
-    Then it listens on <code>:8580</code>. For a permanent install on a Linux host
-    (bare metal, VM, or LXC), use the hardened systemd unit from
-    <a href="https://github.com/stift-sh/stift/blob/main/deploy/stift.service"><code>deploy/stift.service</code></a>:
-  </p>
-  <div class="plate">
-    <div class="plate-bar"><span>sh · as root</span><button class="copy" data-copy="cp dist/stift-linux-amd64 /usr/local/bin/stift &amp;&amp; chmod +x /usr/local/bin/stift
-cp deploy/stift.service /etc/systemd/system/
-systemctl enable --now stift
-journalctl -u stift">copy</button></div>
-    <pre><code><span class="p">$</span> cp dist/stift-linux-amd64 /usr/local/bin/stift <span class="a">&amp;&amp;</span> chmod +x /usr/local/bin/stift
-<span class="p">$</span> cp deploy/stift.service /etc/systemd/system/
-<span class="p">$</span> systemctl enable --now stift
-<span class="p">$</span> journalctl -u stift   <span class="c"># first-boot admin token is in here</span></code></pre>
-  </div>
-
-  <h3>Proxmox VE</h3>
-  <p>
-    One command on the Proxmox host creates an unprivileged Debian LXC
-    (1 core / 512 MB / 8 GB by default), installs stift as a hardened systemd
-    service, and prints the server URL + admin token, ready for <code>stift login</code>:
-  </p>
-  <div class="plate">
-    <div class="plate-bar"><span>sh · on the proxmox host, as root</span><button class="copy" data-copy="bash -c &quot;$(curl -fsSL https://stift.sh/proxmox.sh)&quot;">copy</button></div>
-    <pre><code><span class="p">$</span> bash -c <span class="a">"$(curl -fsSL https://stift.sh/proxmox.sh)"</span></code></pre>
-  </div>
-  <p>
-    The script (<a href="/proxmox.sh">read it first</a>) shows its plan and
-    <strong>asks for confirmation before creating anything</strong>. Flags:
-    <code>--ctid</code>, <code>--hostname</code>, <code>--storage</code>, <code>--disk</code>,
-    <code>--cores</code>, <code>--memory</code>, <code>--bridge</code>,
-    <code>--ip CIDR --gw IP</code> (static instead of DHCP),
-    <code>--binary PATH</code> (install a local build instead of downloading),
-    <code>--token</code>, <code>--yes</code>. See <code>--help</code>.
+    Runs Postgres and MinIO next to the server image
+    (<code>ghcr.io/stift-sh/stift</code>) with persistent volumes. On first start
+    the server prints an <strong>admin token once</strong> — store it. Then it
+    listens on <code>:8580</code>, ready for <code>stift login</code>.
   </p>
 
-  <h3>Docker</h3>
-  <div class="plate">
-    <div class="plate-bar"><span>sh</span><button class="copy" data-copy="docker compose up -d
-docker compose logs stift">copy</button></div>
-    <pre><code><span class="p">$</span> docker compose up -d        <span class="c"># uses docker-compose.yml in the repo</span>
-<span class="p">$</span> docker compose logs stift   <span class="c"># grab the first-boot admin token</span></code></pre>
-  </div>
-  <p>Or pin the token instead of fishing it out of logs:</p>
+  <h3>Your own database and bucket</h3>
+  <p>Point the image at whatever you already run (RDS + S3, Neon + R2, …):</p>
   <div class="plate">
     <div class="plate-bar"><span>sh</span><button class="copy" data-copy='export STIFT_ADMIN_TOKEN="stf_$(openssl rand -hex 24)"
-docker run -d -p 8580:8580 -v stift-data:/data -e STIFT_ADMIN_TOKEN stift:latest'>copy</button></div>
-    <pre><code><span class="p">$</span> export STIFT_ADMIN_TOKEN=<span class="a">"stf_$(openssl rand -hex 24)"</span>
-<span class="p">$</span> docker run -d -p 8580:8580 -v stift-data:/data \
-    -e STIFT_ADMIN_TOKEN stift:latest</code></pre>
+docker run -d -p 8580:8580 -e STIFT_DATABASE_URL=postgres://user:pass@db:5432/stift -e STIFT_S3_BUCKET=stift -e STIFT_S3_REGION=us-east-1 -e STIFT_S3_ACCESS_KEY=... -e STIFT_S3_SECRET_KEY=... -e STIFT_ADMIN_TOKEN ghcr.io/stift-sh/stift:latest'>copy</button></div>
+    <pre><code><span class="p">$</span> export STIFT_ADMIN_TOKEN=<span class="a">"stf_$(openssl rand -hex 24)"</span>   <span class="c"># optional: pin the token</span>
+<span class="p">$</span> docker run -d -p 8580:8580 \
+    -e STIFT_DATABASE_URL=postgres://user:pass@db:5432/stift \
+    -e STIFT_S3_BUCKET=stift -e STIFT_S3_REGION=us-east-1 \
+    -e STIFT_S3_ACCESS_KEY=... -e STIFT_S3_SECRET_KEY=... \
+    -e STIFT_ADMIN_TOKEN ghcr.io/stift-sh/stift:latest</code></pre>
   </div>
   <p>
-    A read-only web UI for browsing and downloading sessions is served at <code>/</code>
-    (paste a token; it never leaves your browser).
+    Set <code>STIFT_S3_ENDPOINT</code> (and <code>STIFT_S3_FORCE_PATH_STYLE=true</code>)
+    for non-AWS providers. Migrations run automatically at startup. Put TLS in
+    front with your usual reverse proxy; the server itself speaks plain HTTP.
   </p>
 </section>
 
@@ -759,7 +731,7 @@ stift token revoke &lt;id&gt;">copy</button></div>
 <footer>
   <div class="frame" style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap">
     <span>stift — mit core · <a href="https://app.stift.sh">stift cloud</a></span>
-    <span><a href="https://app.stift.sh">app.stift.sh</a> · <a href="/install.sh">install.sh</a> · <a href="/proxmox.sh">proxmox.sh</a> · <a href="https://github.com/stift-sh/stift">source</a></span>
+    <span><a href="https://app.stift.sh">app.stift.sh</a> · <a href="/install.sh">install.sh</a> · <a href="https://github.com/stift-sh/stift">source</a></span>
   </div>
 </footer>
 
