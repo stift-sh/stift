@@ -12,3 +12,4 @@ node_modules/
 # local env
 .env
 .env.local
+/apps/web/dist/

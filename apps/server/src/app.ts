@@ -10,6 +10,7 @@ import { whoami } from "./routes/whoami.js";
 import type { Store } from "./storage/store.js";
 import type { Db } from "./db/client.js";
 import { DEFAULT_LIMITS, type Limits } from "./limits.js";
+import { web } from "./web.js";
 
 export const API_VERSION = 1;
 
@@ -23,6 +24,12 @@ export type AppOptions = {
   /** Database handle for token management routes. Optional for the same reason. */
   db?: Db;
   limits?: Limits;
+  /** Feature flags advertised on /api/version; the web app shows cloud-only
+   *  screens only when the server lists them. */
+  features?: string[];
+  /** Directory holding the built web app (index.html + assets). When unset the
+   *  server is API-only and unknown paths 404. */
+  webDir?: string;
 };
 
 const denyAll: Authenticator = { authenticate: async () => null };
@@ -65,6 +72,7 @@ export function createApp(opts: AppOptions) {
     openapi: "3.1.0",
     info: { title: "stift", version: opts.version },
   });
+  if (opts.webDir) app.route("/", web(opts.webDir));
   return app;
 }
 export type App = ReturnType<typeof createApp>;

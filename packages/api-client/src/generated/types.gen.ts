@@ -10,6 +10,10 @@ export type Version = {
      * API major version
      */
     api: number;
+    /**
+     * server-declared feature flags the web app keys screens on (e.g. cloud, marketplace)
+     */
+    features: Array<string>;
 };
 
 export type Whoami = {

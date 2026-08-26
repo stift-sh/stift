@@ -1,0 +1,15 @@
+:root {
+  color-scheme: light dark;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  --fg: #111;
+  --bg: #fff;
+  --muted: #666;
+  --error: #b42318;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --fg: #eee; --bg: #111; --muted: #999; --error: #f97066; }
+}
+body { margin: 0; color: var(--fg); background: var(--bg); }
+.shell { max-width: 60rem; margin: 0 auto; padding: 2rem 1rem; }
+.muted { color: var(--muted); }
+.error { color: var(--error); }

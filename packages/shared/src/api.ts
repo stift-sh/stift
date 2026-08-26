@@ -102,7 +102,11 @@ export type Bundle = z.infer<typeof Bundle>;
 
 /** Returned by GET /api/version. */
 export const Version = z
-  .object({ version: z.string(), api: z.int().describe("API major version") })
+  .object({
+    version: z.string(),
+    api: z.int().describe("API major version"),
+    features: z.array(z.string()).describe("server-declared feature flags the web app keys screens on (e.g. cloud, marketplace)"),
+  })
   .meta({ id: "Version" });
 export type Version = z.infer<typeof Version>;
 

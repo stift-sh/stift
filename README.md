@@ -51,6 +51,11 @@ Binaries come from [GitHub releases](https://github.com/stift-sh/stift/releases)
 (`stift-<os>-<arch>` plus a `.sha256` each, built by GoReleaser on every `v*`
 tag). Or build from source with `make build` (Go 1.26+).
 
+The web app lives in [`apps/web/`](apps/web/) (Vite + React, talking to the
+server only through the generated `@stift/api-client`); the server image serves
+its build at `/`. For development run `docker compose up -d` and `pnpm dev` in
+`apps/web`, which proxies `/v1` and `/api` to `:8580`.
+
 The stift.sh site lives in [`apps/website/`](apps/website/) — a Cloudflare
 Worker serving the docs page and the installer as static assets
 (`make site-deploy`).
@@ -267,6 +272,8 @@ stift token revoke <id>
 | `STIFT_DATABASE_URL` | server | Postgres connection string (required) |
 | `STIFT_S3_BUCKET`, `STIFT_S3_ENDPOINT`, `STIFT_S3_REGION`, `STIFT_S3_ACCESS_KEY`, `STIFT_S3_SECRET_KEY`, `STIFT_S3_FORCE_PATH_STYLE`, `STIFT_S3_PREFIX` | server | blob storage (any S3-compatible API) |
 | `STIFT_AUTH` | server | comma-separated authenticators (default `local`) |
+| `STIFT_FEATURES` | server | comma-separated feature flags advertised on `/api/version` (e.g. `cloud`); the web app shows matching screens only |
+| `STIFT_WEB_DIR` | server | directory of the built web app to serve at `/` (default `apps/web/dist`, `/app/web` in the image); absent → API only |
 
 ## Server: deploy in one minute
 

@@ -22,11 +22,19 @@
           "api": {
             "type": "integer",
             "description": "API major version"
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "server-declared feature flags the web app keys screens on (e.g. cloud, marketplace)"
           }
         },
         "required": [
           "version",
-          "api"
+          "api",
+          "features"
         ]
       },
       "Whoami": {

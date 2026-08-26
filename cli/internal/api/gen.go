@@ -251,8 +251,11 @@ type TokenInfo struct {
 // Version defines model for Version.
 type Version struct {
 	// Api API major version
-	Api     int    `json:"api"`
-	Version string `json:"version"`
+	Api int `json:"api"`
+
+	// Features server-declared feature flags the web app keys screens on (e.g. cloud, marketplace)
+	Features []string `json:"features"`
+	Version  string   `json:"version"`
 }
 
 // Whoami defines model for Whoami.
