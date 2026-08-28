@@ -3,9 +3,9 @@ package daemon
 import (
 	"os"
 
-	"github.com/stift-sh/stift/engine/api"
 	"github.com/stift-sh/stift/engine/archive"
 	"github.com/stift-sh/stift/internal/agents"
+	"github.com/stift-sh/stift/internal/api"
 	"github.com/stift-sh/stift/internal/client"
 	"github.com/stift-sh/stift/internal/gitrepo"
 )
@@ -29,7 +29,7 @@ func PushSession(c *client.Client, s agents.LocalSession, host string) (api.Push
 	}
 
 	projectID, repo := gitrepo.Identity(s.Project)
-	return c.Push(api.Session{
+	return c.Push(api.PushMeta{
 		Key:       s.Key(host),
 		Agent:     s.Agent,
 		SessionID: s.SessionID,
@@ -38,7 +38,7 @@ func PushSession(c *client.Client, s agents.LocalSession, host string) (api.Push
 		Repo:      repo,
 		Host:      host,
 		Title:     s.Title,
-		Base:      s.Base,
+		Base:      api.PushMetaBase(s.Base),
 		Files:     n,
 		ModTime:   s.ModTime,
 	}, tmp.Name())

@@ -42,7 +42,7 @@ func cmdList(args []string) error {
 	for _, s := range sessions {
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%.60s\t%d\t%s\t%s\n",
 			s.ID[:8], s.Agent, s.Host, oneOf(s.Project, "-"), oneOf(s.Title, "-"),
-			s.Files, humanSize(s.Size), humanTime(s.UpdatedAt))
+			s.Files, humanSize(int64(s.Size)), humanTime(s.UpdatedAt))
 	}
 	return w.Flush()
 }

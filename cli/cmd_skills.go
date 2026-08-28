@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/stift-sh/stift/engine/api"
 	"github.com/stift-sh/stift/internal/agents"
+	"github.com/stift-sh/stift/internal/api"
 	"github.com/stift-sh/stift/internal/bundle"
 	"github.com/stift-sh/stift/internal/client"
 	"github.com/stift-sh/stift/internal/skillsync"
@@ -381,7 +381,7 @@ func cmdSkills(args []string) error {
 		if err != nil {
 			return err
 		}
-		b := api.Bundle{Scope: key.Scope, Agent: key.Agent, Project: key.Project, Name: name, Parent: head.Version, Host: skillsync.Hostname(), Files: old.Files}
+		b := api.Bundle{Scope: api.BundleScope(key.Scope), Agent: key.Agent, Project: key.Project, Name: name, Parent: head.Version, Host: skillsync.Hostname(), Files: old.Files}
 		res, err := c.PutBundle(key, b, false)
 		if err != nil {
 			return err

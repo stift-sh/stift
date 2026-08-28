@@ -10,8 +10,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/stift-sh/stift/engine/api"
 	"github.com/stift-sh/stift/engine/archive"
+	"github.com/stift-sh/stift/internal/api"
 	"github.com/stift-sh/stift/internal/client"
 	"github.com/stift-sh/stift/internal/daemon"
 )

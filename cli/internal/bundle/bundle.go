@@ -15,8 +15,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/stift-sh/stift/engine/api"
 	"github.com/stift-sh/stift/internal/agents"
+	"github.com/stift-sh/stift/internal/api"
 )
 
 // Build returns the manifest of one unit: every included file below the
@@ -25,7 +25,7 @@ import (
 // with that content. root supplies the exclude patterns. Warnings (skipped
 // symlinks, oversized files) are returned separately.
 func Build(root agents.ConfigRoot, u agents.Unit) (api.Bundle, map[string]string, []string, error) {
-	b := api.Bundle{Scope: root.Scope, Name: u.Name, Files: []api.BundleFile{}}
+	b := api.Bundle{Scope: api.BundleScope(root.Scope), Name: u.Name, Files: []api.BundleFile{}}
 	blobs := map[string]string{}
 	var warnings []string
 
@@ -38,11 +38,11 @@ func Build(root agents.ConfigRoot, u agents.Unit) (api.Bundle, map[string]string
 		if err != nil {
 			return err
 		}
-		var mode uint32 = 0o644
+		mode := 0o644
 		if fi.Mode()&0o111 != 0 {
 			mode = 0o755
 		}
-		b.Files = append(b.Files, api.BundleFile{Path: rel, SHA256: sum, Size: fi.Size(), Mode: mode})
+		b.Files = append(b.Files, api.BundleFile{Path: rel, Sha256: sum, Size: int(fi.Size()), Mode: mode})
 		if _, ok := blobs[sum]; !ok {
 			blobs[sum] = p
 		}
@@ -149,7 +149,7 @@ func fileSHA(p string) (string, error) {
 func Manifest(b api.Bundle) map[string]string {
 	m := make(map[string]string, len(b.Files))
 	for _, f := range b.Files {
-		m[f.Path] = f.SHA256
+		m[f.Path] = f.Sha256
 	}
 	return m
 }
@@ -215,10 +215,10 @@ func Apply(remote api.Bundle, fetch func(sha string) (io.ReadCloser, error), bas
 		if err != nil {
 			return res, err
 		}
-		if exists && cur == f.SHA256 {
+		if exists && cur == f.Sha256 {
 			res.Unchanged++
 			if !dryRun {
-				fixMode(dst, f.Mode)
+				fixMode(dst, uint32(f.Mode))
 			}
 			continue
 		}
@@ -303,7 +303,7 @@ func writeBlob(dst string, f api.BundleFile, fetch func(string) (io.ReadCloser, 
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return err
 	}
-	rc, err := fetch(f.SHA256)
+	rc, err := fetch(f.Sha256)
 	if err != nil {
 		return err
 	}
@@ -317,11 +317,11 @@ func writeBlob(dst string, f api.BundleFile, fetch func(string) (io.ReadCloser, 
 	if cerr := tmp.Close(); err == nil {
 		err = cerr
 	}
-	if err == nil && hex.EncodeToString(h.Sum(nil)) != f.SHA256 {
-		err = fmt.Errorf("blob %s: content hash mismatch", f.SHA256[:12])
+	if err == nil && hex.EncodeToString(h.Sum(nil)) != f.Sha256 {
+		err = fmt.Errorf("blob %s: content hash mismatch", f.Sha256[:12])
 	}
 	if err == nil {
-		err = os.Chmod(tmp.Name(), fileMode(f.Mode))
+		err = os.Chmod(tmp.Name(), fileMode(uint32(f.Mode)))
 	}
 	if err == nil {
 		if info, lerr := os.Lstat(dst); lerr == nil && info.IsDir() {

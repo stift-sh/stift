@@ -21,17 +21,19 @@ export type Whoami = {
     admin: boolean;
     role?: Role;
     user?: UserRef;
-    org?: {
-        id: string;
-        slug: string;
-        name: string;
-    };
+    org?: OrgRef;
 };
 
 export type Role = 'admin' | 'member';
 
 export type UserRef = {
     id: string;
+    name: string;
+};
+
+export type OrgRef = {
+    id: string;
+    slug: string;
     name: string;
 };
 
@@ -97,7 +99,6 @@ export type PushMeta = {
     base: 'home' | 'project';
     files?: number;
     mod_time?: string;
-    user?: UserRef;
 };
 
 export type BlobsCheckResponse = {

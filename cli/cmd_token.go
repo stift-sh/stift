@@ -47,14 +47,10 @@ func cmdToken(args []string) error {
 		fmt.Fprintln(w, "ID\tNAME\tUSER\tADMIN\tCREATED\tLAST USED")
 		for _, t := range tokens {
 			last := "never"
-			if t.LastUsedAt != nil {
+			if !t.LastUsedAt.IsZero() {
 				last = t.LastUsedAt.Local().Format("2006-01-02 15:04")
 			}
-			user := ""
-			if t.User != nil {
-				user = t.User.Name
-			}
-			fmt.Fprintf(w, "%s\t%s\t%s\t%v\t%s\t%s\n", t.ID, t.Name, user, t.Admin, t.CreatedAt.Local().Format("2006-01-02 15:04"), last)
+			fmt.Fprintf(w, "%s\t%s\t%s\t%v\t%s\t%s\n", t.ID, t.Name, t.User.Name, t.Admin, t.CreatedAt.Local().Format("2006-01-02 15:04"), last)
 		}
 		return w.Flush()
 	case "revoke":

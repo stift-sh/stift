@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/stift-sh/stift/engine/api"
+	"github.com/stift-sh/stift/internal/api"
 )
 
 // Client talks to a stift server.
@@ -75,7 +75,7 @@ func (c *Client) Whoami() (api.Whoami, error) {
 }
 
 // Push uploads a session archive read from archivePath.
-func (c *Client) Push(meta api.Session, archivePath string) (api.PushResult, error) {
+func (c *Client) Push(meta api.PushMeta, archivePath string) (api.PushResult, error) {
 	var out api.PushResult
 	f, err := os.Open(archivePath)
 	if err != nil {

@@ -12,8 +12,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/stift-sh/stift/engine/api"
 	"github.com/stift-sh/stift/internal/agents"
+	"github.com/stift-sh/stift/internal/api"
 	"github.com/stift-sh/stift/internal/bundle"
 	"github.com/stift-sh/stift/internal/client"
 )
@@ -262,7 +262,7 @@ func UploadBlobs(c *client.Client, blobs map[string]string) error {
 func ManifestFiles(m map[string]string) []api.BundleFile {
 	var out []api.BundleFile
 	for p, sha := range m {
-		out = append(out, api.BundleFile{Path: p, SHA256: sha})
+		out = append(out, api.BundleFile{Path: p, Sha256: sha})
 	}
 	return out
 }

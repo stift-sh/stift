@@ -137,7 +137,7 @@ type Bundle struct {
 	Parent int `json:"parent"`
 
 	// Project abs path (scope=project)
-	Project *string     `json:"project,omitempty"`
+	Project string      `json:"project,omitempty"`
 	Scope   BundleScope `json:"scope"`
 
 	// Skills parsed SKILL.md frontmatter, for listing
@@ -161,17 +161,24 @@ type BundleFile struct {
 
 // BundleInput defines model for BundleInput.
 type BundleInput struct {
-	Author *string       `json:"author,omitempty"`
-	Files  *[]BundleFile `json:"files,omitempty"`
-	Host   *string       `json:"host,omitempty"`
+	Author string       `json:"author,omitempty"`
+	Files  []BundleFile `json:"files,omitempty"`
+	Host   string       `json:"host,omitempty"`
 
 	// Parent version this was based on
-	Parent *int `json:"parent,omitempty"`
+	Parent int `json:"parent,omitempty"`
 }
 
 // Error defines model for Error.
 type Error struct {
 	Error string `json:"error"`
+}
+
+// OrgRef defines model for OrgRef.
+type OrgRef struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Slug string `json:"slug"`
 }
 
 // PushMeta JSON; must precede archive
@@ -180,20 +187,19 @@ type PushMeta struct {
 
 	// Base what archive paths are relative to
 	Base    PushMetaBase `json:"base"`
-	Files   *int         `json:"files,omitempty"`
+	Files   int          `json:"files,omitempty"`
 	Host    string       `json:"host"`
 	Key     string       `json:"key"`
-	ModTime *time.Time   `json:"mod_time,omitempty"`
-	Project *string      `json:"project,omitempty"`
+	ModTime time.Time    `json:"mod_time,omitempty"`
+	Project string       `json:"project,omitempty"`
 
-	// ProjectId repo name, for cross-machine matching
-	ProjectId *string `json:"project_id,omitempty"`
+	// ProjectID repo name, for cross-machine matching
+	ProjectID string `json:"project_id,omitempty"`
 
 	// Repo normalized git remote URL (secondary signal)
-	Repo      *string  `json:"repo,omitempty"`
-	SessionId string   `json:"session_id"`
-	Title     *string  `json:"title,omitempty"`
-	User      *UserRef `json:"user,omitempty"`
+	Repo      string `json:"repo,omitempty"`
+	SessionID string `json:"session_id"`
+	Title     string `json:"title,omitempty"`
 }
 
 // PushMetaBase what archive paths are relative to
@@ -220,22 +226,22 @@ type Session struct {
 	CreatedAt time.Time   `json:"created_at"`
 	Files     int         `json:"files"`
 	Host      string      `json:"host"`
-	Id        string      `json:"id"`
+	ID        string      `json:"id"`
 	Key       string      `json:"key"`
 	ModTime   time.Time   `json:"mod_time"`
-	Project   *string     `json:"project,omitempty"`
+	Project   string      `json:"project,omitempty"`
 
-	// ProjectId repo name, for cross-machine matching
-	ProjectId *string `json:"project_id,omitempty"`
+	// ProjectID repo name, for cross-machine matching
+	ProjectID string `json:"project_id,omitempty"`
 
 	// Repo normalized git remote URL (secondary signal)
-	Repo      *string   `json:"repo,omitempty"`
-	SessionId string    `json:"session_id"`
+	Repo      string    `json:"repo,omitempty"`
+	SessionID string    `json:"session_id"`
 	Sha256    string    `json:"sha256"`
 	Size      int       `json:"size"`
-	Title     *string   `json:"title,omitempty"`
+	Title     string    `json:"title,omitempty"`
 	UpdatedAt time.Time `json:"updated_at"`
-	User      *UserRef  `json:"user,omitempty"`
+	User      UserRef   `json:"user,omitempty"`
 }
 
 // SessionBase what archive paths are relative to
@@ -250,41 +256,41 @@ type SkillMeta struct {
 
 // TokenCreateRequest defines model for TokenCreateRequest.
 type TokenCreateRequest struct {
-	Admin *bool  `json:"admin,omitempty"`
+	Admin bool   `json:"admin,omitempty"`
 	Name  string `json:"name"`
 }
 
 // TokenCreated defines model for TokenCreated.
 type TokenCreated struct {
-	Admin      bool       `json:"admin"`
-	CreatedAt  time.Time  `json:"created_at"`
-	Id         string     `json:"id"`
-	LastUsedAt *time.Time `json:"last_used_at"`
-	Name       string     `json:"name"`
-	Token      string     `json:"token"`
-	User       *UserRef   `json:"user,omitempty"`
+	Admin      bool      `json:"admin"`
+	CreatedAt  time.Time `json:"created_at"`
+	ID         string    `json:"id"`
+	LastUsedAt time.Time `json:"last_used_at"`
+	Name       string    `json:"name"`
+	Token      string    `json:"token"`
+	User       UserRef   `json:"user,omitempty"`
 }
 
 // TokenInfo defines model for TokenInfo.
 type TokenInfo struct {
-	Admin      bool       `json:"admin"`
-	CreatedAt  time.Time  `json:"created_at"`
-	Id         string     `json:"id"`
-	LastUsedAt *time.Time `json:"last_used_at"`
-	Name       string     `json:"name"`
-	User       *UserRef   `json:"user,omitempty"`
+	Admin      bool      `json:"admin"`
+	CreatedAt  time.Time `json:"created_at"`
+	ID         string    `json:"id"`
+	LastUsedAt time.Time `json:"last_used_at"`
+	Name       string    `json:"name"`
+	User       UserRef   `json:"user,omitempty"`
 }
 
 // UserRef defines model for UserRef.
 type UserRef struct {
-	Id   string `json:"id"`
+	ID   string `json:"id"`
 	Name string `json:"name"`
 }
 
 // Version defines model for Version.
 type Version struct {
-	// Api API major version
-	Api int `json:"api"`
+	// API API major version
+	API int `json:"api"`
 
 	// Features server-declared feature flags the web app keys screens on (e.g. cloud, marketplace)
 	Features []string `json:"features"`
@@ -293,41 +299,37 @@ type Version struct {
 
 // Whoami defines model for Whoami.
 type Whoami struct {
-	Admin bool   `json:"admin"`
-	Name  string `json:"name"`
-	Org   *struct {
-		Id   string `json:"id"`
-		Name string `json:"name"`
-		Slug string `json:"slug"`
-	} `json:"org,omitempty"`
-	Role *Role    `json:"role,omitempty"`
-	User *UserRef `json:"user,omitempty"`
+	Admin bool    `json:"admin"`
+	Name  string  `json:"name"`
+	Org   OrgRef  `json:"org,omitempty"`
+	Role  Role    `json:"role,omitempty"`
+	User  UserRef `json:"user,omitempty"`
 }
 
 // GetV1BundlesParams defines parameters for GetV1Bundles.
 type GetV1BundlesParams struct {
-	Scope   *string `form:"scope,omitempty" json:"scope,omitempty"`
-	Agent   *string `form:"agent,omitempty" json:"agent,omitempty"`
-	Project *string `form:"project,omitempty" json:"project,omitempty"`
-	Name    *string `form:"name,omitempty" json:"name,omitempty"`
+	Scope   string `form:"scope,omitempty" json:"scope,omitempty"`
+	Agent   string `form:"agent,omitempty" json:"agent,omitempty"`
+	Project string `form:"project,omitempty" json:"project,omitempty"`
+	Name    string `form:"name,omitempty" json:"name,omitempty"`
 }
 
 // DeleteV1BundlesScopeAgentNameParams defines parameters for DeleteV1BundlesScopeAgentName.
 type DeleteV1BundlesScopeAgentNameParams struct {
 	// Project abs path, required when scope=project
-	Project *string `form:"project,omitempty" json:"project,omitempty"`
+	Project string `form:"project,omitempty" json:"project,omitempty"`
 }
 
 // GetV1BundlesScopeAgentNameParams defines parameters for GetV1BundlesScopeAgentName.
 type GetV1BundlesScopeAgentNameParams struct {
 	// Project abs path, required when scope=project
-	Project *string `form:"project,omitempty" json:"project,omitempty"`
+	Project string `form:"project,omitempty" json:"project,omitempty"`
 
 	// Version 0 or absent for HEAD
-	Version *string `form:"version,omitempty" json:"version,omitempty"`
+	Version string `form:"version,omitempty" json:"version,omitempty"`
 
 	// History 1 for every version, newest first
-	History *string `form:"history,omitempty" json:"history,omitempty"`
+	History string `form:"history,omitempty" json:"history,omitempty"`
 }
 
 // GetV1BundlesScopeAgentName200JSONResponseBody1 defines parameters for GetV1BundlesScopeAgentName.
@@ -341,20 +343,20 @@ type GetV1BundlesScopeAgentName200JSONResponseBody struct {
 // PutV1BundlesScopeAgentNameParams defines parameters for PutV1BundlesScopeAgentName.
 type PutV1BundlesScopeAgentNameParams struct {
 	// Project abs path, required when scope=project
-	Project *string `form:"project,omitempty" json:"project,omitempty"`
+	Project string `form:"project,omitempty" json:"project,omitempty"`
 
 	// Force 1 to overwrite a stale parent
-	Force *string `form:"force,omitempty" json:"force,omitempty"`
+	Force string `form:"force,omitempty" json:"force,omitempty"`
 }
 
 // GetV1SessionsParams defines parameters for GetV1Sessions.
 type GetV1SessionsParams struct {
-	Agent   *string `form:"agent,omitempty" json:"agent,omitempty"`
-	Project *string `form:"project,omitempty" json:"project,omitempty"`
-	Host    *string `form:"host,omitempty" json:"host,omitempty"`
+	Agent   string `form:"agent,omitempty" json:"agent,omitempty"`
+	Project string `form:"project,omitempty" json:"project,omitempty"`
+	Host    string `form:"host,omitempty" json:"host,omitempty"`
 
 	// Q substring match on title, project or session_id
-	Q *string `form:"q,omitempty" json:"q,omitempty"`
+	Q string `form:"q,omitempty" json:"q,omitempty"`
 }
 
 // PostV1SessionsMultipartBody defines parameters for PostV1Sessions.
@@ -366,9 +368,9 @@ type PostV1SessionsMultipartBody struct {
 	Meta PushMeta `json:"meta"`
 }
 
-// GetV1SessionsIdArchiveParams defines parameters for GetV1SessionsIdArchive.
-type GetV1SessionsIdArchiveParams struct {
-	Range *string `json:"range,omitempty"`
+// GetV1SessionsIDArchiveParams defines parameters for GetV1SessionsIDArchive.
+type GetV1SessionsIDArchiveParams struct {
+	Range string `json:"range,omitempty"`
 }
 
 // PostV1BlobsCheckJSONRequestBody defines body for PostV1BlobsCheck for application/json ContentType.

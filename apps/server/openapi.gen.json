@@ -53,23 +53,7 @@
             "$ref": "#/components/schemas/UserRef"
           },
           "org": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string"
-              },
-              "slug": {
-                "type": "string"
-              },
-              "name": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "id",
-              "slug",
-              "name"
-            ]
+            "$ref": "#/components/schemas/OrgRef"
           }
         },
         "required": [
@@ -96,6 +80,25 @@
         },
         "required": [
           "id",
+          "name"
+        ]
+      },
+      "OrgRef": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
           "name"
         ]
       },
@@ -253,9 +256,6 @@
           "mod_time": {
             "type": "string",
             "format": "date-time"
-          },
-          "user": {
-            "$ref": "#/components/schemas/UserRef"
           }
         },
         "required": [

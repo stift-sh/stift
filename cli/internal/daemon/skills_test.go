@@ -92,7 +92,7 @@ func newSkillsServer(t *testing.T) *client.Client {
 		t.Fatal(err)
 	}
 	for _, h := range heads {
-		if err := c.DeleteBundle(client.BundleKey{Scope: h.Scope, Agent: h.Agent, Project: h.Project, Name: h.Name}); err != nil {
+		if err := c.DeleteBundle(client.BundleKey{Scope: string(h.Scope), Agent: h.Agent, Project: h.Project, Name: h.Name}); err != nil {
 			t.Fatal(err)
 		}
 	}

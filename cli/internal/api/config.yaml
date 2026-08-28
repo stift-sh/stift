@@ -3,3 +3,8 @@ package: api
 output: gen.go
 generate:
   models: true
+output-options:
+  # Id -> ID, SessionId -> SessionID, matching Go convention.
+  name-normalizer: ToCamelCaseWithInitialisms
+  # Optional fields as zero values with omitempty rather than pointers.
+  prefer-skip-optional-pointer: true

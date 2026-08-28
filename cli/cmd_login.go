@@ -63,11 +63,11 @@ func cmdLogin(args []string) error {
 	if who.Admin {
 		role = "admin token"
 	}
-	if who.Role != nil {
-		role = *who.Role
+	if who.Role != "" {
+		role = string(who.Role)
 	}
 	as := fmt.Sprintf("%q", who.Name)
-	if who.User != nil {
+	if who.User.Name != "" {
 		as = fmt.Sprintf("%q (token %q)", who.User.Name, who.Name)
 	}
 	fmt.Printf("logged in to %s as %s (%s); saved to %s\n", server, as, role, path)

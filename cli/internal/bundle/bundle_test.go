@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stift-sh/stift/engine/api"
 	"github.com/stift-sh/stift/internal/agents"
+	"github.com/stift-sh/stift/internal/api"
 )
 
 func write(t *testing.T, path, content string, mode os.FileMode) {
@@ -86,7 +86,7 @@ func TestBuild(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(b.Files) != 1 || b.Files[0].Path != c.file || (c.sha != "" && b.Files[0].SHA256 != c.sha) {
+		if len(b.Files) != 1 || b.Files[0].Path != c.file || (c.sha != "" && b.Files[0].Sha256 != c.sha) {
 			t.Fatalf("%s: %+v", c.name, b.Files)
 		}
 	}
@@ -109,8 +109,8 @@ func TestBuild(t *testing.T) {
 }
 
 func TestDiff(t *testing.T) {
-	local := api.Bundle{Files: []api.BundleFile{{Path: "a", SHA256: "1"}, {Path: "b", SHA256: "2"}, {Path: "c", SHA256: "3"}}}
-	remote := api.Bundle{Files: []api.BundleFile{{Path: "a", SHA256: "1"}, {Path: "b", SHA256: "x"}, {Path: "d", SHA256: "4"}}}
+	local := api.Bundle{Files: []api.BundleFile{{Path: "a", Sha256: "1"}, {Path: "b", Sha256: "2"}, {Path: "c", Sha256: "3"}}}
+	remote := api.Bundle{Files: []api.BundleFile{{Path: "a", Sha256: "1"}, {Path: "b", Sha256: "x"}, {Path: "d", Sha256: "4"}}}
 	ch := Diff(local, remote)
 	if strings.Join(ch.Added, ",") != "c" || strings.Join(ch.Modified, ",") != "b" || strings.Join(ch.Removed, ",") != "d" {
 		t.Fatalf("%+v", ch)
@@ -229,7 +229,7 @@ func TestApply(t *testing.T) {
 	}
 
 	// Unsafe paths are refused.
-	bad := api.Bundle{Files: []api.BundleFile{{Path: "../x", SHA256: "0"}}}
+	bad := api.Bundle{Files: []api.BundleFile{{Path: "../x", Sha256: "0"}}}
 	if _, err := Apply(bad, fetch, dst, nil, true, false); err == nil {
 		t.Fatal("escaping path accepted")
 	}

@@ -1,6 +1,7 @@
 // Wire types shared by the stift server, web app and generated clients.
-// Mirrors cli/engine/api/types.go field for field; the Go side will be
-// generated from the OpenAPI document emitted by the server.
+// The single source of truth: the server emits openapi.gen.json from these
+// and the TS client (packages/api-client) and Go types (cli/internal/api)
+// are generated from that.
 import { z } from "zod";
 
 const timestamp = z.iso.datetime({ offset: true });
@@ -8,6 +9,10 @@ const timestamp = z.iso.datetime({ offset: true });
 /** A user, as referenced from other resources. */
 export const UserRef = z.object({ id: z.string(), name: z.string() }).meta({ id: "UserRef" });
 export type UserRef = z.infer<typeof UserRef>;
+
+/** The caller's org, as returned by whoami. */
+export const OrgRef = z.object({ id: z.string(), slug: z.string(), name: z.string() }).meta({ id: "OrgRef" });
+export type OrgRef = z.infer<typeof OrgRef>;
 
 export const Role = z.enum(["admin", "member"]).meta({ id: "Role" });
 export type Role = z.infer<typeof Role>;
@@ -73,7 +78,7 @@ export const Whoami = z
     admin: z.boolean(),
     role: Role.optional(),
     user: UserRef.optional(),
-    org: z.object({ id: z.string(), slug: z.string(), name: z.string() }).optional(),
+    org: OrgRef.optional(),
   })
   .meta({ id: "Whoami" });
 export type Whoami = z.infer<typeof Whoami>;
@@ -133,7 +138,7 @@ export const Version = z
 export type Version = z.infer<typeof Version>;
 
 /** Multipart `meta` part of POST /v1/sessions: what the client sends. */
-export const PushMeta = Session.omit({ id: true, sha256: true, size: true, created_at: true, updated_at: true })
+export const PushMeta = Session.omit({ id: true, sha256: true, size: true, created_at: true, updated_at: true, user: true })
   .partial({ files: true, mod_time: true })
   .meta({ id: "PushMeta" });
 export type PushMeta = z.infer<typeof PushMeta>;

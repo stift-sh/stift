@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/stift-sh/stift/engine/api"
+	"github.com/stift-sh/stift/internal/api"
 	"github.com/stift-sh/stift/internal/bundle"
 	"github.com/stift-sh/stift/internal/client"
 	"github.com/stift-sh/stift/internal/skillsync"
@@ -146,7 +146,7 @@ func (d *Daemon) skillsPass(projects map[string]string) {
 	}
 	heads := map[client.BundleKey]api.Bundle{}
 	for _, r := range remotes {
-		heads[client.BundleKey{Scope: r.Scope, Agent: r.Agent, Project: r.Project, Name: r.Name}] = r
+		heads[client.BundleKey{Scope: string(r.Scope), Agent: r.Agent, Project: r.Project, Name: r.Name}] = r
 	}
 	now := time.Now()
 	for _, t := range targets {
@@ -175,7 +175,7 @@ func (d *Daemon) skillsPass(projects map[string]string) {
 			}
 		}
 		for _, r := range remotes {
-			if r.Scope != t.Scope || r.Agent != t.Agent || r.Project != t.Project {
+			if string(r.Scope) != t.Scope || r.Agent != t.Agent || r.Project != t.Project {
 				continue
 			}
 			entry := s.Entry(t, r.Name)
