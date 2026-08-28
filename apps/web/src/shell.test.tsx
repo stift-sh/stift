@@ -2,7 +2,7 @@ import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { getToken, setToken } from "./api/client";
 import { renderApp } from "./test/render";
-import { http, HttpResponse, server, unauthorized } from "./test/msw";
+import { http, HttpResponse, member, server, unauthorized } from "./test/msw";
 
 const TOKEN = "stf_" + "a".repeat(48);
 
@@ -39,13 +39,25 @@ test("a 401 mid-session returns to login", async () => {
   expect(getToken()).toBeNull();
 });
 
-test("tokens nav is hidden for non-admins and the route 404s", async () => {
-  server.use(http.get("*/v1/whoami", () => HttpResponse.json({ name: "dev", admin: false })));
+test("header shows user, org and role; members reach /tokens", async () => {
+  server.use(
+    http.get("*/v1/whoami", () => HttpResponse.json(member)),
+    http.get("*/v1/tokens", () => HttpResponse.json([])),
+  );
   setToken(TOKEN);
   renderApp({ path: "/tokens" });
   expect(await screen.findByText("dev")).toBeInTheDocument();
-  expect(screen.queryByRole("link", { name: "Tokens" })).not.toBeInTheDocument();
-  expect(screen.getByText("Page not found")).toBeInTheDocument();
+  expect(screen.getByText("dev").closest("span")!.parentElement).toHaveTextContent("dev · Acme · member");
+  expect(screen.getByRole("link", { name: "Tokens" })).toBeInTheDocument();
+  expect(await screen.findByText("No tokens yet")).toBeInTheDocument();
+});
+
+test("an older server without roles falls back to the admin flag", async () => {
+  server.use(http.get("*/v1/whoami", () => HttpResponse.json({ name: "old", admin: true })));
+  setToken(TOKEN);
+  renderApp({ path: "/sessions" });
+  expect(await screen.findByText("old")).toBeInTheDocument();
+  expect(screen.getByText("old").closest("span")!.parentElement).toHaveTextContent("old · admin");
 });
 
 test("cloud entries appear only with the cloud feature", async () => {

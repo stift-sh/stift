@@ -33,13 +33,9 @@ export function GettingStarted() {
           <CopyField value="curl -fsSL https://stift.sh/install.sh | sh" prompt="$" />
         </Step>
         <Step n={2} title="Get a token">
-          {me.data?.admin ? (
-            <p>
-              Create one on the <Link to="/tokens">Tokens</Link> page. The secret is shown once, so copy it right away.
-            </p>
-          ) : (
-            <p>Ask an admin of this server for an API token; tokens are created on the Tokens page or with the CLI.</p>
-          )}
+          <p>
+            Create one on the <Link to="/tokens">Tokens</Link> page. The secret is shown once, so copy it right away.
+          </p>
         </Step>
         <Step n={3} title="Log in">
           <p>Point the CLI at this server with your token:</p>

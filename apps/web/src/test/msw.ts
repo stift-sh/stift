@@ -3,7 +3,9 @@ import { http, HttpResponse } from "msw";
 import type { Version, Whoami } from "@stift/shared";
 
 export const version: Version = { version: "test", api: 1, features: [] };
-export const admin: Whoami = { name: "root", admin: true };
+export const org = { id: "", slug: "default", name: "Acme" };
+export const admin: Whoami = { name: "root", admin: true, role: "admin", user: { id: "u-root", name: "root" }, org };
+export const member: Whoami = { name: "dev-laptop", admin: false, role: "member", user: { id: "u-dev", name: "dev" }, org };
 export const unauthorized = () => HttpResponse.json({ error: "invalid token" }, { status: 401 });
 
 /** Default handlers: any bearer is accepted as the admin identity. */

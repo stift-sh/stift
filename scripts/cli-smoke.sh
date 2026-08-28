@@ -26,7 +26,7 @@ fail() { echo "FAIL: $*"; cat "$WORK/server.log" 2>/dev/null; exit 1; }
   import pg from "pg";
   const c = new pg.Client({ connectionString: process.env.STIFT_DATABASE_URL });
   await c.connect();
-  await c.query("truncate sessions, blobs, bundles, bundle_versions, tokens");
+  await c.query("truncate sessions, blobs, bundles, bundle_versions, tokens, installs, memberships, users cascade");
   await c.end();
 ') || fail "reset database"
 
@@ -41,12 +41,32 @@ curl -sf "http://localhost:$PORT/healthz" >/dev/null || { cat "$WORK/server.log"
 export HOME=$WORK/home STIFT_CONFIG=$WORK/config.json STIFT_STATE=$WORK/state STIFT_SKILLS_STATE=$WORK/skills-state
 mkdir -p "$HOME"
 
-# login + tokens (admin gate, tenant rule)
-"$STIFT" login "http://localhost:$PORT" --token "$STIFT_ADMIN_TOKEN"
+# login + tokens (roles, tenant rule)
+OUT=$("$STIFT" login "http://localhost:$PORT" --token "$STIFT_ADMIN_TOKEN")
+echo "$OUT" | grep -q "(admin)" || fail "login as admin: $OUT"
 "$STIFT" stop >/dev/null 2>&1 || true # login starts the background sync; the smoke drives pushes itself
 "$STIFT" token list | grep -q admin || fail "token list"
-USER_TOKEN=$("$STIFT" token create laptop | grep -o 'stf_[0-9a-f]*')
-[ -n "$USER_TOKEN" ] || fail "token create"
+"$STIFT" token create laptop | grep -q 'stf_' || fail "token create"
+
+# A member of the org. Tokens belong to their caller, so a second user is
+# seeded directly (the members API is skills-registry-3 item 3).
+USER_TOKEN=stf_$(head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n')
+(cd apps/server && STIFT_MEMBER_TOKEN=$USER_TOKEN node --input-type=module -e '
+  import pg from "pg";
+  import { createHash } from "node:crypto";
+  const c = new pg.Client({ connectionString: process.env.STIFT_DATABASE_URL });
+  await c.connect();
+  await c.query("insert into users (id, name) values ($1, $2)", ["smoke-dev", "dev"]);
+  await c.query("insert into memberships (org_id, user_id, role) values ($1, $2, $3)", ["", "smoke-dev", "member"]);
+  const hash = createHash("sha256").update(process.env.STIFT_MEMBER_TOKEN).digest("hex");
+  await c.query("insert into tokens (id, org_id, user_id, name, hash) values ($1, $2, $3, $4, $5)", ["smoke001", "", "smoke-dev", "dev-laptop", hash]);
+  await c.end();
+') || fail "seed member"
+OUT=$(STIFT_TOKEN=$USER_TOKEN "$STIFT" token create --admin x 2>&1 || true)
+echo "$OUT" | grep -q "admin token required" || fail "member --admin: $OUT"
+STIFT_TOKEN=$USER_TOKEN "$STIFT" token list | grep -q dev-laptop || fail "member token list"
+STIFT_TOKEN=$USER_TOKEN "$STIFT" token list | grep -q laptop$ && fail "member sees admin tokens"
+"$STIFT" token list | grep -q dev-laptop || fail "admin sees member tokens"
 
 # sessions: a custom agent with one file session
 mkdir -p "$HOME/.smoke/runs/run-1" "$WORK/project"

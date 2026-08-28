@@ -58,11 +58,19 @@ func cmdLogin(args []string) error {
 	if err != nil {
 		return err
 	}
+	// Older servers only send `admin`; newer ones add role and user.
 	role := "token"
 	if who.Admin {
 		role = "admin token"
 	}
-	fmt.Printf("logged in to %s as %q (%s); saved to %s\n", server, who.Name, role, path)
+	if who.Role != nil {
+		role = *who.Role
+	}
+	as := fmt.Sprintf("%q", who.Name)
+	if who.User != nil {
+		as = fmt.Sprintf("%q (token %q)", who.User.Name, who.Name)
+	}
+	fmt.Printf("logged in to %s as %s (%s); saved to %s\n", server, as, role, path)
 
 	if !*noDaemon {
 		if err := service.Install(); err != nil {

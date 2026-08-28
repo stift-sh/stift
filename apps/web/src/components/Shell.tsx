@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from "react-router";
-import { useIdentity, useLogout } from "../api/auth";
+import { roleOf, useIdentity, useLogout } from "../api/auth";
 import { useServerVersion } from "../api/version";
 import { Logo } from "./Logo";
 import s from "./Shell.module.css";
@@ -9,7 +9,7 @@ type NavItem = { to: string; label: string; admin?: boolean; feature?: string };
 const NAV: NavItem[] = [
   { to: "/sessions", label: "Sessions" },
   { to: "/skills", label: "Skills" },
-  { to: "/tokens", label: "Tokens", admin: true },
+  { to: "/tokens", label: "Tokens" },
   { to: "/billing", label: "Billing", feature: "cloud" },
   { to: "/start", label: "Get started" },
 ];
@@ -46,8 +46,9 @@ export function Shell() {
         <div className={s.right}>
           {me.data && (
             <span className={s.identity}>
-              <span className={s.name}>{me.data.name}</span>
-              {me.data.admin && <> · admin</>}
+              <span className={s.name}>{me.data.user?.name ?? me.data.name}</span>
+              {me.data.org && <> · {me.data.org.name}</>}
+              <> · {roleOf(me.data)}</>
             </span>
           )}
           <button type="button" className="btn btn--sm btn--ghost" onClick={logout}>

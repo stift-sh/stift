@@ -1,5 +1,6 @@
 import { type FormEvent, useState } from "react";
 import type { TokenCreated, TokenInfo } from "@stift/shared";
+import { roleOf, useIdentity } from "../api/auth";
 import { useCreateToken, useRevokeToken, useTokens } from "../api/tokens";
 import { CopyField } from "../components/CopyField";
 import { EmptyState, ErrorState, PageHeader, Spinner } from "../components/States";
@@ -8,6 +9,8 @@ import s from "./Tokens.module.css";
 
 export function Tokens() {
   const tokens = useTokens();
+  const me = useIdentity();
+  const admin = roleOf(me.data) === "admin";
   const [creating, setCreating] = useState(false);
   const [created, setCreated] = useState<TokenCreated | null>(null);
   const items = tokens.data ?? [];
@@ -16,7 +19,11 @@ export function Tokens() {
     <section>
       <PageHeader
         title="Tokens"
-        subtitle="API tokens authenticate the CLI against this server."
+        subtitle={
+          admin
+            ? "API tokens authenticate the CLI against this server. Admins see every token in the org."
+            : "Your API tokens; they authenticate the CLI against this server as you."
+        }
         actions={
           !creating &&
           !created && (
@@ -28,6 +35,7 @@ export function Tokens() {
       />
       {creating && (
         <CreateForm
+          admin={admin}
           onCancel={() => setCreating(false)}
           onCreated={(t) => {
             setCreating(false);
@@ -50,6 +58,7 @@ export function Tokens() {
             <thead>
               <tr>
                 <th>Name</th>
+                {admin && <th>User</th>}
                 <th>Role</th>
                 <th>Id</th>
                 <th className="num">Created</th>
@@ -59,7 +68,7 @@ export function Tokens() {
             </thead>
             <tbody>
               {items.map((t) => (
-                <Row key={t.id} token={t} />
+                <Row key={t.id} token={t} showUser={admin} />
               ))}
             </tbody>
           </table>
@@ -69,7 +78,7 @@ export function Tokens() {
   );
 }
 
-function CreateForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: (t: TokenCreated) => void }) {
+function CreateForm({ admin: isAdmin, onCancel, onCreated }: { admin: boolean; onCancel: () => void; onCreated: (t: TokenCreated) => void }) {
   const create = useCreateToken();
   const [name, setName] = useState("");
   const [admin, setAdmin] = useState(false);
@@ -77,7 +86,8 @@ function CreateForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: 
   function submit(e: FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
-    create.mutate({ name: name.trim(), admin }, { onSuccess: onCreated });
+    // A token has the role of its user; `admin` is only meaningful for admins.
+    create.mutate(isAdmin ? { name: name.trim(), admin } : { name: name.trim() }, { onSuccess: onCreated });
   }
 
   return (
@@ -95,10 +105,12 @@ function CreateForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: 
           disabled={create.isPending}
         />
       </label>
-      <label className={s.check}>
-        <input type="checkbox" checked={admin} onChange={(e) => setAdmin(e.target.checked)} disabled={create.isPending} />
-        Admin (may manage tokens and org-scope skills)
-      </label>
+      {isAdmin && (
+        <label className={s.check}>
+          <input type="checkbox" checked={admin} onChange={(e) => setAdmin(e.target.checked)} disabled={create.isPending} />
+          Admin (may manage tokens and org-scope skills)
+        </label>
+      )}
       {create.isError && (
         <p className={s.error} role="alert">
           {create.error.message}
@@ -136,12 +148,13 @@ function Created({ token, onDone }: { token: TokenCreated; onDone: () => void })
   );
 }
 
-function Row({ token }: { token: TokenInfo }) {
+function Row({ token, showUser }: { token: TokenInfo; showUser: boolean }) {
   const revoke = useRevokeToken();
   const [confirm, setConfirm] = useState(false);
   return (
     <tr>
       <td className="mono">{token.name}</td>
+      {showUser && <td>{token.user?.name ?? <span className="dim">—</span>}</td>}
       <td>{token.admin ? <span className="badge badge--admin">admin</span> : <span className="badge">member</span>}</td>
       <td className="mono dim">{token.id}</td>
       <td className="num dim" title={fmtTime(token.created_at)}>

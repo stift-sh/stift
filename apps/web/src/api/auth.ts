@@ -5,6 +5,7 @@
 import { useSyncExternalStore } from "react";
 import { QueryCache, QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getV1Whoami } from "@stift/api-client";
+import type { Whoami } from "@stift/shared";
 import { getToken, setToken } from "./client";
 
 const listeners = new Set<() => void>();
@@ -68,6 +69,10 @@ export function createQueryClient() {
 export function useIdentity() {
   return useQuery({ queryKey: ["whoami"], queryFn: whoami, staleTime: Infinity, retry: false });
 }
+
+/** The caller's role; servers older than roles only send `admin`. */
+export const roleOf = (me: Pick<Whoami, "admin" | "role"> | undefined): "admin" | "member" | undefined =>
+  me && (me.role ?? (me.admin ? "admin" : "member"));
 
 export function useLogin() {
   const qc = useQueryClient();

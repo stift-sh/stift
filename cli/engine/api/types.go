@@ -29,14 +29,29 @@ type PushResult struct {
 	Status  string  `json:"status"` // "created", "updated" or "unchanged"
 }
 
+// UserRef is a user as referenced from other resources.
+type UserRef struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// OrgRef is the caller's org as returned by whoami.
+type OrgRef struct {
+	ID   string `json:"id"`
+	Slug string `json:"slug"`
+	Name string `json:"name"`
+}
+
 // TokenInfo describes an access token (the secret itself is never stored).
 type TokenInfo struct {
 	ID        string    `json:"id"`
 	Name      string    `json:"name"`
-	Admin     bool       `json:"admin"`
-	CreatedAt time.Time  `json:"created_at"`
+	Admin     bool      `json:"admin"`
+	CreatedAt time.Time `json:"created_at"`
 	// LastUsedAt is nil until the token authenticates a request.
 	LastUsedAt *time.Time `json:"last_used_at"`
+	// User owns the token; nil from servers older than roles.
+	User *UserRef `json:"user,omitempty"`
 }
 
 // TokenCreated is returned by POST /v1/tokens; Token is shown exactly once.
@@ -45,10 +60,14 @@ type TokenCreated struct {
 	Token string `json:"token"`
 }
 
-// Whoami is returned by GET /v1/whoami.
+// Whoami is returned by GET /v1/whoami. Role, User and Org are nil from
+// servers older than roles; Admin is always set.
 type Whoami struct {
-	Name  string `json:"name"`
-	Admin bool   `json:"admin"`
+	Name  string   `json:"name"`
+	Admin bool     `json:"admin"`
+	Role  *string  `json:"role,omitempty"`
+	User  *UserRef `json:"user,omitempty"`
+	Org   *OrgRef  `json:"org,omitempty"`
 }
 
 // Error is the JSON error envelope.
