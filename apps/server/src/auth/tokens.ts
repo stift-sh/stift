@@ -13,18 +13,28 @@ export const TOKEN_PREFIX = "stf_";
 export const hashToken = (raw: string) => createHash("sha256").update(raw).digest("hex");
 
 type Row = typeof tokens.$inferSelect;
-const info = (r: Row, role: Role): TokenInfo => ({
+type UserRow = { id: string; name: string };
+const info = (r: Row, role: Role, user: UserRow): TokenInfo => ({
   id: r.id,
   name: r.name,
   admin: role === "admin",
   created_at: r.createdAt.toISOString(),
   last_used_at: r.lastUsedAt ? r.lastUsedAt.toISOString() : null,
+  user,
 });
 
-/** Who a token belongs to. Until the members API lands (skills-registry-3
- *  item 3) every token gets a user of its own, named after the token, so the
- *  `admin` flag on the token API keeps working: it becomes the role of that
- *  user's membership. */
+const tokenJoin = (db: Pick<Db, "select">) =>
+  db
+    .select({ token: tokens, role: memberships.role, user: { id: users.id, name: users.name } })
+    .from(tokens)
+    .innerJoin(users, eq(users.id, tokens.userId))
+    .leftJoin(memberships, and(eq(memberships.orgId, tokens.orgId), eq(memberships.userId, tokens.userId)));
+
+/** Who a token belongs to: an existing user (the caller, normally) or a new
+ *  user minted with it. New users come from the bootstrap (`env-admin`,
+ *  `admin`) and from tests; the members API (skills-registry-3 item 3) is
+ *  how further users appear. A boolean is shorthand for a new user with
+ *  that admin-ness. */
 export type TokenOwner = { userId: string } | { newUser: { name: string; role: Role; email?: string } };
 
 /** Mints a new token; the raw secret is returned exactly once. */
@@ -37,8 +47,8 @@ export async function createToken(db: Db, orgId: string, name: string, owner: To
  *  A boolean owner is shorthand for a new user with that admin-ness. */
 export async function registerToken(db: Db, orgId: string, raw: string, name: string, owner: TokenOwner | boolean) {
   const hash = hashToken(raw);
-  const existing = await db.query.tokens.findFirst({ where: eq(tokens.hash, hash) });
-  if (existing) return info(existing, await roleOf(db, existing.orgId, existing.userId));
+  const [existing] = await tokenJoin(db).where(eq(tokens.hash, hash));
+  if (existing) return info(existing.token, existing.role ?? "member", existing.user);
   const o: TokenOwner = typeof owner === "boolean" ? { newUser: { name, role: owner ? "admin" : "member" } } : owner;
   return db.transaction(async (tx) => {
     let userId: string;
@@ -54,33 +64,26 @@ export async function registerToken(db: Db, orgId: string, raw: string, name: st
       .values({ id: randomBytes(4).toString("hex"), orgId, userId, name, hash })
       .onConflictDoNothing()
       .returning();
-    if (row) return info(row, await roleOf(tx, orgId, userId));
-    const r = (await tx.query.tokens.findFirst({ where: eq(tokens.hash, hash) }))!;
-    return info(r, await roleOf(tx, r.orgId, r.userId));
+    const [r] = await tokenJoin(tx).where(eq(tokens.hash, row?.hash ?? hash));
+    return info(r!.token, r!.role ?? "member", r!.user);
   });
 }
 
-/** Role of a user in an org; "member" when no membership exists. */
-export async function roleOf(db: Pick<Db, "query">, orgId: string, userId: string): Promise<Role> {
-  const m = await db.query.memberships.findFirst({
-    where: and(eq(memberships.orgId, orgId), eq(memberships.userId, userId)),
-  });
-  return m?.role ?? "member";
+
+/** Tokens of an org, or of one user in it when `userId` is given. */
+export async function listTokens(db: Db, orgId: string, userId?: string): Promise<TokenInfo[]> {
+  const conds = [eq(tokens.orgId, orgId)];
+  if (userId !== undefined) conds.push(eq(tokens.userId, userId));
+  const rows = await tokenJoin(db).where(and(...conds)).orderBy(tokens.createdAt);
+  return rows.map((r) => info(r.token, r.role ?? "member", r.user));
 }
 
-export async function listTokens(db: Db, orgId: string): Promise<TokenInfo[]> {
-  const rows = await db
-    .select({ token: tokens, role: memberships.role })
-    .from(tokens)
-    .leftJoin(memberships, and(eq(memberships.orgId, tokens.orgId), eq(memberships.userId, tokens.userId)))
-    .where(eq(tokens.orgId, orgId))
-    .orderBy(tokens.createdAt);
-  return rows.map((r) => info(r.token, r.role ?? "member"));
-}
-
-/** Returns false when no token with that id exists in the org. */
-export async function revokeToken(db: Db, orgId: string, id: string) {
-  const rows = await db.delete(tokens).where(and(eq(tokens.orgId, orgId), eq(tokens.id, id))).returning();
+/** Returns false when no matching token exists in the org (or, with
+ *  `userId`, none owned by that user). */
+export async function revokeToken(db: Db, orgId: string, id: string, userId?: string) {
+  const conds = [eq(tokens.orgId, orgId), eq(tokens.id, id)];
+  if (userId !== undefined) conds.push(eq(tokens.userId, userId));
+  const rows = await db.delete(tokens).where(and(...conds)).returning();
   return rows.length > 0;
 }
 
@@ -96,11 +99,7 @@ export class TokenAuthenticator implements Authenticator {
   async authenticate(raw: string): Promise<Identity | null> {
     if (!raw.startsWith(TOKEN_PREFIX)) return null;
     const hash = hashToken(raw);
-    const [row] = await this.db
-      .select({ token: tokens, role: memberships.role })
-      .from(tokens)
-      .leftJoin(memberships, and(eq(memberships.orgId, tokens.orgId), eq(memberships.userId, tokens.userId)))
-      .where(eq(tokens.hash, hash));
+    const [row] = await tokenJoin(this.db).where(eq(tokens.hash, hash));
     if (!row || !timingSafeEqual(Buffer.from(row.token.hash), Buffer.from(hash))) return null;
     // Fire-and-forget, coarse (once a minute) so a chatty daemon does not
     // write a row per request; errors must never fail the request.
@@ -110,6 +109,6 @@ export class TokenAuthenticator implements Authenticator {
       .where(and(eq(tokens.id, row.token.id), sql`(${tokens.lastUsedAt} is null or ${tokens.lastUsedAt} < now() - interval '1 minute')`))
       .catch(() => {});
     const t = row.token;
-    return identity({ id: t.id, userId: t.userId, orgId: t.orgId, name: t.name, role: row.role ?? "member" });
+    return identity({ id: t.id, userId: t.userId, userName: row.user.name, orgId: t.orgId, name: t.name, role: row.role ?? "member" });
   }
 }

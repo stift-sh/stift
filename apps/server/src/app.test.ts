@@ -17,11 +17,11 @@ test("healthz and version", async () => {
 test("whoami requires a bearer token", async () => {
   const app = createApp({
     version: "1",
-    auth: { authenticate: async (raw) => (raw === "stf_ok" ? identity({ id: "1", userId: "u", orgId: "", name: "me", role: "admin" }) : null) },
+    auth: { authenticate: async (raw) => (raw === "stf_ok" ? identity({ id: "1", userName: "u", userId: "u", orgId: "", name: "me", role: "admin" }) : null) },
   });
   assert.equal((await app.request("/v1/whoami")).status, 401);
   const r = await app.request("/v1/whoami", { headers: { Authorization: "Bearer stf_ok" } });
-  assert.deepEqual(await r.json(), { name: "me", admin: true });
+  assert.deepEqual(await r.json(), { name: "me", admin: true, role: "admin", user: { id: "u", name: "u" } });
 });
 
 test("serves the web bundle with SPA fallback", async () => {

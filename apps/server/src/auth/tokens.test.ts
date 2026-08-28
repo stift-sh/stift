@@ -32,7 +32,7 @@ describe("local tokens", { skip: dbUrl ? false : "STIFT_TEST_DATABASE_URL not se
     const auth = new TokenAuthenticator(conn.db);
     const id = await auth.authenticate(raw);
     assert.equal(id?.userId.length, 16);
-    assert.deepEqual(id, { id: info.id, userId: id!.userId, orgId: "", name: "ci", role: "member", admin: false });
+    assert.deepEqual(id, { id: info.id, userId: id!.userId, userName: "ci", orgId: "", name: "ci", role: "member", admin: false });
     assert.equal(await auth.authenticate(raw.slice(0, -1) + (raw.endsWith("0") ? "1" : "0")), null);
     assert.equal(await auth.authenticate("nope"), null);
   });

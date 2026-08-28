@@ -8,7 +8,7 @@ import { bearer, requireAdmin, type AuthEnv } from "./middleware.js";
 const fake: Authenticator = {
   authenticate: async (raw) =>
     raw === "stf_admin" || raw === "stf_user"
-      ? identity({ id: "1", userId: "u", orgId: "", name: raw, role: raw === "stf_admin" ? "admin" : "member" })
+      ? identity({ id: "1", userName: "u", userId: "u", orgId: "", name: raw, role: raw === "stf_admin" ? "admin" : "member" })
       : null,
 };
 

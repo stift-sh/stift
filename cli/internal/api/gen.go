@@ -71,6 +71,24 @@ func (e PushResultStatus) Valid() bool {
 	}
 }
 
+// Defines values for Role.
+const (
+	Admin  Role = "admin"
+	Member Role = "member"
+)
+
+// Valid indicates whether the value is a known member of the Role enum.
+func (e Role) Valid() bool {
+	switch e {
+	case Admin:
+		return true
+	case Member:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SessionBase.
 const (
 	SessionBaseHome    SessionBase = "home"
@@ -172,9 +190,10 @@ type PushMeta struct {
 	ProjectId *string `json:"project_id,omitempty"`
 
 	// Repo normalized git remote URL (secondary signal)
-	Repo      *string `json:"repo,omitempty"`
-	SessionId string  `json:"session_id"`
-	Title     *string `json:"title,omitempty"`
+	Repo      *string  `json:"repo,omitempty"`
+	SessionId string   `json:"session_id"`
+	Title     *string  `json:"title,omitempty"`
+	User      *UserRef `json:"user,omitempty"`
 }
 
 // PushMetaBase what archive paths are relative to
@@ -188,6 +207,9 @@ type PushResult struct {
 
 // PushResultStatus defines model for PushResult.Status.
 type PushResultStatus string
+
+// Role defines model for Role.
+type Role string
 
 // Session defines model for Session.
 type Session struct {
@@ -213,6 +235,7 @@ type Session struct {
 	Size      int       `json:"size"`
 	Title     *string   `json:"title,omitempty"`
 	UpdatedAt time.Time `json:"updated_at"`
+	User      *UserRef  `json:"user,omitempty"`
 }
 
 // SessionBase what archive paths are relative to
@@ -239,6 +262,7 @@ type TokenCreated struct {
 	LastUsedAt *time.Time `json:"last_used_at"`
 	Name       string     `json:"name"`
 	Token      string     `json:"token"`
+	User       *UserRef   `json:"user,omitempty"`
 }
 
 // TokenInfo defines model for TokenInfo.
@@ -248,6 +272,13 @@ type TokenInfo struct {
 	Id         string     `json:"id"`
 	LastUsedAt *time.Time `json:"last_used_at"`
 	Name       string     `json:"name"`
+	User       *UserRef   `json:"user,omitempty"`
+}
+
+// UserRef defines model for UserRef.
+type UserRef struct {
+	Id   string `json:"id"`
+	Name string `json:"name"`
 }
 
 // Version defines model for Version.
@@ -264,6 +295,13 @@ type Version struct {
 type Whoami struct {
 	Admin bool   `json:"admin"`
 	Name  string `json:"name"`
+	Org   *struct {
+		Id   string `json:"id"`
+		Name string `json:"name"`
+		Slug string `json:"slug"`
+	} `json:"org,omitempty"`
+	Role *Role    `json:"role,omitempty"`
+	User *UserRef `json:"user,omitempty"`
 }
 
 // GetV1BundlesParams defines parameters for GetV1Bundles.

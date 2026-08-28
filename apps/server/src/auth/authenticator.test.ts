@@ -4,7 +4,7 @@ import { chain, type Authenticator } from "./authenticator.js";
 import { identity } from "./identity.js";
 
 const fixed = (name: string | null): Authenticator => ({
-  authenticate: async () => (name ? identity({ id: name, userId: name, orgId: "", name, role: "member" }) : null),
+  authenticate: async () => (name ? identity({ id: name, userId: name, userName: name, orgId: "", name, role: "member" }) : null),
 });
 
 test("chain returns the first non-null identity", async () => {

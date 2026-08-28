@@ -59,6 +59,10 @@ describe("sessions routes", { skip }, () => {
     r = await req(t.app, "GET", `/v1/sessions/${r1.session.id.slice(0, 6)}`, t.admin);
     assert.equal(r.status, 200, "prefix get");
 
+    assert.equal(r1.session.user?.name, "admin");
+    r = await req(t.app, "DELETE", `/v1/sessions/${r1.session.id}`, t.member);
+    assert.equal(r.status, 403);
+    assert.deepEqual(await r.json(), { error: "session belongs to another user" });
     r = await req(t.app, "DELETE", `/v1/sessions/${r1.session.id}`, t.admin);
     assert.equal(r.status, 204);
     r = await req(t.app, "GET", `/v1/sessions/${r1.session.id}`, t.admin);

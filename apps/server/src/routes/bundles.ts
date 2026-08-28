@@ -1,6 +1,8 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
+import type { Context } from "hono";
 import { Bundle, BundleFilter, BundleInput } from "@stift/shared";
 import type { AuthEnv } from "../auth/middleware.js";
+import { can } from "../auth/permissions.js";
 import { MissingBlobError, NotFoundError, StaleError } from "../storage/errors.js";
 import type { Store } from "../storage/store.js";
 import { validUnitName, type BundleKey } from "../storage/validate.js";
@@ -47,8 +49,21 @@ export function bundles(store: Store) {
     async (c) => c.json(await store.listBundles(c.var.identity.orgId, c.req.valid("query")), 200),
   );
 
+  /** Applies `bundle.write` against the row's owner; returns a 403 response or undefined. */
+  const denyWrite = async (c: Context<AuthEnv>, k: BundleKey) => {
+    const id = c.var.identity;
+    if (k.scope === "org" && !can(id, { action: "bundle.write", scope: "org", ownerId: null })) {
+      return err(c, 403, "org scope requires an admin token");
+    }
+    if (k.scope !== "user") return undefined;
+    const ownerId = (await store.bundleOwner(id.orgId, k)) ?? null;
+    if (!can(id, { action: "bundle.write", scope: "user", ownerId })) return err(c, 403, "user scope unit belongs to another user");
+    return undefined;
+  };
+
   r.use(keyPath.replace("{scope}", ":scope").replace("{agent}", ":agent").replace("{name}{.+}", "*"), async (c, next) => {
-    // Org scope writes need an admin token (requireScopeWrite).
+    // Org scope writes need an admin token (requireScopeWrite); checked here
+    // so the wording precedes body validation, as in the Go server.
     if ((c.req.method === "PUT" || c.req.method === "DELETE") && c.req.path.startsWith("/v1/bundles/org/") && !c.var.identity.admin) {
       return err(c, 403, "org scope requires an admin token");
     }
@@ -88,6 +103,8 @@ export function bundles(store: Store) {
       const k = keyFrom(c.req.valid("param"), q.project);
       const body = c.req.valid("json");
       const input = { ...body, author: body.author || id.name, userId: id.userId };
+      const denied = await denyWrite(c, k);
+      if (denied) return denied;
       try {
         return c.json(await store.putBundle(id.orgId, k, input, q.force === "1"), 201);
       } catch (e) {
@@ -157,6 +174,8 @@ export function bundles(store: Store) {
     }),
     async (c) => {
       const k = keyFrom(c.req.valid("param"), c.req.valid("query").project);
+      const denied = await denyWrite(c, k);
+      if (denied) return denied;
       try {
         await store.deleteBundle(c.var.identity.orgId, k);
       } catch (e) {

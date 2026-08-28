@@ -5,6 +5,13 @@ import { z } from "zod";
 
 const timestamp = z.iso.datetime({ offset: true });
 
+/** A user, as referenced from other resources. */
+export const UserRef = z.object({ id: z.string(), name: z.string() }).meta({ id: "UserRef" });
+export type UserRef = z.infer<typeof UserRef>;
+
+export const Role = z.enum(["admin", "member"]).meta({ id: "Role" });
+export type Role = z.infer<typeof Role>;
+
 /** One uploaded agent session. */
 export const Session = z
   .object({
@@ -24,6 +31,8 @@ export const Session = z
     mod_time: timestamp,
     created_at: timestamp,
     updated_at: timestamp,
+    /** Who pushed it; absent for rows written before users existed. */
+    user: UserRef.optional(),
   })
   .meta({ id: "Session" });
 export type Session = z.infer<typeof Session>;
@@ -46,6 +55,8 @@ export const TokenInfo = z
     created_at: timestamp,
     /** Null until the token authenticates a request; updated at most once a minute. */
     last_used_at: timestamp.nullable(),
+    /** The token's user. */
+    user: UserRef.optional(),
   })
   .meta({ id: "TokenInfo" });
 export type TokenInfo = z.infer<typeof TokenInfo>;
@@ -55,7 +66,16 @@ export const TokenCreated = TokenInfo.extend({ token: z.string() }).meta({ id: "
 export type TokenCreated = z.infer<typeof TokenCreated>;
 
 /** Returned by GET /v1/whoami. */
-export const Whoami = z.object({ name: z.string(), admin: z.boolean() }).meta({ id: "Whoami" });
+export const Whoami = z
+  .object({
+    name: z.string(),
+    /** Derived from `role`; kept for older clients. */
+    admin: z.boolean(),
+    role: Role.optional(),
+    user: UserRef.optional(),
+    org: z.object({ id: z.string(), slug: z.string(), name: z.string() }).optional(),
+  })
+  .meta({ id: "Whoami" });
 export type Whoami = z.infer<typeof Whoami>;
 
 /** JSON error envelope. */

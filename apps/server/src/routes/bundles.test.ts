@@ -3,7 +3,8 @@
 import { after, before, beforeEach, describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import type { Bundle, BundleInput, TokenCreated } from "@stift/shared";
+import { sql } from "drizzle-orm";
+import type { Bundle, BundleInput } from "@stift/shared";
 import { createTestApp, req, resetDb, skip, type TestApp } from "./harness.js";
 
 const shaOf = (b: Uint8Array) => createHash("sha256").update(b).digest("hex");
@@ -136,8 +137,7 @@ describe("bundles routes", { skip }, () => {
   });
 
   test("org scope requires admin", async () => {
-    const r0 = await req(t.app, "POST", "/v1/tokens", t.admin, JSON.stringify({ name: "dev", admin: false }), "application/json");
-    const user = ((await r0.json()) as TokenCreated).token;
+    const user = t.member;
     const sha = await putBlob(user, bytes("org\n"));
     const m: BundleInput = { files: [{ path: "CLAUDE.md", sha256: sha, size: 4, mode: 0o644 }] };
 
@@ -151,5 +151,36 @@ describe("bundles routes", { skip }, () => {
     assert.equal(r.status, 403);
     r = await putBundle(user, "/v1/bundles/user/claude/CLAUDE.md", m);
     assert.equal(r.status, 201);
+  });
+
+  test("user scope units belong to their owner", async () => {
+    const sha = await putBlob(t.admin, bytes("own\n"));
+    await putBlob(t.member, bytes("own\n"));
+    const m: BundleInput = { files: [{ path: "CLAUDE.md", sha256: sha, size: 4, mode: 0o644 }] };
+
+    // The admin's unit: a member can neither overwrite nor delete it.
+    let r = await putBundle(t.admin, "/v1/bundles/user/claude/CLAUDE.md", m);
+    assert.equal(r.status, 201);
+    r = await putBundle(t.member, "/v1/bundles/user/claude/CLAUDE.md", { ...m, parent: 1 });
+    assert.equal(r.status, 403);
+    assert.deepEqual(await r.json(), { error: "user scope unit belongs to another user" });
+    r = await req(t.app, "DELETE", "/v1/bundles/user/claude/CLAUDE.md", t.member);
+    assert.equal(r.status, 403);
+    assert.equal((await getJson(t.member, "/v1/bundles/user/claude/CLAUDE.md")).status, 200);
+
+    // The member's unit: the admin can overwrite it.
+    r = await putBundle(t.member, "/v1/bundles/user/claude/skills/mine", m);
+    assert.equal(r.status, 201);
+    r = await putBundle(t.admin, "/v1/bundles/user/claude/skills/mine", { ...m, parent: 1 });
+    assert.equal(r.status, 201);
+
+    // An unowned (legacy) unit is claimed by its first writer.
+    await t.db.execute(sql`update bundles set user_id = null where name = 'CLAUDE.md'`);
+    r = await putBundle(t.member, "/v1/bundles/user/claude/CLAUDE.md", { ...m, parent: 1 });
+    assert.equal(r.status, 201);
+    r = await putBundle(t.admin, "/v1/bundles/user/claude/CLAUDE.md", { ...m, parent: 2 });
+    assert.equal(r.status, 201); // admin may still write it
+    const { rows } = await t.db.execute(sql`select user_id from bundles where name = 'CLAUDE.md'`);
+    assert.ok((rows[0] as { user_id: string | null }).user_id, "claimed");
   });
 });

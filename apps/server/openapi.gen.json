@@ -45,11 +45,58 @@
           },
           "admin": {
             "type": "boolean"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserRef"
+          },
+          "org": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "slug": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "slug",
+              "name"
+            ]
           }
         },
         "required": [
           "name",
           "admin"
+        ]
+      },
+      "Role": {
+        "type": "string",
+        "enum": [
+          "admin",
+          "member"
+        ]
+      },
+      "UserRef": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
         ]
       },
       "Error": {
@@ -143,6 +190,9 @@
           "updated_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserRef"
           }
         },
         "required": [
@@ -203,6 +253,9 @@
           "mod_time": {
             "type": "string",
             "format": "date-time"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserRef"
           }
         },
         "required": [
@@ -406,6 +459,9 @@
               "null"
             ],
             "format": "date-time"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserRef"
           }
         },
         "required": [
@@ -438,6 +494,9 @@
               "null"
             ],
             "format": "date-time"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserRef"
           },
           "token": {
             "type": "string"
@@ -816,6 +875,16 @@
           },
           "401": {
             "description": "missing or invalid bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -1566,7 +1635,7 @@
         ],
         "responses": {
           "200": {
-            "description": "all tokens",
+            "description": "the org's tokens for admins, the caller's own for members",
             "content": {
               "application/json": {
                 "schema": {
@@ -1580,16 +1649,6 @@
           },
           "401": {
             "description": "missing or invalid bearer token",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -1699,16 +1758,6 @@
           },
           "401": {
             "description": "missing or invalid bearer token",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {

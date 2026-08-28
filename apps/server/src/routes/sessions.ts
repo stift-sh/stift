@@ -4,6 +4,7 @@ import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { stream } from "hono/streaming";
 import { PushMeta, PushResult, Session, SessionFilter } from "@stift/shared";
 import type { AuthEnv } from "../auth/middleware.js";
+import { can } from "../auth/permissions.js";
 import type { Limits } from "../limits.js";
 import { NotFoundError } from "../storage/errors.js";
 import type { Store } from "../storage/store.js";
@@ -255,13 +256,17 @@ export function sessions(store: Store, limits: Limits) {
       tags: ["sessions"],
       security,
       request: { params: idParam },
-      responses: { 204: { description: "deleted" }, 400: errors[400], 401: errors[401], 404: errors[404] },
+      responses: { 204: { description: "deleted" }, 400: errors[400], 401: errors[401], 403: errors[403], 404: errors[404] },
     }),
     async (c) => {
       const res = await resolve(c, c.req.valid("param").id);
       if ("error" in res) return err(c, res.error, res.msg);
+      const id = c.var.identity;
+      const s = await store.get(id.orgId, res.id);
+      if (!s) return err(c, 404, "no such session");
+      if (!can(id, { action: "session.delete", ownerId: s.user?.id ?? null })) return err(c, 403, "session belongs to another user");
       try {
-        await store.delete(c.var.identity.orgId, res.id);
+        await store.delete(id.orgId, res.id);
       } catch (e) {
         if (e instanceof NotFoundError) return err(c, 404, "no such session");
         throw e;

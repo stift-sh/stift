@@ -19,6 +19,20 @@ export type Version = {
 export type Whoami = {
     name: string;
     admin: boolean;
+    role?: Role;
+    user?: UserRef;
+    org?: {
+        id: string;
+        slug: string;
+        name: string;
+    };
+};
+
+export type Role = 'admin' | 'member';
+
+export type UserRef = {
+    id: string;
+    name: string;
 };
 
 export type _Error = {
@@ -56,6 +70,7 @@ export type Session = {
     mod_time: string;
     created_at: string;
     updated_at: string;
+    user?: UserRef;
 };
 
 /**
@@ -82,6 +97,7 @@ export type PushMeta = {
     base: 'home' | 'project';
     files?: number;
     mod_time?: string;
+    user?: UserRef;
 };
 
 export type BlobsCheckResponse = {
@@ -157,6 +173,7 @@ export type TokenInfo = {
     admin: boolean;
     created_at: string;
     last_used_at: string | null;
+    user?: UserRef;
 };
 
 export type TokenCreated = {
@@ -165,6 +182,7 @@ export type TokenCreated = {
     admin: boolean;
     created_at: string;
     last_used_at: string | null;
+    user?: UserRef;
     token: string;
 };
 
@@ -331,6 +349,10 @@ export type DeleteV1SessionsByIdErrors = {
      * missing or invalid bearer token
      */
     401: _Error;
+    /**
+     * forbidden
+     */
+    403: _Error;
     /**
      * not found
      */
@@ -754,17 +776,13 @@ export type GetV1TokensErrors = {
      * missing or invalid bearer token
      */
     401: _Error;
-    /**
-     * forbidden
-     */
-    403: _Error;
 };
 
 export type GetV1TokensError = GetV1TokensErrors[keyof GetV1TokensErrors];
 
 export type GetV1TokensResponses = {
     /**
-     * all tokens
+     * the org's tokens for admins, the caller's own for members
      */
     200: Array<TokenInfo>;
 };
@@ -822,10 +840,6 @@ export type DeleteV1TokensByIdErrors = {
      * missing or invalid bearer token
      */
     401: _Error;
-    /**
-     * forbidden
-     */
-    403: _Error;
     /**
      * not found
      */

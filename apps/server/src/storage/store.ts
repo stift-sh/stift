@@ -3,7 +3,7 @@ import type { Readable } from "node:stream";
 import { and, asc, desc, eq, inArray, like, sql } from "drizzle-orm";
 import type { Bundle, BundleFile, Session, SkillMeta } from "@stift/shared";
 import type { Db } from "../db/client.js";
-import { blobs, bundleVersions, bundles, sessions } from "../db/schema.js";
+import { blobs, bundleVersions, bundles, sessions, users } from "../db/schema.js";
 import { BlobStore } from "./blobs.js";
 import { MissingBlobError, NotFoundError, StaleError } from "./errors.js";
 import { parseFrontmatter } from "./frontmatter.js";
@@ -59,6 +59,8 @@ export interface Store {
   /** Every version, newest first. */
   bundleHistory(orgId: string, k: BundleKey): Promise<Bundle[]>;
   deleteBundle(orgId: string, k: BundleKey): Promise<void>;
+  /** `user_id` of the bundle row; null when unowned, undefined when there is no row. */
+  bundleOwner(orgId: string, k: BundleKey): Promise<string | null | undefined>;
 }
 
 const FRONTMATTER_LIMIT = 64 << 10;
@@ -81,9 +83,11 @@ function assertKey(k: BundleKey) {
 }
 
 type SessionRow = typeof sessions.$inferSelect;
+type SessionUser = { id: string; name: string } | null;
 
-function toSession(r: SessionRow): Session {
+function toSession(r: SessionRow, user: SessionUser = null): Session {
   return {
+    ...(user ? { user } : {}),
     id: r.id,
     key: r.key,
     agent: r.agent,
@@ -139,7 +143,7 @@ export class PgStore implements Store {
           .for("update");
         const now = new Date();
         if (existing && existing.sha256 === staged.sha256) {
-          return { session: toSession(existing), status: "unchanged" as const };
+          return { session: await this.withUser(tx, existing), status: "unchanged" as const };
         }
         const id = existing?.id ?? newId();
         const row: typeof sessions.$inferInsert = {
@@ -173,7 +177,7 @@ export class PgStore implements Store {
               .where(and(eq(sessions.orgId, orgId), eq(sessions.id, id)))
               .returning()
           : await tx.insert(sessions).values(row).returning();
-        return { session: toSession(saved!), status: existing ? ("updated" as const) : ("created" as const) };
+        return { session: await this.withUser(tx, saved!), status: existing ? ("updated" as const) : ("created" as const) };
       });
       return result;
     } finally {
@@ -181,12 +185,23 @@ export class PgStore implements Store {
     }
   }
 
-  async get(orgId: string, id: string) {
-    const [row] = await this.db
-      .select()
+  /** Joins the pushing user's name onto a row. */
+  private async withUser(db: Pick<Db, "select">, r: SessionRow): Promise<Session> {
+    if (!r.userId) return toSession(r);
+    const [u] = await db.select({ id: users.id, name: users.name }).from(users).where(eq(users.id, r.userId));
+    return toSession(r, u ?? null);
+  }
+
+  private sessionSelect() {
+    return this.db
+      .select({ session: sessions, user: { id: users.id, name: users.name } })
       .from(sessions)
-      .where(and(eq(sessions.orgId, orgId), eq(sessions.id, id)));
-    return row ? toSession(row) : undefined;
+      .leftJoin(users, eq(users.id, sessions.userId));
+  }
+
+  async get(orgId: string, id: string) {
+    const [row] = await this.sessionSelect().where(and(eq(sessions.orgId, orgId), eq(sessions.id, id)));
+    return row ? toSession(row.session, row.user) : undefined;
   }
 
   async openArchive(orgId: string, id: string, range?: string) {
@@ -220,12 +235,10 @@ export class PgStore implements Store {
         ),
       );
     }
-    const rows = await this.db
-      .select()
-      .from(sessions)
+    const rows = await this.sessionSelect()
       .where(and(...conds))
       .orderBy(desc(sessions.updatedAt), asc(sessions.id));
-    return rows.map(toSession);
+    return rows.map((r) => toSession(r.session, r.user));
   }
 
   async resolveId(orgId: string, prefix: string) {
@@ -319,6 +332,8 @@ export class PgStore implements Store {
       if (stillMissing.length > 0) throw new MissingBlobError(stillMissing);
 
       if (!force && parent !== row.head) throw new StaleError(row.head, parent);
+      // The first write claims an unowned (legacy) row.
+      if (row.userId === null && b.userId) await tx.update(bundles).set({ userId: b.userId }).where(eq(bundles.id, row.id));
       const created = new Date();
       const manifest: Bundle = {
         scope: k.scope as Bundle["scope"],
@@ -381,6 +396,12 @@ export class PgStore implements Store {
       .where(eq(bundleVersions.bundleId, row.id))
       .orderBy(desc(bundleVersions.version));
     return rows.map((r) => r.manifest);
+  }
+
+  async bundleOwner(orgId: string, k: BundleKey) {
+    if (!validOrgId(orgId) || validateKey(k)) return undefined;
+    const [row] = await this.db.select({ userId: bundles.userId }).from(bundles).where(this.bundleWhere(orgId, k));
+    return row?.userId;
   }
 
   async deleteBundle(orgId: string, k: BundleKey) {
