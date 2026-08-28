@@ -32,6 +32,9 @@ func New(base, token string) *Client {
 	}
 }
 
+// Server returns the base URL the client talks to.
+func (c *Client) Server() string { return c.base }
+
 func (c *Client) do(method, path string, body io.Reader, contentType string) (*http.Response, error) {
 	req, err := http.NewRequest(method, c.base+path, body)
 	if err != nil {
@@ -162,15 +165,55 @@ func (c *Client) Delete(id string) error {
 	return res.Body.Close()
 }
 
-func (c *Client) TokenCreate(name string, admin bool) (api.TokenCreated, error) {
-	body, _ := json.Marshal(map[string]any{"name": name, "admin": admin})
+// TokenCreate mints a token for the caller, or for another member (admins
+// only) when user is set.
+func (c *Client) TokenCreate(name string, admin bool, user string) (api.TokenCreated, error) {
 	var out api.TokenCreated
-	res, err := c.do(http.MethodPost, "/v1/tokens", bytes.NewReader(body), "application/json")
+	return out, c.postJSON("/v1/tokens", api.TokenCreateRequest{Name: name, Admin: admin, User: user}, &out)
+}
+
+func (c *Client) postJSON(path string, in, out any) error {
+	body, _ := json.Marshal(in)
+	res, err := c.do(http.MethodPost, path, bytes.NewReader(body), "application/json")
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	return json.NewDecoder(res.Body).Decode(out)
+}
+
+// MemberList returns the members of the caller's org.
+func (c *Client) MemberList() ([]api.Member, error) {
+	var out []api.Member
+	return out, c.getJSON("/v1/members", &out)
+}
+
+// MemberAdd creates a user in the org; the response carries a first token
+// when one was requested (admins only).
+func (c *Client) MemberAdd(in api.MemberCreateRequest) (api.MemberCreated, error) {
+	var out api.MemberCreated
+	return out, c.postJSON("/v1/members", in, &out)
+}
+
+// MemberSetRole changes a member's role; ref is a user id or name.
+func (c *Client) MemberSetRole(ref string, role api.Role) (api.Member, error) {
+	var out api.Member
+	body, _ := json.Marshal(api.MemberUpdateRequest{Role: role})
+	res, err := c.do(http.MethodPatch, "/v1/members/"+url.PathEscape(ref), bytes.NewReader(body), "application/json")
 	if err != nil {
 		return out, err
 	}
 	defer res.Body.Close()
 	return out, json.NewDecoder(res.Body).Decode(&out)
+}
+
+// MemberRemove removes a member and their tokens; ref is a user id or name.
+func (c *Client) MemberRemove(ref string) error {
+	res, err := c.do(http.MethodDelete, "/v1/members/"+url.PathEscape(ref), nil, "")
+	if err != nil {
+		return err
+	}
+	return res.Body.Close()
 }
 
 func (c *Client) TokenList() ([]api.TokenInfo, error) {

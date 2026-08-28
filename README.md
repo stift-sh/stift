@@ -244,14 +244,21 @@ a literal path is one unit, `<dir>/**` makes each entry directly under
 glob makes each match a unit named by its path relative to home or the
 project. Names may be at most three path segments deep.
 
-### Tokens
+### Users and tokens
 
-Mint a token per machine/teammate so any one of them can be revoked:
+A server has one org; every user is an `admin` or a `member`. Admins manage
+users and org-scope skills, members see everything and write their own
+user- and project-scope units. Tokens belong to a user and carry its role.
 
 ```sh
-stift token create laptop          # prints the secret once
-stift token create ci --admin     # admin = may manage tokens
-stift token list
+stift user add --email a@b.co alice   # admin: creates the user and prints a first token once
+stift user list
+stift user role alice admin           # or member; applies to all her tokens at once
+stift user rm alice                   # revokes her tokens too
+
+stift token create laptop             # a token for yourself; prints the secret once
+stift token create --user alice ci    # admin: a token for another member
+stift token list                      # admins see the org, members their own
 stift token revoke <id>
 ```
 
@@ -329,8 +336,12 @@ All `/v1` endpoints require `Authorization: Bearer <token>`.
 | `GET /v1/bundles/{scope}/{agent}/{name}?project=&version=` | manifest (HEAD unless `version`) |
 | `GET /v1/bundles/{scope}/{agent}/{name}?project=&history=1` | all versions of the unit, newest first |
 | `DELETE /v1/bundles/{scope}/{agent}/{name}?project=` | delete the unit and its history (org scope admin-only) |
-| `GET /v1/whoami` | token name + role |
-| `GET/POST/DELETE /v1/tokens` | token management (admin only) |
+| `GET /v1/whoami` | token name, user, role and org |
+| `GET/POST/DELETE /v1/tokens` | own tokens; admins see the org and may `POST` with `user` for another member |
+| `GET /v1/members` | members of the org with role and token count |
+| `POST /v1/members` | admin: add a user (`name`, `email`, `role`, optional `token` name mints a first token, shown once) |
+| `PATCH /v1/members/{id}` | admin: change `role` (id or name); refuses to demote the last admin |
+| `DELETE /v1/members/{id}` | admin: remove a member and their tokens; refuses self |
 | `GET /healthz` | liveness (no auth) |
 
 ## Security notes

@@ -12,6 +12,7 @@ const table: [Subject, boolean, boolean][] = [
   [{ action: "bundle.write", scope: "user", ownerId: null }, true, true],
   [{ action: "bundle.write", scope: "project", ownerId: "u2" }, true, true],
   [{ action: "token.manage" }, false, true],
+  [{ action: "member.manage" }, false, true],
   [{ action: "session.delete", ownerId: "u2" }, false, true],
   [{ action: "session.delete", ownerId: "u1" }, true, true],
   [{ action: "session.delete", ownerId: null }, true, true],

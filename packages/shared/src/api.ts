@@ -185,6 +185,44 @@ export type BundleInput = z.infer<typeof BundleInput>;
 
 /** Body of POST /v1/tokens. */
 export const TokenCreateRequest = z
-  .object({ name: z.string(), admin: z.boolean().optional() })
+  .object({
+    name: z.string(),
+    admin: z.boolean().optional(),
+    /** Admins only: mint the token for another member (by user id or name). */
+    user: z.string().optional(),
+  })
   .meta({ id: "TokenCreateRequest" });
 export type TokenCreateRequest = z.infer<typeof TokenCreateRequest>;
+
+/** One member of the caller's org (GET /v1/members). */
+export const Member = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    email: z.string().nullable(),
+    role: Role,
+    created_at: timestamp,
+    tokens: z.int().describe("number of tokens the member holds"),
+  })
+  .meta({ id: "Member" });
+export type Member = z.infer<typeof Member>;
+
+/** Body of POST /v1/members. */
+export const MemberCreateRequest = z
+  .object({
+    name: z.string(),
+    email: z.string().optional(),
+    role: Role.optional().describe("default member"),
+    /** Mint a first token for the new member, returned once as `token`. */
+    token: z.string().optional().describe("name of a first token to create; omitted = no token"),
+  })
+  .meta({ id: "MemberCreateRequest" });
+export type MemberCreateRequest = z.infer<typeof MemberCreateRequest>;
+
+/** Returned by POST /v1/members; `token` is present only when requested, shown once. */
+export const MemberCreated = Member.extend({ token: z.string().optional() }).meta({ id: "MemberCreated" });
+export type MemberCreated = z.infer<typeof MemberCreated>;
+
+/** Body of PATCH /v1/members/{id}. */
+export const MemberUpdateRequest = z.object({ role: Role }).meta({ id: "MemberUpdateRequest" });
+export type MemberUpdateRequest = z.infer<typeof MemberUpdateRequest>;

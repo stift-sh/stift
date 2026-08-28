@@ -22,8 +22,9 @@ func cmdToken(args []string) error {
 	case "create":
 		fs := flag.NewFlagSet("token create", flag.ExitOnError)
 		admin := fs.Bool("admin", false, "accepted for admins only; a token has the role of its user")
+		user := fs.String("user", "", "mint the token for another member (admins only)")
 		fs.Usage = func() {
-			fmt.Fprintln(os.Stderr, "usage: stift token create <name> [--admin]")
+			fmt.Fprintln(os.Stderr, "usage: stift token create [--user <member>] [--admin] <name>")
 			fs.PrintDefaults()
 		}
 		fs.Parse(args[1:])
@@ -31,12 +32,12 @@ func cmdToken(args []string) error {
 			fs.Usage()
 			os.Exit(2)
 		}
-		created, err := c.TokenCreate(fs.Arg(0), *admin)
+		created, err := c.TokenCreate(fs.Arg(0), *admin, *user)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("token %q created (id %s). The secret is shown once:\n\n  %s\n\n",
-			created.Name, created.ID, created.Token)
+		fmt.Printf("token %q created for %s (id %s). The secret is shown once:\n\n  %s\n\n",
+			created.Name, created.User.Name, created.ID, created.Token)
 		return nil
 	case "list":
 		tokens, err := c.TokenList()

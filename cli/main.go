@@ -36,6 +36,8 @@ func main() {
 		err = cmdSkills(args)
 	case "token":
 		err = cmdToken(args)
+	case "user", "users":
+		err = cmdUser(args)
 	case "daemon":
 		err = cmdDaemon(args)
 	case "start":
@@ -93,7 +95,8 @@ Client:
   stift list [flags]                List sessions stored on the server
   stift delete ID...                Delete sessions from the server
   stift agents [flags]              Show sessions detected on this machine
-  stift token create|list|revoke    Manage access tokens (admin)
+  stift token create|list|revoke    Manage access tokens (--user: for another member, admin)
+  stift user add|list|role|rm       Manage the members of your org (admin)
 
 Background sync:
   stift start | stop | restart      Control the background auto-sync service (sessions + skills)

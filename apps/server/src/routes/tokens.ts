@@ -2,6 +2,7 @@ import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { TokenCreateRequest, TokenCreated, TokenInfo } from "@stift/shared";
 import type { AuthEnv } from "../auth/middleware.js";
 import { can } from "../auth/permissions.js";
+import { memberByName } from "../auth/members.js";
 import { createToken, listTokens, revokeToken } from "../auth/tokens.js";
 import type { Db } from "../db/client.js";
 import { err, errors } from "./_errors.js";
@@ -15,8 +16,8 @@ const json = <T extends z.ZodTypeAny>(description: string, schema: T) => ({
 
 /** Token management. Mount behind `bearer`. Admins see and revoke every
  *  token in the org; members only their own (`token.manage` vs `token.own`).
- *  Tokens belong to the caller; creating one for another user is the
- *  members API (skills-registry-3 item 3). */
+ *  Tokens belong to the caller; admins may mint one for another member
+ *  with `user` (how a first token is handed to a new member). */
 export function tokens(db: Db) {
   const r = new OpenAPIHono<AuthEnv>();
 
@@ -54,7 +55,7 @@ export function tokens(db: Db) {
       tags: ["tokens"],
       security,
       request: { body: { content: { "application/json": { schema: TokenCreateRequest } }, required: true } },
-      responses: { 201: json("the new token; `token` is shown once", TokenCreated), 400: errors[400], 401: errors[401], 403: errors[403] },
+      responses: { 201: json("the new token; `token` is shown once", TokenCreated), 400: errors[400], 401: errors[401], 403: errors[403], 404: errors[404] },
     }),
     async (c) => {
       const body = c.req.valid("json");
@@ -62,7 +63,14 @@ export function tokens(db: Db) {
       if (!body.name) return err(c, 400, "name is required");
       // `admin` is a property of the caller's role now, not of the token.
       if (body.admin && !can(id, { action: "token.manage" })) return err(c, 403, "admin token required");
-      const { raw, info } = await createToken(db, id.orgId, body.name, { userId: id.userId });
+      let userId = id.userId;
+      if (body.user) {
+        if (!can(id, { action: "member.manage" })) return err(c, 403, "admin token required");
+        const m = await memberByName(db, id.orgId, body.user);
+        if (!m) return err(c, 404, "no such member");
+        userId = m.id;
+      }
+      const { raw, info } = await createToken(db, id.orgId, body.name, { userId });
       return c.json({ ...info, token: raw }, 201);
     },
     (result, c) => {

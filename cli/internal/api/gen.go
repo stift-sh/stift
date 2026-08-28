@@ -32,6 +32,24 @@ func (e BundleScope) Valid() bool {
 	}
 }
 
+// Defines values for MemberCreateRequestRole.
+const (
+	MemberCreateRequestRoleAdmin  MemberCreateRequestRole = "admin"
+	MemberCreateRequestRoleMember MemberCreateRequestRole = "member"
+)
+
+// Valid indicates whether the value is a known member of the MemberCreateRequestRole enum.
+func (e MemberCreateRequestRole) Valid() bool {
+	switch e {
+	case MemberCreateRequestRoleAdmin:
+		return true
+	case MemberCreateRequestRoleMember:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PushMetaBase.
 const (
 	PushMetaBaseHome    PushMetaBase = "home"
@@ -73,16 +91,16 @@ func (e PushResultStatus) Valid() bool {
 
 // Defines values for Role.
 const (
-	Admin  Role = "admin"
-	Member Role = "member"
+	RoleAdmin  Role = "admin"
+	RoleMember Role = "member"
 )
 
 // Valid indicates whether the value is a known member of the Role enum.
 func (e Role) Valid() bool {
 	switch e {
-	case Admin:
+	case RoleAdmin:
 		return true
-	case Member:
+	case RoleMember:
 		return true
 	default:
 		return false
@@ -174,6 +192,51 @@ type Error struct {
 	Error string `json:"error"`
 }
 
+// Member defines model for Member.
+type Member struct {
+	CreatedAt time.Time `json:"created_at"`
+	Email     string    `json:"email"`
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Role      Role      `json:"role"`
+
+	// Tokens number of tokens the member holds
+	Tokens int `json:"tokens"`
+}
+
+// MemberCreateRequest defines model for MemberCreateRequest.
+type MemberCreateRequest struct {
+	Email string `json:"email,omitempty"`
+	Name  string `json:"name"`
+
+	// Role default member
+	Role MemberCreateRequestRole `json:"role,omitempty"`
+
+	// Token name of a first token to create; omitted = no token
+	Token string `json:"token,omitempty"`
+}
+
+// MemberCreateRequestRole default member
+type MemberCreateRequestRole string
+
+// MemberCreated defines model for MemberCreated.
+type MemberCreated struct {
+	CreatedAt time.Time `json:"created_at"`
+	Email     string    `json:"email"`
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Role      Role      `json:"role"`
+	Token     string    `json:"token,omitempty"`
+
+	// Tokens number of tokens the member holds
+	Tokens int `json:"tokens"`
+}
+
+// MemberUpdateRequest defines model for MemberUpdateRequest.
+type MemberUpdateRequest struct {
+	Role Role `json:"role"`
+}
+
 // OrgRef defines model for OrgRef.
 type OrgRef struct {
 	ID   string `json:"id"`
@@ -258,6 +321,7 @@ type SkillMeta struct {
 type TokenCreateRequest struct {
 	Admin bool   `json:"admin,omitempty"`
 	Name  string `json:"name"`
+	User  string `json:"user,omitempty"`
 }
 
 // TokenCreated defines model for TokenCreated.
@@ -378,6 +442,12 @@ type PostV1BlobsCheckJSONRequestBody = BlobsCheckRequest
 
 // PutV1BundlesScopeAgentNameJSONRequestBody defines body for PutV1BundlesScopeAgentName for application/json ContentType.
 type PutV1BundlesScopeAgentNameJSONRequestBody = BundleInput
+
+// PostV1MembersJSONRequestBody defines body for PostV1Members for application/json ContentType.
+type PostV1MembersJSONRequestBody = MemberCreateRequest
+
+// PatchV1MembersIDJSONRequestBody defines body for PatchV1MembersID for application/json ContentType.
+type PatchV1MembersIDJSONRequestBody = MemberUpdateRequest
 
 // PostV1SessionsMultipartRequestBody defines body for PostV1Sessions for multipart/form-data ContentType.
 type PostV1SessionsMultipartRequestBody PostV1SessionsMultipartBody

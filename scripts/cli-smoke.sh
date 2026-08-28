@@ -48,20 +48,24 @@ echo "$OUT" | grep -q "(admin)" || fail "login as admin: $OUT"
 "$STIFT" token list | grep -q admin || fail "token list"
 "$STIFT" token create laptop | grep -q 'stf_' || fail "token create"
 
-# A member of the org. Tokens belong to their caller, so a second user is
-# seeded directly (the members API is skills-registry-3 item 3).
-USER_TOKEN=stf_$(head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n')
-(cd apps/server && STIFT_MEMBER_TOKEN=$USER_TOKEN node --input-type=module -e '
-  import pg from "pg";
-  import { createHash } from "node:crypto";
-  const c = new pg.Client({ connectionString: process.env.STIFT_DATABASE_URL });
-  await c.connect();
-  await c.query("insert into users (id, name) values ($1, $2)", ["smoke-dev", "dev"]);
-  await c.query("insert into memberships (org_id, user_id, role) values ($1, $2, $3)", ["", "smoke-dev", "member"]);
-  const hash = createHash("sha256").update(process.env.STIFT_MEMBER_TOKEN).digest("hex");
-  await c.query("insert into tokens (id, org_id, user_id, name, hash) values ($1, $2, $3, $4, $5)", ["smoke001", "", "smoke-dev", "dev-laptop", hash]);
-  await c.end();
-') || fail "seed member"
+# A member of the org, added through the members API. The first token is
+# printed once in a ready-made login line.
+OUT=$("$STIFT" user add --email dev@example.com --token-name dev-laptop dev)
+echo "$OUT" | grep -q 'added as member' || fail "user add: $OUT"
+USER_TOKEN=$(echo "$OUT" | grep -o 'stf_[0-9a-f]*')
+[ -n "$USER_TOKEN" ] || fail "user add printed no token"
+"$STIFT" user list | grep -q 'dev.*member.*dev@example.com' || fail "user list"
+OUT=$("$STIFT" user add dev 2>&1 || true)
+echo "$OUT" | grep -q 'already exists' || fail "duplicate user: $OUT"
+OUT=$(STIFT_TOKEN=$USER_TOKEN "$STIFT" user add eve 2>&1 || true)
+echo "$OUT" | grep -q 'admin token required' || fail "member user add: $OUT"
+STIFT_TOKEN=$USER_TOKEN "$STIFT" user list | grep -q admin || fail "member user list"
+"$STIFT" token create --user dev dev-phone | grep -q 'created for dev' || fail "token create --user"
+"$STIFT" user role dev admin | grep -q 'now admin' || fail "user role admin"
+STIFT_TOKEN=$USER_TOKEN "$STIFT" token list | grep -q 'true' || fail "promoted member token has admin role"
+"$STIFT" user role dev member | grep -q 'now member' || fail "user role member"
+OUT=$("$STIFT" user role env-admin member 2>&1 || true)
+echo "$OUT" | grep -q 'last admin' || fail "last admin guard: $OUT"
 OUT=$(STIFT_TOKEN=$USER_TOKEN "$STIFT" token create --admin x 2>&1 || true)
 echo "$OUT" | grep -q "admin token required" || fail "member --admin: $OUT"
 STIFT_TOKEN=$USER_TOKEN "$STIFT" token list | grep -q dev-laptop || fail "member token list"

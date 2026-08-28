@@ -190,6 +190,49 @@ export type TokenCreated = {
 export type TokenCreateRequest = {
     name: string;
     admin?: boolean;
+    user?: string;
+};
+
+export type Member = {
+    id: string;
+    name: string;
+    email: string | null;
+    role: Role;
+    created_at: string;
+    /**
+     * number of tokens the member holds
+     */
+    tokens: number;
+};
+
+export type MemberCreated = {
+    id: string;
+    name: string;
+    email: string | null;
+    role: Role;
+    created_at: string;
+    /**
+     * number of tokens the member holds
+     */
+    tokens: number;
+    token?: string;
+};
+
+export type MemberCreateRequest = {
+    name: string;
+    email?: string;
+    /**
+     * default member
+     */
+    role?: 'admin' | 'member';
+    /**
+     * name of a first token to create; omitted = no token
+     */
+    token?: string;
+};
+
+export type MemberUpdateRequest = {
+    role: Role;
 };
 
 export type GetHealthzData = {
@@ -810,6 +853,10 @@ export type PostV1TokensErrors = {
      * forbidden
      */
     403: _Error;
+    /**
+     * not found
+     */
+    404: _Error;
 };
 
 export type PostV1TokensError = PostV1TokensErrors[keyof PostV1TokensErrors];
@@ -857,3 +904,149 @@ export type DeleteV1TokensByIdResponses = {
 };
 
 export type DeleteV1TokensByIdResponse = DeleteV1TokensByIdResponses[keyof DeleteV1TokensByIdResponses];
+
+export type GetV1MembersData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/members';
+};
+
+export type GetV1MembersErrors = {
+    /**
+     * missing or invalid bearer token
+     */
+    401: _Error;
+};
+
+export type GetV1MembersError = GetV1MembersErrors[keyof GetV1MembersErrors];
+
+export type GetV1MembersResponses = {
+    /**
+     * members of the caller's org
+     */
+    200: Array<Member>;
+};
+
+export type GetV1MembersResponse = GetV1MembersResponses[keyof GetV1MembersResponses];
+
+export type PostV1MembersData = {
+    body: MemberCreateRequest;
+    path?: never;
+    query?: never;
+    url: '/v1/members';
+};
+
+export type PostV1MembersErrors = {
+    /**
+     * bad request
+     */
+    400: _Error;
+    /**
+     * missing or invalid bearer token
+     */
+    401: _Error;
+    /**
+     * forbidden
+     */
+    403: _Error;
+    /**
+     * conflict
+     */
+    409: _Error;
+};
+
+export type PostV1MembersError = PostV1MembersErrors[keyof PostV1MembersErrors];
+
+export type PostV1MembersResponses = {
+    /**
+     * the new member; `token` (when requested) is shown once
+     */
+    201: MemberCreated;
+};
+
+export type PostV1MembersResponse = PostV1MembersResponses[keyof PostV1MembersResponses];
+
+export type DeleteV1MembersByIdData = {
+    body?: never;
+    path: {
+        /**
+         * user id or name
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/v1/members/{id}';
+};
+
+export type DeleteV1MembersByIdErrors = {
+    /**
+     * bad request
+     */
+    400: _Error;
+    /**
+     * missing or invalid bearer token
+     */
+    401: _Error;
+    /**
+     * forbidden
+     */
+    403: _Error;
+    /**
+     * not found
+     */
+    404: _Error;
+};
+
+export type DeleteV1MembersByIdError = DeleteV1MembersByIdErrors[keyof DeleteV1MembersByIdErrors];
+
+export type DeleteV1MembersByIdResponses = {
+    /**
+     * removed, with the member's tokens
+     */
+    204: void;
+};
+
+export type DeleteV1MembersByIdResponse = DeleteV1MembersByIdResponses[keyof DeleteV1MembersByIdResponses];
+
+export type PatchV1MembersByIdData = {
+    body: MemberUpdateRequest;
+    path: {
+        /**
+         * user id or name
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/v1/members/{id}';
+};
+
+export type PatchV1MembersByIdErrors = {
+    /**
+     * bad request
+     */
+    400: _Error;
+    /**
+     * missing or invalid bearer token
+     */
+    401: _Error;
+    /**
+     * forbidden
+     */
+    403: _Error;
+    /**
+     * not found
+     */
+    404: _Error;
+};
+
+export type PatchV1MembersByIdError = PatchV1MembersByIdErrors[keyof PatchV1MembersByIdErrors];
+
+export type PatchV1MembersByIdResponses = {
+    /**
+     * the updated member
+     */
+    200: Member;
+};
+
+export type PatchV1MembersByIdResponse = PatchV1MembersByIdResponses[keyof PatchV1MembersByIdResponses];

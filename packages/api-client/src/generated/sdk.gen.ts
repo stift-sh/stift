@@ -2,7 +2,7 @@
 
 import { type Client, formDataBodySerializer, type Options as Options2, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { DeleteV1BundlesByScopeByAgentByNameData, DeleteV1BundlesByScopeByAgentByNameErrors, DeleteV1BundlesByScopeByAgentByNameResponses, DeleteV1SessionsByIdData, DeleteV1SessionsByIdErrors, DeleteV1SessionsByIdResponses, DeleteV1TokensByIdData, DeleteV1TokensByIdErrors, DeleteV1TokensByIdResponses, GetApiVersionData, GetApiVersionResponses, GetHealthzData, GetHealthzResponses, GetV1BlobsByShaData, GetV1BlobsByShaErrors, GetV1BlobsByShaResponses, GetV1BundlesByScopeByAgentByNameData, GetV1BundlesByScopeByAgentByNameErrors, GetV1BundlesByScopeByAgentByNameResponses, GetV1BundlesData, GetV1BundlesErrors, GetV1BundlesResponses, GetV1SessionsByIdArchiveData, GetV1SessionsByIdArchiveErrors, GetV1SessionsByIdArchiveResponses, GetV1SessionsByIdData, GetV1SessionsByIdErrors, GetV1SessionsByIdResponses, GetV1SessionsData, GetV1SessionsErrors, GetV1SessionsResponses, GetV1TokensData, GetV1TokensErrors, GetV1TokensResponses, GetV1WhoamiData, GetV1WhoamiErrors, GetV1WhoamiResponses, PostV1BlobsCheckData, PostV1BlobsCheckErrors, PostV1BlobsCheckResponses, PostV1SessionsData, PostV1SessionsErrors, PostV1SessionsResponses, PostV1TokensData, PostV1TokensErrors, PostV1TokensResponses, PutV1BlobsByShaData, PutV1BlobsByShaErrors, PutV1BlobsByShaResponses, PutV1BundlesByScopeByAgentByNameData, PutV1BundlesByScopeByAgentByNameErrors, PutV1BundlesByScopeByAgentByNameResponses } from './types.gen';
+import type { DeleteV1BundlesByScopeByAgentByNameData, DeleteV1BundlesByScopeByAgentByNameErrors, DeleteV1BundlesByScopeByAgentByNameResponses, DeleteV1MembersByIdData, DeleteV1MembersByIdErrors, DeleteV1MembersByIdResponses, DeleteV1SessionsByIdData, DeleteV1SessionsByIdErrors, DeleteV1SessionsByIdResponses, DeleteV1TokensByIdData, DeleteV1TokensByIdErrors, DeleteV1TokensByIdResponses, GetApiVersionData, GetApiVersionResponses, GetHealthzData, GetHealthzResponses, GetV1BlobsByShaData, GetV1BlobsByShaErrors, GetV1BlobsByShaResponses, GetV1BundlesByScopeByAgentByNameData, GetV1BundlesByScopeByAgentByNameErrors, GetV1BundlesByScopeByAgentByNameResponses, GetV1BundlesData, GetV1BundlesErrors, GetV1BundlesResponses, GetV1MembersData, GetV1MembersErrors, GetV1MembersResponses, GetV1SessionsByIdArchiveData, GetV1SessionsByIdArchiveErrors, GetV1SessionsByIdArchiveResponses, GetV1SessionsByIdData, GetV1SessionsByIdErrors, GetV1SessionsByIdResponses, GetV1SessionsData, GetV1SessionsErrors, GetV1SessionsResponses, GetV1TokensData, GetV1TokensErrors, GetV1TokensResponses, GetV1WhoamiData, GetV1WhoamiErrors, GetV1WhoamiResponses, PatchV1MembersByIdData, PatchV1MembersByIdErrors, PatchV1MembersByIdResponses, PostV1BlobsCheckData, PostV1BlobsCheckErrors, PostV1BlobsCheckResponses, PostV1MembersData, PostV1MembersErrors, PostV1MembersResponses, PostV1SessionsData, PostV1SessionsErrors, PostV1SessionsResponses, PostV1TokensData, PostV1TokensErrors, PostV1TokensResponses, PutV1BlobsByShaData, PutV1BlobsByShaErrors, PutV1BlobsByShaResponses, PutV1BundlesByScopeByAgentByNameData, PutV1BundlesByScopeByAgentByNameErrors, PutV1BundlesByScopeByAgentByNameResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -259,5 +259,65 @@ export const deleteV1TokensById = <ThrowOnError extends boolean = false>(options
         ],
         url: '/v1/tokens/{id}',
         ...options
+    });
+};
+
+export const getV1Members = <ThrowOnError extends boolean = false>(options?: Options<GetV1MembersData, ThrowOnError>) => {
+    return (options?.client ?? client).get<GetV1MembersResponses, GetV1MembersErrors, ThrowOnError>({
+        security: [
+            {
+                scheme: 'bearer',
+                type: 'http'
+            }
+        ],
+        url: '/v1/members',
+        ...options
+    });
+};
+
+export const postV1Members = <ThrowOnError extends boolean = false>(options: Options<PostV1MembersData, ThrowOnError>) => {
+    return (options.client ?? client).post<PostV1MembersResponses, PostV1MembersErrors, ThrowOnError>({
+        security: [
+            {
+                scheme: 'bearer',
+                type: 'http'
+            }
+        ],
+        url: '/v1/members',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+export const deleteV1MembersById = <ThrowOnError extends boolean = false>(options: Options<DeleteV1MembersByIdData, ThrowOnError>) => {
+    return (options.client ?? client).delete<DeleteV1MembersByIdResponses, DeleteV1MembersByIdErrors, ThrowOnError>({
+        security: [
+            {
+                scheme: 'bearer',
+                type: 'http'
+            }
+        ],
+        url: '/v1/members/{id}',
+        ...options
+    });
+};
+
+export const patchV1MembersById = <ThrowOnError extends boolean = false>(options: Options<PatchV1MembersByIdData, ThrowOnError>) => {
+    return (options.client ?? client).patch<PatchV1MembersByIdResponses, PatchV1MembersByIdErrors, ThrowOnError>({
+        security: [
+            {
+                scheme: 'bearer',
+                type: 'http'
+            }
+        ],
+        url: '/v1/members/{id}',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
     });
 };
