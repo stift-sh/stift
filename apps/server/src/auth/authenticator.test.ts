@@ -1,9 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { chain, type Authenticator } from "./authenticator.js";
+import { identity } from "./identity.js";
 
 const fixed = (name: string | null): Authenticator => ({
-  authenticate: async () => (name ? { id: name, tenant: "", name, admin: false } : null),
+  authenticate: async () => (name ? identity({ id: name, userId: name, orgId: "", name, role: "member" }) : null),
 });
 
 test("chain returns the first non-null identity", async () => {

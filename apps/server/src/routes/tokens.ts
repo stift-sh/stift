@@ -24,7 +24,7 @@ export function tokens(db: Db) {
       security,
       responses: { 200: json("all tokens", z.array(TokenInfo)), 401: errors[401], 403: errors[403] },
     }),
-    async (c) => c.json(await listTokens(db, c.var.identity.tenant), 200),
+    async (c) => c.json(await listTokens(db, c.var.identity.orgId), 200),
   );
 
   // Go decodes with encoding/json: malformed bodies get our wording, not the
@@ -51,7 +51,7 @@ export function tokens(db: Db) {
     async (c) => {
       const body = c.req.valid("json");
       if (!body.name) return err(c, 400, "name is required");
-      const { raw, info } = await createToken(db, c.var.identity.tenant, body.name, body.admin ?? false);
+      const { raw, info } = await createToken(db, c.var.identity.orgId, body.name, body.admin ?? false);
       return c.json({ ...info, token: raw }, 201);
     },
     (result, c) => {
@@ -72,7 +72,7 @@ export function tokens(db: Db) {
       const { id } = c.req.valid("param");
       const caller = c.var.identity;
       if (id === caller.id) return err(c, 400, "refusing to revoke the token used for this request");
-      if (!(await revokeToken(db, caller.tenant, id))) return err(c, 404, "no such token");
+      if (!(await revokeToken(db, caller.orgId, id))) return err(c, 404, "no such token");
       return c.body(null, 204);
     },
   );

@@ -3,9 +3,9 @@ import path from "node:path/posix";
 /** Bounds how deep a unit name may nest. */
 export const MAX_NAME_SEGMENTS = 3;
 
-/** Tenant names are used as storage prefixes; guard against traversal. */
-export function validTenant(tenant: string): boolean {
-  return tenant === "" || /^[A-Za-z0-9_-]+$/.test(tenant);
+/** OrgId names are used as storage prefixes; guard against traversal. */
+export function validOrgId(orgId: string): boolean {
+  return orgId === "" || /^[A-Za-z0-9_-]+$/.test(orgId);
 }
 
 /** Lowercase hex SHA-256 digest. */

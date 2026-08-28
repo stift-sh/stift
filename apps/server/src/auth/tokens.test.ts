@@ -1,8 +1,9 @@
 import { after, before, beforeEach, describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { connect, runMigrations } from "../db/client.js";
-import { bootstrap } from "./bootstrap.js";
+import { memberships, orgs } from "../db/schema.js";
+import { bootstrap, ensureDefaultOrg } from "./bootstrap.js";
 import { TokenAuthenticator, createToken, hashToken, listTokens, registerToken, revokeToken } from "./tokens.js";
 
 const dbUrl = process.env.STIFT_TEST_DATABASE_URL;
@@ -16,7 +17,12 @@ describe("local tokens", { skip: dbUrl ? false : "STIFT_TEST_DATABASE_URL not se
     conn = connect(dbUrl!);
     await runMigrations(conn.db);
   });
-  beforeEach(() => conn.db.execute(sql`truncate tokens`));
+  beforeEach(async () => {
+    await conn.db.execute(sql`truncate tokens, memberships, users cascade`);
+    await conn.db.execute(sql`delete from orgs where id <> ''`);
+    await ensureDefaultOrg(conn.db, {});
+    await conn.db.insert(orgs).values({ id: "org_1", slug: "org-1", name: "Org 1" });
+  });
   after(() => conn.pool.end());
 
   test("create / check round-trip, format, wrong token", async () => {
@@ -24,7 +30,9 @@ describe("local tokens", { skip: dbUrl ? false : "STIFT_TEST_DATABASE_URL not se
     assert.match(raw, /^stf_[0-9a-f]{48}$/);
     assert.match(info.id, /^[0-9a-f]{8}$/);
     const auth = new TokenAuthenticator(conn.db);
-    assert.deepEqual(await auth.authenticate(raw), { id: info.id, tenant: "", name: "ci", admin: false });
+    const id = await auth.authenticate(raw);
+    assert.equal(id?.userId.length, 16);
+    assert.deepEqual(id, { id: info.id, userId: id!.userId, orgId: "", name: "ci", role: "member", admin: false });
     assert.equal(await auth.authenticate(raw.slice(0, -1) + (raw.endsWith("0") ? "1" : "0")), null);
     assert.equal(await auth.authenticate("nope"), null);
   });
@@ -38,10 +46,10 @@ describe("local tokens", { skip: dbUrl ? false : "STIFT_TEST_DATABASE_URL not se
     assert.equal((await listTokens(conn.db, "")).length, 1);
   });
 
-  test("tenant is carried through and scopes list/revoke", async () => {
+  test("org is carried through and scopes list/revoke", async () => {
     const { raw, info } = await createToken(conn.db, "org_1", "cli", true);
     const id = await new TokenAuthenticator(conn.db).authenticate(raw);
-    assert.equal(id?.tenant, "org_1");
+    assert.equal(id?.orgId, "org_1");
     assert.equal((await listTokens(conn.db, "")).length, 0);
     assert.equal(await revokeToken(conn.db, "", info.id), false);
     assert.equal(await revokeToken(conn.db, "org_1", info.id), true);
@@ -64,5 +72,21 @@ describe("local tokens", { skip: dbUrl ? false : "STIFT_TEST_DATABASE_URL not se
     await bootstrap(conn.db, {}, (m) => logs.push(m));
     assert.equal(logs.length, 1);
     assert.equal((await listTokens(conn.db, ""))[0]!.name, "admin");
+  });
+
+  test("role comes from the membership, not the token", async () => {
+    const { raw } = await createToken(conn.db, "", "laptop", false);
+    const auth = new TokenAuthenticator(conn.db);
+    const before = await auth.authenticate(raw);
+    assert.equal(before?.role, "member");
+    await conn.db.update(memberships).set({ role: "admin" }).where(eq(memberships.userId, before!.userId));
+    const after = await auth.authenticate(raw);
+    assert.equal(after?.role, "admin");
+    assert.equal(after?.admin, true);
+    assert.equal((await listTokens(conn.db, ""))[0]!.admin, true);
+    // A second token for the same user shares the role.
+    const second = await createToken(conn.db, "", "desktop", { userId: before!.userId });
+    assert.equal(second.info.admin, true);
+    assert.equal((await auth.authenticate(second.raw))?.userId, before!.userId);
   });
 });

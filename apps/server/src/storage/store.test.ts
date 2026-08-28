@@ -18,8 +18,8 @@ const sha = (s: string | Buffer) => createHash("sha256").update(s).digest("hex")
 const rd = (s: string | Buffer) => Readable.from([Buffer.from(s)]);
 const readAll = async (r: Readable) => Buffer.concat(await r.toArray());
 
-async function putBlob(b: Store, tenant: string, p: string, content: string): Promise<BundleFile> {
-  await b.putBlob(tenant, sha(content), rd(content), Buffer.byteLength(content));
+async function putBlob(b: Store, orgId: string, p: string, content: string): Promise<BundleFile> {
+  await b.putBlob(orgId, sha(content), rd(content), Buffer.byteLength(content));
   return { path: p, sha256: sha(content), size: Buffer.byteLength(content), mode: 0o644 };
 }
 
@@ -45,7 +45,7 @@ describe("Store contract", { skip: dbUrl ? false : "STIFT_TEST_DATABASE_URL not 
     b = new PgStore(conn.db, blobStore);
   });
   beforeEach(async () => {
-    await conn.db.execute(sql`truncate sessions, blobs, bundles, bundle_versions, tokens`);
+    await conn.db.execute(sql`truncate sessions, blobs, bundles, bundle_versions, tokens, installs, memberships, users cascade`);
   });
   after(async () => {
     await conn.pool.end();
@@ -135,25 +135,25 @@ describe("Store contract", { skip: dbUrl ? false : "STIFT_TEST_DATABASE_URL not 
     const data = "shared content";
     const id = sha(data);
     await b.putBlob("orgA", id, rd(data), data.length);
-    assert.equal((await b.hasBlobs("orgB", [id])).length, 1, "blob leaked across tenants");
-    assert.equal((await b.hasBlobs("", [id])).length, 1, "blob leaked to default tenant");
-    await rejects(b.openBlob("orgB", id), NotFoundError, "openBlob across tenants succeeded");
+    assert.equal((await b.hasBlobs("orgB", [id])).length, 1, "blob leaked across orgs");
+    assert.equal((await b.hasBlobs("", [id])).length, 1, "blob leaked to default org");
+    await rejects(b.openBlob("orgB", id), NotFoundError, "openBlob across orgs succeeded");
 
     const k: BundleKey = { scope: "user", agent: "claude", name: "CLAUDE.md" };
     const f: BundleFile = { path: "CLAUDE.md", sha256: id, size: data.length, mode: 0 };
     await b.putBundle("orgA", k, { files: [f] });
-    await rejects(b.putBundle("orgB", k, { files: [f] }), MissingBlobError, "expected MissingBlobError across tenants");
-    assert.equal(await b.getBundle("orgB", k, 0), undefined, "bundle leaked across tenants");
-    assert.equal(await b.getBundle("", k, 0), undefined, "bundle leaked to default tenant");
+    await rejects(b.putBundle("orgB", k, { files: [f] }), MissingBlobError, "expected MissingBlobError across orgs");
+    assert.equal(await b.getBundle("orgB", k, 0), undefined, "bundle leaked across orgs");
+    assert.equal(await b.getBundle("", k, 0), undefined, "bundle leaked to default org");
     assert.equal((await b.listBundles("orgB", {})).length, 0);
     // Independent version counters.
     await putBlob(b, "orgB", "CLAUDE.md", data);
     assert.equal((await b.putBundle("orgB", k, { files: [f] })).version, 1);
     await b.deleteBundle("orgB", k);
     assert.ok(await b.getBundle("orgA", k, 0), "deleting orgB's bundle removed orgA's");
-    // Invalid tenant names are rejected.
-    await rejects(b.putBlob("../x", id, rd(data), data.length), undefined, "invalid tenant accepted by putBlob");
-    await rejects(b.putBundle("../x", k, {}), undefined, "invalid tenant accepted by putBundle");
+    // Invalid org ids are rejected.
+    await rejects(b.putBlob("../x", id, rd(data), data.length), undefined, "invalid org id accepted by putBlob");
+    await rejects(b.putBundle("../x", k, {}), undefined, "invalid org id accepted by putBundle");
   });
 
   test("MissingBlob", async () => {
@@ -313,7 +313,7 @@ describe("Store contract", { skip: dbUrl ? false : "STIFT_TEST_DATABASE_URL not 
     assert.equal((await b.list("", { query: "TESTS" }))[0]?.id, r1.session.id);
     assert.equal((await b.list("", { query: "abc-1" })).length, 1);
     assert.equal((await b.list("", { host: "nope" })).length, 0);
-    assert.equal((await b.list("orgA")).length, 0, "sessions leaked across tenants");
+    assert.equal((await b.list("orgA")).length, 0, "sessions leaked across orgs");
 
     assert.equal(await b.resolveId("", r1.session.id), r1.session.id);
     assert.equal(await b.resolveId("", r1.session.id.slice(0, 6)), r1.session.id);

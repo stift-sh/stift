@@ -7,7 +7,7 @@ import { blobs, bundleVersions, bundles, sessions } from "../db/schema.js";
 import { BlobStore } from "./blobs.js";
 import { MissingBlobError, NotFoundError, StaleError } from "./errors.js";
 import { parseFrontmatter } from "./frontmatter.js";
-import { type BundleKey, validateKey, validBundlePath, validSha, validTenant } from "./validate.js";
+import { type BundleKey, validateKey, validBundlePath, validSha, validOrgId } from "./validate.js";
 
 export type { BundleKey };
 
@@ -16,43 +16,49 @@ export type ListFilter = { agent?: string; project?: string; host?: string; quer
 export type BundleFilter = { scope?: string; agent?: string; project?: string; name?: string };
 
 /** What the client sends on push: everything the server does not compute. */
-export type SessionInput = Omit<Session, "id" | "sha256" | "size" | "created_at" | "updated_at">;
+export type SessionInput = Omit<Session, "id" | "sha256" | "size" | "created_at" | "updated_at"> & {
+  /** The pushing user; recorded on the row, never returned to clients. */
+  userId?: string;
+};
 export type PutStatus = "created" | "updated" | "unchanged";
 
 /** Input manifest for putBundle; key fields, version and created are set by the store. */
-export type BundleInput = Partial<Pick<Bundle, "parent" | "host" | "author" | "files">>;
+export type BundleInput = Partial<Pick<Bundle, "parent" | "host" | "author" | "files">> & {
+  /** The writing user; recorded as the unit's owner when the unit is created. */
+  userId?: string;
+};
 
 /**
  * Storage abstraction the HTTP layer depends on. Every method is scoped to a
- * tenant ("" = default). Port of `Backend` in the former Go server (git history before 2026-08-27) engine/server/store.go:
+ * org ("" = default). Port of `Backend` in the former Go server (git history before 2026-08-27) engine/server/store.go:
  * session metadata, blob index and bundle manifests live in Postgres, session
  * archives and blob contents in an S3-compatible bucket.
  */
 export interface Store {
-  put(tenant: string, meta: SessionInput, archive: Readable): Promise<{ session: Session; status: PutStatus }>;
-  get(tenant: string, id: string): Promise<Session | undefined>;
+  put(orgId: string, meta: SessionInput, archive: Readable): Promise<{ session: Session; status: PutStatus }>;
+  get(orgId: string, id: string): Promise<Session | undefined>;
   /** `range` is an HTTP Range header value forwarded to the object store. */
-  openArchive(tenant: string, id: string, range?: string): Promise<{ body: Readable; session: Session }>;
-  delete(tenant: string, id: string): Promise<void>;
-  list(tenant: string, f?: ListFilter): Promise<Session[]>;
+  openArchive(orgId: string, id: string, range?: string): Promise<{ body: Readable; session: Session }>;
+  delete(orgId: string, id: string): Promise<void>;
+  list(orgId: string, f?: ListFilter): Promise<Session[]>;
   /** Accepts a full or unambiguous-prefix session id. */
-  resolveId(tenant: string, prefix: string): Promise<string>;
+  resolveId(orgId: string, prefix: string): Promise<string>;
 
   /** Reports which of the given sha256 digests are not stored. */
-  hasBlobs(tenant: string, shas: string[]): Promise<string[]>;
+  hasBlobs(orgId: string, shas: string[]): Promise<string[]>;
   /** Stores content under its sha256; hash and size are verified. Re-putting is a no-op. */
-  putBlob(tenant: string, sha: string, body: Readable, size: number): Promise<void>;
-  openBlob(tenant: string, sha: string): Promise<Readable>;
+  putBlob(orgId: string, sha: string, body: Readable, size: number): Promise<void>;
+  openBlob(orgId: string, sha: string): Promise<Readable>;
 
   /** Writes version HEAD+1 atomically; StaleError / MissingBlobError on conflict. */
-  putBundle(tenant: string, k: BundleKey, b: BundleInput, force?: boolean): Promise<Bundle>;
+  putBundle(orgId: string, k: BundleKey, b: BundleInput, force?: boolean): Promise<Bundle>;
   /** Version 0 means HEAD. */
-  getBundle(tenant: string, k: BundleKey, version?: number): Promise<Bundle | undefined>;
+  getBundle(orgId: string, k: BundleKey, version?: number): Promise<Bundle | undefined>;
   /** HEAD manifest of every bundle matching f, sorted by scope, agent, project, name. */
-  listBundles(tenant: string, f?: BundleFilter): Promise<Bundle[]>;
+  listBundles(orgId: string, f?: BundleFilter): Promise<Bundle[]>;
   /** Every version, newest first. */
-  bundleHistory(tenant: string, k: BundleKey): Promise<Bundle[]>;
-  deleteBundle(tenant: string, k: BundleKey): Promise<void>;
+  bundleHistory(orgId: string, k: BundleKey): Promise<Bundle[]>;
+  deleteBundle(orgId: string, k: BundleKey): Promise<void>;
 }
 
 const FRONTMATTER_LIMIT = 64 << 10;
@@ -61,8 +67,8 @@ function newId(): string {
   return randomBytes(8).toString("hex");
 }
 
-function assertTenant(tenant: string) {
-  if (!validTenant(tenant)) throw new Error(`invalid tenant "${tenant}"`);
+function assertOrgId(orgId: string) {
+  if (!validOrgId(orgId)) throw new Error(`invalid orgId "${orgId}"`);
 }
 
 function assertSha(sha: string) {
@@ -120,8 +126,8 @@ export class PgStore implements Store {
 
   // ---- sessions ----
 
-  async put(tenant: string, meta: SessionInput, archive: Readable) {
-    assertTenant(tenant);
+  async put(orgId: string, meta: SessionInput, archive: Readable) {
+    assertOrgId(orgId);
     const staged = await this.blobStore.stage(archive);
     let promoted = false;
     try {
@@ -129,7 +135,7 @@ export class PgStore implements Store {
         const [existing] = await tx
           .select()
           .from(sessions)
-          .where(and(eq(sessions.tenant, tenant), eq(sessions.key, meta.key)))
+          .where(and(eq(sessions.orgId, orgId), eq(sessions.key, meta.key)))
           .for("update");
         const now = new Date();
         if (existing && existing.sha256 === staged.sha256) {
@@ -137,8 +143,9 @@ export class PgStore implements Store {
         }
         const id = existing?.id ?? newId();
         const row: typeof sessions.$inferInsert = {
-          tenant,
+          orgId,
           id,
+          userId: meta.userId ?? existing?.userId ?? null,
           key: meta.key,
           agent: meta.agent,
           sessionId: meta.session_id,
@@ -157,13 +164,13 @@ export class PgStore implements Store {
         };
         // The archive is written before the row so a reader never sees
         // metadata pointing at a missing object.
-        await this.blobStore.promote(staged, this.blobStore.sessionKey(tenant, id));
+        await this.blobStore.promote(staged, this.blobStore.sessionKey(orgId, id));
         promoted = true;
         const [saved] = existing
           ? await tx
               .update(sessions)
               .set(row)
-              .where(and(eq(sessions.tenant, tenant), eq(sessions.id, id)))
+              .where(and(eq(sessions.orgId, orgId), eq(sessions.id, id)))
               .returning()
           : await tx.insert(sessions).values(row).returning();
         return { session: toSession(saved!), status: existing ? ("updated" as const) : ("created" as const) };
@@ -174,33 +181,33 @@ export class PgStore implements Store {
     }
   }
 
-  async get(tenant: string, id: string) {
+  async get(orgId: string, id: string) {
     const [row] = await this.db
       .select()
       .from(sessions)
-      .where(and(eq(sessions.tenant, tenant), eq(sessions.id, id)));
+      .where(and(eq(sessions.orgId, orgId), eq(sessions.id, id)));
     return row ? toSession(row) : undefined;
   }
 
-  async openArchive(tenant: string, id: string, range?: string) {
-    const session = await this.get(tenant, id);
+  async openArchive(orgId: string, id: string, range?: string) {
+    const session = await this.get(orgId, id);
     if (!session) throw new NotFoundError(`session ${id} not found`);
-    const obj = await this.blobStore.get(this.blobStore.sessionKey(tenant, id), { range });
+    const obj = await this.blobStore.get(this.blobStore.sessionKey(orgId, id), { range });
     if (!obj) throw new NotFoundError(`archive for session ${id} not found`);
     return { body: obj.body, session };
   }
 
-  async delete(tenant: string, id: string) {
+  async delete(orgId: string, id: string) {
     const deleted = await this.db
       .delete(sessions)
-      .where(and(eq(sessions.tenant, tenant), eq(sessions.id, id)))
+      .where(and(eq(sessions.orgId, orgId), eq(sessions.id, id)))
       .returning({ id: sessions.id });
     if (deleted.length === 0) throw new NotFoundError(`session ${id} not found`);
-    await this.blobStore.delete(this.blobStore.sessionKey(tenant, id)).catch(() => {});
+    await this.blobStore.delete(this.blobStore.sessionKey(orgId, id)).catch(() => {});
   }
 
-  async list(tenant: string, f: ListFilter = {}) {
-    const conds = [eq(sessions.tenant, tenant)];
+  async list(orgId: string, f: ListFilter = {}) {
+    const conds = [eq(sessions.orgId, orgId)];
     if (f.agent) conds.push(eq(sessions.agent, f.agent));
     if (f.project) conds.push(eq(sessions.project, f.project));
     if (f.host) conds.push(eq(sessions.host, f.host));
@@ -221,12 +228,12 @@ export class PgStore implements Store {
     return rows.map(toSession);
   }
 
-  async resolveId(tenant: string, prefix: string) {
+  async resolveId(orgId: string, prefix: string) {
     if (prefix === "") throw new NotFoundError("session not found");
     const rows = await this.db
       .select({ id: sessions.id })
       .from(sessions)
-      .where(and(eq(sessions.tenant, tenant), like(sessions.id, `${prefix.replace(/[\\%_]/g, "\\$&")}%`)))
+      .where(and(eq(sessions.orgId, orgId), like(sessions.id, `${prefix.replace(/[\\%_]/g, "\\$&")}%`)))
       .limit(2);
     if (rows.some((r) => r.id === prefix)) return prefix;
     if (rows.length === 0) throw new NotFoundError("session not found");
@@ -236,42 +243,42 @@ export class PgStore implements Store {
 
   // ---- blobs ----
 
-  async hasBlobs(tenant: string, shas: string[]) {
-    assertTenant(tenant);
+  async hasBlobs(orgId: string, shas: string[]) {
+    assertOrgId(orgId);
     for (const s of shas) assertSha(s);
     if (shas.length === 0) return [];
     const rows = await this.db
       .select({ sha256: blobs.sha256 })
       .from(blobs)
-      .where(and(eq(blobs.tenant, tenant), inArray(blobs.sha256, shas)));
+      .where(and(eq(blobs.orgId, orgId), inArray(blobs.sha256, shas)));
     const have = new Set(rows.map((r) => r.sha256));
     return shas.filter((s) => !have.has(s));
   }
 
-  async putBlob(tenant: string, sha: string, body: Readable, size: number) {
-    assertTenant(tenant);
+  async putBlob(orgId: string, sha: string, body: Readable, size: number) {
+    assertOrgId(orgId);
     assertSha(sha);
-    if ((await this.hasBlobs(tenant, [sha])).length === 0) {
+    if ((await this.hasBlobs(orgId, [sha])).length === 0) {
       body.resume(); // already stored; drain and ignore
       return;
     }
-    const stored = await this.blobStore.putVerified(this.blobStore.blobKey(tenant, sha), body, { sha256: sha, size });
-    await this.db.insert(blobs).values({ tenant, sha256: sha, size: stored.size }).onConflictDoNothing();
+    const stored = await this.blobStore.putVerified(this.blobStore.blobKey(orgId, sha), body, { sha256: sha, size });
+    await this.db.insert(blobs).values({ orgId, sha256: sha, size: stored.size }).onConflictDoNothing();
   }
 
-  async openBlob(tenant: string, sha: string) {
-    if (!validTenant(tenant) || !validSha(sha)) throw new NotFoundError("blob not found");
-    if ((await this.hasBlobs(tenant, [sha])).length > 0) throw new NotFoundError("blob not found");
-    const obj = await this.blobStore.get(this.blobStore.blobKey(tenant, sha));
+  async openBlob(orgId: string, sha: string) {
+    if (!validOrgId(orgId) || !validSha(sha)) throw new NotFoundError("blob not found");
+    if ((await this.hasBlobs(orgId, [sha])).length > 0) throw new NotFoundError("blob not found");
+    const obj = await this.blobStore.get(this.blobStore.blobKey(orgId, sha));
     if (!obj) throw new NotFoundError("blob not found");
     return obj.body;
   }
 
   // ---- bundles ----
 
-  private bundleWhere(tenant: string, k: BundleKey) {
+  private bundleWhere(orgId: string, k: BundleKey) {
     return and(
-      eq(bundles.tenant, tenant),
+      eq(bundles.orgId, orgId),
       eq(bundles.scope, k.scope),
       eq(bundles.agent, k.agent),
       eq(bundles.project, k.project ?? ""),
@@ -279,8 +286,8 @@ export class PgStore implements Store {
     );
   }
 
-  async putBundle(tenant: string, k: BundleKey, b: BundleInput, force = false) {
-    assertTenant(tenant);
+  async putBundle(orgId: string, k: BundleKey, b: BundleInput, force = false) {
+    assertOrgId(orgId);
     assertKey(k);
     const files = [...(b.files ?? [])];
     const seen = new Set<string>();
@@ -292,23 +299,23 @@ export class PgStore implements Store {
     }
     files.sort((x, y) => (x.path < y.path ? -1 : x.path > y.path ? 1 : 0));
 
-    const missing = await this.hasBlobs(tenant, files.map((f) => f.sha256));
+    const missing = await this.hasBlobs(orgId, files.map((f) => f.sha256));
     if (missing.length > 0) throw new MissingBlobError(missing);
-    const skills = await this.parseSkills(tenant, files);
+    const skills = await this.parseSkills(orgId, files);
     const parent = b.parent ?? 0;
 
     return this.db.transaction(async (tx) => {
       // Upsert the bundle row and lock it so concurrent writers serialize.
       await tx
         .insert(bundles)
-        .values({ tenant, scope: k.scope, agent: k.agent, project: k.project ?? "", name: k.name })
+        .values({ orgId, scope: k.scope, agent: k.agent, project: k.project ?? "", name: k.name, userId: b.userId ?? null })
         .onConflictDoNothing();
-      const [row] = await tx.select().from(bundles).where(this.bundleWhere(tenant, k)).for("update");
+      const [row] = await tx.select().from(bundles).where(this.bundleWhere(orgId, k)).for("update");
       if (!row) throw new Error("bundle row vanished");
 
       // Re-check blob presence under the lock: the manifest must never
       // reference a blob that is not in the index.
-      const stillMissing = await this.hasBlobs(tenant, files.map((f) => f.sha256));
+      const stillMissing = await this.hasBlobs(orgId, files.map((f) => f.sha256));
       if (stillMissing.length > 0) throw new MissingBlobError(stillMissing);
 
       if (!force && parent !== row.head) throw new StaleError(row.head, parent);
@@ -332,9 +339,9 @@ export class PgStore implements Store {
     });
   }
 
-  async getBundle(tenant: string, k: BundleKey, version = 0) {
-    if (!validTenant(tenant) || validateKey(k)) return undefined;
-    const [row] = await this.db.select().from(bundles).where(this.bundleWhere(tenant, k));
+  async getBundle(orgId: string, k: BundleKey, version = 0) {
+    if (!validOrgId(orgId) || validateKey(k)) return undefined;
+    const [row] = await this.db.select().from(bundles).where(this.bundleWhere(orgId, k));
     if (!row || row.head === 0) return undefined;
     const v = version === 0 ? row.head : version;
     if (v < 0 || v > row.head) return undefined;
@@ -345,9 +352,9 @@ export class PgStore implements Store {
     return ver?.manifest;
   }
 
-  async listBundles(tenant: string, f: BundleFilter = {}) {
-    if (!validTenant(tenant)) return [];
-    const conds = [eq(bundles.tenant, tenant), sql`${bundles.head} > 0`];
+  async listBundles(orgId: string, f: BundleFilter = {}) {
+    if (!validOrgId(orgId)) return [];
+    const conds = [eq(bundles.orgId, orgId), sql`${bundles.head} > 0`];
     if (f.scope) conds.push(eq(bundles.scope, f.scope));
     if (f.agent) conds.push(eq(bundles.agent, f.agent));
     if (f.project) conds.push(eq(bundles.project, f.project));
@@ -364,9 +371,9 @@ export class PgStore implements Store {
     return rows.map((r) => r.manifest);
   }
 
-  async bundleHistory(tenant: string, k: BundleKey) {
-    if (!validTenant(tenant) || validateKey(k)) return [];
-    const [row] = await this.db.select().from(bundles).where(this.bundleWhere(tenant, k));
+  async bundleHistory(orgId: string, k: BundleKey) {
+    if (!validOrgId(orgId) || validateKey(k)) return [];
+    const [row] = await this.db.select().from(bundles).where(this.bundleWhere(orgId, k));
     if (!row) return [];
     const rows = await this.db
       .select({ manifest: bundleVersions.manifest })
@@ -376,23 +383,23 @@ export class PgStore implements Store {
     return rows.map((r) => r.manifest);
   }
 
-  async deleteBundle(tenant: string, k: BundleKey) {
-    assertTenant(tenant);
+  async deleteBundle(orgId: string, k: BundleKey) {
+    assertOrgId(orgId);
     assertKey(k);
     // Versions cascade; the row itself goes so numbering restarts from 1.
     const deleted = await this.db
       .delete(bundles)
-      .where(and(this.bundleWhere(tenant, k), sql`${bundles.head} > 0`))
+      .where(and(this.bundleWhere(orgId, k), sql`${bundles.head} > 0`))
       .returning({ id: bundles.id });
     if (deleted.length === 0) throw new NotFoundError("bundle not found");
   }
 
   /** Extracts name/description from every SKILL.md in files, sorted by path. */
-  private async parseSkills(tenant: string, files: BundleFile[]): Promise<SkillMeta[]> {
+  private async parseSkills(orgId: string, files: BundleFile[]): Promise<SkillMeta[]> {
     const skills: SkillMeta[] = [];
     for (const f of files) {
       if (f.path.split("/").pop() !== "SKILL.md") continue;
-      const obj = await this.blobStore.get(this.blobStore.blobKey(tenant, f.sha256), {
+      const obj = await this.blobStore.get(this.blobStore.blobKey(orgId, f.sha256), {
         range: `bytes=0-${FRONTMATTER_LIMIT - 1}`,
       });
       if (!obj) throw new MissingBlobError([f.sha256]);

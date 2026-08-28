@@ -1,13 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { Hono } from "hono";
+import { identity } from "./identity.js";
 import type { Authenticator } from "./authenticator.js";
 import { bearer, requireAdmin, type AuthEnv } from "./middleware.js";
 
 const fake: Authenticator = {
   authenticate: async (raw) =>
     raw === "stf_admin" || raw === "stf_user"
-      ? { id: "1", tenant: "", name: raw, admin: raw === "stf_admin" }
+      ? identity({ id: "1", userId: "u", orgId: "", name: raw, role: raw === "stf_admin" ? "admin" : "member" })
       : null,
 };
 

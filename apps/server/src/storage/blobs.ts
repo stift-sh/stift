@@ -8,7 +8,7 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
-import { validSha, validTenant } from "./validate.js";
+import { validSha, validOrgId } from "./validate.js";
 
 export type BlobStoreConfig = {
   bucket: string;
@@ -46,10 +46,10 @@ export type Staged = { tmp: string; sha256: string; size: number };
 /**
  * Content storage over the S3 API (R2, S3, MinIO). Layout:
  *
- *   <tenant>/sessions/<id>.tar.gz
- *   <tenant>/blobs/<sha[0:2]>/<sha>
+ *   <org>/sessions/<id>.tar.gz
+ *   <org>/blobs/<sha[0:2]>/<sha>
  *
- * The empty tenant maps to "_". Writes go to a temporary key while the
+ * The empty org id maps to "_". Writes go to a temporary key while the
  * content is hashed, then are copied to the final key only when the digest
  * (and size, if given) match, so a rejected upload leaves nothing behind.
  */
@@ -72,18 +72,18 @@ export class BlobStore {
     });
   }
 
-  private tenantPrefix(tenant: string): string {
-    if (!validTenant(tenant)) throw new Error(`invalid tenant "${tenant}"`);
-    return `${this.prefix}${tenant === "" ? "_" : tenant}/`;
+  private orgPrefix(orgId: string): string {
+    if (!validOrgId(orgId)) throw new Error(`invalid orgId "${orgId}"`);
+    return `${this.prefix}${orgId === "" ? "_" : orgId}/`;
   }
 
-  sessionKey(tenant: string, id: string): string {
-    return `${this.tenantPrefix(tenant)}sessions/${id}.tar.gz`;
+  sessionKey(orgId: string, id: string): string {
+    return `${this.orgPrefix(orgId)}sessions/${id}.tar.gz`;
   }
 
-  blobKey(tenant: string, sha: string): string {
+  blobKey(orgId: string, sha: string): string {
     if (!validSha(sha)) throw new Error(`invalid sha256 "${sha}"`);
-    return `${this.tenantPrefix(tenant)}blobs/${sha.slice(0, 2)}/${sha}`;
+    return `${this.orgPrefix(orgId)}blobs/${sha.slice(0, 2)}/${sha}`;
   }
 
   /**

@@ -5,6 +5,7 @@ import { sql } from "drizzle-orm";
 import type { PushMeta } from "@stift/shared";
 import { createApp, type App } from "../app.js";
 import { authFromEnv } from "../auth/config.js";
+import { ensureDefaultOrg } from "../auth/bootstrap.js";
 import { createToken } from "../auth/tokens.js";
 import { connect, runMigrations, type Db } from "../db/client.js";
 import { DEFAULT_LIMITS, type Limits } from "../limits.js";
@@ -17,12 +18,12 @@ export const skip = dbUrl ? false : "STIFT_TEST_DATABASE_URL not set";
 export type TestApp = { app: App; admin: string; db: Db; close: () => Promise<void> };
 
 /** Empties every table, like a fresh data dir per Go test. */
-export const resetDb = (db: Db) => db.execute(sql`truncate sessions, blobs, bundles, bundle_versions`);
+export const resetDb = (db: Db) => db.execute(sql`truncate sessions, blobs, bundles, bundle_versions, installs`);
 
 export async function createTestApp(limits: Partial<Limits> = {}): Promise<TestApp> {
   const conn = connect(dbUrl!);
   await runMigrations(conn.db);
-  await conn.db.execute(sql`truncate sessions, blobs, bundles, bundle_versions, tokens`);
+  await conn.db.execute(sql`truncate sessions, blobs, bundles, bundle_versions, tokens, installs, memberships, users cascade`);
   const blobs = new BlobStore({
     bucket: process.env.STIFT_S3_BUCKET ?? "stift",
     endpoint: process.env.STIFT_S3_ENDPOINT ?? "http://localhost:9000",
@@ -32,6 +33,7 @@ export async function createTestApp(limits: Partial<Limits> = {}): Promise<TestA
     forcePathStyle: true,
     prefix: "test",
   });
+  await ensureDefaultOrg(conn.db, {});
   const { raw: admin } = await createToken(conn.db, "", "admin", true);
   const app = createApp({
     version: "test",

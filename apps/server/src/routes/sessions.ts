@@ -126,7 +126,7 @@ export function sessions(store: Store, limits: Limits) {
     }),
   );
   r.post("/v1/sessions", async (c) => {
-    const tenant = c.var.identity.tenant;
+    const orgId = c.var.identity.orgId;
     const ct = c.req.header("content-type") ?? "";
     if (!ct.toLowerCase().startsWith("multipart/form-data")) {
       return err(c, 400, "expected multipart/form-data: request Content-Type isn't multipart/form-data");
@@ -134,8 +134,8 @@ export function sessions(store: Store, limits: Limits) {
     const body = limited(c.req.raw.body, limits.maxUploadBytes);
     const out = await readPush(body, ct, async (meta, archive) => {
       // Go zero values for the optional fields.
-      const input = { ...meta, files: meta.files ?? 0, mod_time: meta.mod_time ?? new Date(0).toISOString() };
-      const { session, status } = await store.put(tenant, input, archive);
+      const input = { ...meta, files: meta.files ?? 0, mod_time: meta.mod_time ?? new Date(0).toISOString(), userId: c.var.identity.userId };
+      const { session, status } = await store.put(orgId, input, archive);
       return { status: status === "created" ? 201 : 200, body: { session, status } };
     });
     if (out.status === 201) return c.json(out.body as PushResult, 201);
@@ -154,7 +154,7 @@ export function sessions(store: Store, limits: Limits) {
     }),
     async (c) => {
       const q = c.req.valid("query");
-      const list = await store.list(c.var.identity.tenant, { agent: q.agent, project: q.project, host: q.host, query: q.q });
+      const list = await store.list(c.var.identity.orgId, { agent: q.agent, project: q.project, host: q.host, query: q.q });
       return c.json(list, 200);
     },
   );
@@ -162,7 +162,7 @@ export function sessions(store: Store, limits: Limits) {
   /** Resolves an id or prefix; returns a response on failure. */
   const resolve = async (c: { var: AuthEnv["Variables"] }, prefix: string): Promise<{ id: string } | { error: 404 | 400; msg: string }> => {
     try {
-      return { id: await store.resolveId(c.var.identity.tenant, prefix) };
+      return { id: await store.resolveId(c.var.identity.orgId, prefix) };
     } catch (e) {
       if (e instanceof NotFoundError) return { error: 404, msg: "no such session" };
       return { error: 400, msg: (e as Error).message };
@@ -181,7 +181,7 @@ export function sessions(store: Store, limits: Limits) {
     async (c) => {
       const res = await resolve(c, c.req.valid("param").id);
       if ("error" in res) return err(c, res.error, res.msg);
-      const s = await store.get(c.var.identity.tenant, res.id);
+      const s = await store.get(c.var.identity.orgId, res.id);
       if (!s) return err(c, 404, "no such session");
       return c.json(s, 200);
     },
@@ -206,8 +206,8 @@ export function sessions(store: Store, limits: Limits) {
     async (c) => {
       const res = await resolve(c, c.req.valid("param").id);
       if ("error" in res) return err(c, res.error, res.msg);
-      const tenant = c.var.identity.tenant;
-      const session = await store.get(tenant, res.id);
+      const orgId = c.var.identity.orgId;
+      const session = await store.get(orgId, res.id);
       if (!session) return err(c, 404, "no such session");
 
       // Single-range subset of http.ServeContent: bytes=a-b, bytes=a-, bytes=-n.
@@ -225,7 +225,7 @@ export function sessions(store: Store, limits: Limits) {
 
       let archive: { body: Readable };
       try {
-        archive = await store.openArchive(tenant, res.id, range ? `bytes=${range.start}-${range.end}` : undefined);
+        archive = await store.openArchive(orgId, res.id, range ? `bytes=${range.start}-${range.end}` : undefined);
       } catch (e) {
         if (e instanceof NotFoundError) return err(c, 404, "no such session");
         throw e;
@@ -261,7 +261,7 @@ export function sessions(store: Store, limits: Limits) {
       const res = await resolve(c, c.req.valid("param").id);
       if ("error" in res) return err(c, res.error, res.msg);
       try {
-        await store.delete(c.var.identity.tenant, res.id);
+        await store.delete(c.var.identity.orgId, res.id);
       } catch (e) {
         if (e instanceof NotFoundError) return err(c, 404, "no such session");
         throw e;

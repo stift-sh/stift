@@ -91,10 +91,12 @@ describe("blobs routes", { skip }, () => {
     assert.deepEqual(await r.json(), { error: "at most 10000 shas per check" });
   });
 
-  test("tenant isolation", async () => {
-    // tokens minted via the API share the admin's tenant; a second tenant
-    // needs a token row with a different tenant column.
+  test("org isolation", async () => {
+    // tokens minted via the API share the admin's orgId; a second orgId
+    // needs a token row with a different org_id column.
     const { createToken } = await import("../auth/tokens.js");
+    const { orgs } = await import("../db/schema.js");
+    await t.db.insert(orgs).values({ id: "other", slug: "other", name: "Other" }).onConflictDoNothing();
     const { raw: other } = await createToken(t.db, "other", "other", false);
     const content = bytes("hello");
     await put(shaOf(content), content);

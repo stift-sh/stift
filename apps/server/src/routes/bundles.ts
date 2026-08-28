@@ -44,7 +44,7 @@ export function bundles(store: Store) {
       request: { query: BundleFilter },
       responses: { 200: json("HEAD manifest of every matching bundle", z.array(Bundle)), 401: errors[401] },
     }),
-    async (c) => c.json(await store.listBundles(c.var.identity.tenant, c.req.valid("query")), 200),
+    async (c) => c.json(await store.listBundles(c.var.identity.orgId, c.req.valid("query")), 200),
   );
 
   r.use(keyPath.replace("{scope}", ":scope").replace("{agent}", ":agent").replace("{name}{.+}", "*"), async (c, next) => {
@@ -87,12 +87,12 @@ export function bundles(store: Store) {
       const q = c.req.valid("query");
       const k = keyFrom(c.req.valid("param"), q.project);
       const body = c.req.valid("json");
-      const input = { ...body, author: body.author || id.name };
+      const input = { ...body, author: body.author || id.name, userId: id.userId };
       try {
-        return c.json(await store.putBundle(id.tenant, k, input, q.force === "1"), 201);
+        return c.json(await store.putBundle(id.orgId, k, input, q.force === "1"), 201);
       } catch (e) {
         if (e instanceof StaleError) {
-          const head = await store.getBundle(id.tenant, k, 0);
+          const head = await store.getBundle(id.orgId, k, 0);
           const msg = head ? `stale: current head is version ${head.version}, bundle parent is ${body.parent ?? 0}` : e.message;
           return err(c, 409, msg);
         }
@@ -127,20 +127,20 @@ export function bundles(store: Store) {
       },
     }),
     async (c) => {
-      const tenant = c.var.identity.tenant;
+      const orgId = c.var.identity.orgId;
       const q = c.req.valid("query");
       const k = keyFrom(c.req.valid("param"), q.project);
       if (!validUnitName(k.name)) return err(c, 400, "invalid bundle name");
       if (q.history === "1") {
-        if (!(await store.getBundle(tenant, k, 0))) return err(c, 404, "no such bundle");
-        return c.json(await store.bundleHistory(tenant, k), 200);
+        if (!(await store.getBundle(orgId, k, 0))) return err(c, 404, "no such bundle");
+        return c.json(await store.bundleHistory(orgId, k), 200);
       }
       let version = 0;
       if (q.version !== undefined && q.version !== "") {
         if (!/^\d+$/.test(q.version)) return err(c, 400, "version must be a non-negative integer");
         version = Number(q.version);
       }
-      const b = await store.getBundle(tenant, k, version);
+      const b = await store.getBundle(orgId, k, version);
       if (!b) return err(c, 404, "no such bundle");
       return c.json(b, 200);
     },
@@ -158,7 +158,7 @@ export function bundles(store: Store) {
     async (c) => {
       const k = keyFrom(c.req.valid("param"), c.req.valid("query").project);
       try {
-        await store.deleteBundle(c.var.identity.tenant, k);
+        await store.deleteBundle(c.var.identity.orgId, k);
       } catch (e) {
         if (e instanceof NotFoundError) return err(c, 404, "no such bundle");
         if (e instanceof Error) return err(c, 400, e.message);

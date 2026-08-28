@@ -48,7 +48,7 @@ export function blobs(store: Store, limits: Limits) {
       const { shas } = c.req.valid("json");
       if (shas.length > MAX_CHECK) return err(c, 400, `at most ${MAX_CHECK} shas per check`);
       for (const s of shas) if (!validSha(s)) return err(c, 400, `invalid sha256 "${s}"`);
-      return c.json({ missing: await store.hasBlobs(c.var.identity.tenant, shas) }, 200);
+      return c.json({ missing: await store.hasBlobs(c.var.identity.orgId, shas) }, 200);
     },
     (result, c) => {
       if (!result.success) return err(c, 400, `bad request body: ${result.error.issues[0]?.message ?? "invalid"}`);
@@ -82,7 +82,7 @@ export function blobs(store: Store, limits: Limits) {
       if (length > limits.maxBlobBytes) return err(c, 413, `blob exceeds limit of ${limits.maxBlobBytes} bytes`);
       const body = limited(c.req.raw.body, limits.maxBlobBytes);
       try {
-        await store.putBlob(c.var.identity.tenant, sha, body, length);
+        await store.putBlob(c.var.identity.orgId, sha, body, length);
       } catch (e) {
         if (e instanceof TooLargeError) return err(c, 413, `blob exceeds limit of ${e.limit} bytes`);
         if (e instanceof HashMismatchError) return err(c, 400, e.message);
@@ -111,7 +111,7 @@ export function blobs(store: Store, limits: Limits) {
       if (!validSha(sha)) return err(c, 400, "invalid sha256 in path");
       let body: Readable;
       try {
-        body = await store.openBlob(c.var.identity.tenant, sha);
+        body = await store.openBlob(c.var.identity.orgId, sha);
       } catch (e) {
         if (e instanceof Error && e.name === "NotFoundError") return err(c, 404, "no such blob");
         throw e;
