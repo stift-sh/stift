@@ -216,6 +216,34 @@ func (c *Client) MemberRemove(ref string) error {
 	return res.Body.Close()
 }
 
+// ReportInstall tells the server where an org unit now is on this machine
+// (reporting only; see `stift skills install`).
+func (c *Client) ReportInstall(in api.InstallReport) error {
+	body, _ := json.Marshal(in)
+	res, err := c.do(http.MethodPost, "/v1/installs", bytes.NewReader(body), "application/json")
+	if err != nil {
+		return err
+	}
+	return res.Body.Close()
+}
+
+// ListInstalls returns the reported installs of the caller's org.
+func (c *Client) ListInstalls(agent, name string) ([]api.Install, error) {
+	q := url.Values{}
+	if agent != "" {
+		q.Set("agent", agent)
+	}
+	if name != "" {
+		q.Set("name", name)
+	}
+	p := "/v1/installs"
+	if len(q) > 0 {
+		p += "?" + q.Encode()
+	}
+	var out []api.Install
+	return out, c.getJSON(p, &out)
+}
+
 func (c *Client) TokenList() ([]api.TokenInfo, error) {
 	var out []api.TokenInfo
 	return out, c.getJSON("/v1/tokens", &out)

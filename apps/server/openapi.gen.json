@@ -639,6 +639,85 @@
         "required": [
           "role"
         ]
+      },
+      "Install": {
+        "type": "object",
+        "properties": {
+          "agent": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "description": "unit name, e.g. skills/deploy"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "org version the local copy was taken from"
+          },
+          "host": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string",
+            "enum": [
+              "install",
+              "subscribe"
+            ],
+            "description": "install = detached copy, subscribe = org-scope mirror"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserRef"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "agent",
+          "name",
+          "version",
+          "host",
+          "from",
+          "user",
+          "updated_at"
+        ]
+      },
+      "InstallReport": {
+        "type": "object",
+        "properties": {
+          "agent": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "description": "unit name, e.g. skills/deploy"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "org version the local copy was taken from"
+          },
+          "host": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string",
+            "enum": [
+              "install",
+              "subscribe"
+            ],
+            "description": "install = detached copy, subscribe = org-scope mirror"
+          }
+        },
+        "required": [
+          "agent",
+          "name",
+          "version",
+          "host",
+          "from"
+        ]
       }
     },
     "parameters": {}
@@ -2155,6 +2234,106 @@
           },
           "404": {
             "description": "not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/installs": {
+      "get": {
+        "tags": [
+          "installs"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "agent",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "name",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "reported installs in the caller's org, oldest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Install"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "missing or invalid bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "installs"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstallReport"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "recorded (one row per user, agent, unit and host)"
+          },
+          "400": {
+            "description": "bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "missing or invalid bearer token",
             "content": {
               "application/json": {
                 "schema": {

@@ -211,7 +211,7 @@ func Apply(remote api.Bundle, fetch func(sha string) (io.ReadCloser, error), bas
 		}
 		remoteSet[f.Path] = true
 		dst := filepath.Join(baseDir, filepath.FromSlash(f.Path))
-		cur, exists, err := localSHA(dst)
+		cur, exists, err := LocalSHA(dst)
 		if err != nil {
 			return res, err
 		}
@@ -247,7 +247,7 @@ func Apply(remote api.Bundle, fetch func(sha string) (io.ReadCloser, error), bas
 			continue
 		}
 		dst := filepath.Join(baseDir, filepath.FromSlash(p))
-		cur, exists, err := localSHA(dst)
+		cur, exists, err := LocalSHA(dst)
 		if err != nil || !exists {
 			continue
 		}
@@ -281,10 +281,10 @@ func validPath(p string) bool {
 	return filepath.IsLocal(filepath.FromSlash(p))
 }
 
-// localSHA returns the sha256 of a regular file, or exists=false when the
+// LocalSHA returns the sha256 of a regular file, or exists=false when the
 // path is absent. Symlinks and directories count as existing with an empty
 // hash so they are never silently replaced without force.
-func localSHA(p string) (sha string, exists bool, err error) {
+func LocalSHA(p string) (sha string, exists bool, err error) {
 	info, err := os.Lstat(p)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {

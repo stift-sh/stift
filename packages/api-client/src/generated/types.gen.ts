@@ -235,6 +235,42 @@ export type MemberUpdateRequest = {
     role: Role;
 };
 
+export type Install = {
+    agent: string;
+    /**
+     * unit name, e.g. skills/deploy
+     */
+    name: string;
+    /**
+     * org version the local copy was taken from
+     */
+    version: number;
+    host: string;
+    /**
+     * install = detached copy, subscribe = org-scope mirror
+     */
+    from: 'install' | 'subscribe';
+    user: UserRef;
+    updated_at: string;
+};
+
+export type InstallReport = {
+    agent: string;
+    /**
+     * unit name, e.g. skills/deploy
+     */
+    name: string;
+    /**
+     * org version the local copy was taken from
+     */
+    version: number;
+    host: string;
+    /**
+     * install = detached copy, subscribe = org-scope mirror
+     */
+    from: 'install' | 'subscribe';
+};
+
 export type GetHealthzData = {
     body?: never;
     path?: never;
@@ -1050,3 +1086,60 @@ export type PatchV1MembersByIdResponses = {
 };
 
 export type PatchV1MembersByIdResponse = PatchV1MembersByIdResponses[keyof PatchV1MembersByIdResponses];
+
+export type GetV1InstallsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        agent?: string;
+        name?: string;
+    };
+    url: '/v1/installs';
+};
+
+export type GetV1InstallsErrors = {
+    /**
+     * missing or invalid bearer token
+     */
+    401: _Error;
+};
+
+export type GetV1InstallsError = GetV1InstallsErrors[keyof GetV1InstallsErrors];
+
+export type GetV1InstallsResponses = {
+    /**
+     * reported installs in the caller's org, oldest first
+     */
+    200: Array<Install>;
+};
+
+export type GetV1InstallsResponse = GetV1InstallsResponses[keyof GetV1InstallsResponses];
+
+export type PostV1InstallsData = {
+    body: InstallReport;
+    path?: never;
+    query?: never;
+    url: '/v1/installs';
+};
+
+export type PostV1InstallsErrors = {
+    /**
+     * bad request
+     */
+    400: _Error;
+    /**
+     * missing or invalid bearer token
+     */
+    401: _Error;
+};
+
+export type PostV1InstallsError = PostV1InstallsErrors[keyof PostV1InstallsErrors];
+
+export type PostV1InstallsResponses = {
+    /**
+     * recorded (one row per user, agent, unit and host)
+     */
+    204: void;
+};
+
+export type PostV1InstallsResponse = PostV1InstallsResponses[keyof PostV1InstallsResponses];

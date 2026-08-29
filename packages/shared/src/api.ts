@@ -226,3 +226,23 @@ export type MemberCreated = z.infer<typeof MemberCreated>;
 /** Body of PATCH /v1/members/{id}. */
 export const MemberUpdateRequest = z.object({ role: Role }).meta({ id: "MemberUpdateRequest" });
 export type MemberUpdateRequest = z.infer<typeof MemberUpdateRequest>;
+
+/** Body of POST /v1/installs: where an org skill now is on the caller's
+ *  machine. Reporting only; the server never enforces anything from it. */
+export const InstallReport = z
+  .object({
+    agent: z.string(),
+    name: z.string().describe("unit name, e.g. skills/deploy"),
+    version: z.int().min(1).describe("org version the local copy was taken from"),
+    host: z.string(),
+    from: z.enum(["install", "subscribe"]).describe("install = detached copy, subscribe = org-scope mirror"),
+  })
+  .meta({ id: "InstallReport" });
+export type InstallReport = z.infer<typeof InstallReport>;
+
+/** One reported install (GET /v1/installs). */
+export const Install = InstallReport.extend({
+  user: UserRef,
+  updated_at: timestamp,
+}).meta({ id: "Install" });
+export type Install = z.infer<typeof Install>;

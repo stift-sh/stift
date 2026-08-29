@@ -155,6 +155,11 @@ func pullSkills(c *client.Client, agentList, scopes, project, only string, versi
 				continue
 			}
 			reportApply(t.Label(remote.Name), remote.Version, res, dryRun)
+			if t.Scope == "org" && !dryRun {
+				if err := s.Report(t.Agent, remote.Name, remote.Version, api.InstallReportFromSubscribe); err != nil {
+					warnf(fmt.Sprintf("could not report the pull of %s to the server: %v", remote.Name, err))
+				}
+			}
 		}
 		if len(remotes) == 0 && explicit && (only != "" || version == 0) {
 			fmt.Printf("no %s/%s units on the server\n", t.Agent, t.Scope)
@@ -222,12 +227,18 @@ func cmdSkills(args []string) error {
 	agent := fs.String("agent", "claude", "agent whose units to inspect")
 	scope := fs.String("scope", "user", "unit scope: user, project or org")
 	project := fs.String("project", "", "project directory for --scope project (default: current directory)")
+	replace := fs.Bool("replace", false, "install: turn an org-scope subscription (symlink) into a copy")
+	upgrade := fs.Bool("upgrade", false, "install: re-copy over an existing install")
+	force := fs.Bool("force", false, "install: overwrite local modifications")
 	fs.Usage = func() {
 		fmt.Fprintln(os.Stderr, "usage: stift skills list [--scope S] [--agent A]")
 		fmt.Fprintln(os.Stderr, "       stift skills history NAME [--scope S] [--agent A]")
 		fmt.Fprintln(os.Stderr, "       stift skills diff NAME [N]       compare local files with server version N (default HEAD)")
 		fmt.Fprintln(os.Stderr, "       stift skills rollback NAME N     publish version N again as a new version")
 		fmt.Fprintln(os.Stderr, "       stift skills delete NAME         delete a unit and its history from the server")
+		fmt.Fprintln(os.Stderr, "       stift skills install NAME [--agent A] [--replace] [--upgrade] [--force]")
+		fmt.Fprintln(os.Stderr, "                                        copy an org unit into your own config (a fork you may edit)")
+		fmt.Fprintln(os.Stderr, "       stift skills outdated            installed copies that are behind the org head")
 		fmt.Fprintln(os.Stderr, "NAME is a unit such as skills/deploy, agents/reviewer, commands/fix-tests or CLAUDE.md.")
 		fs.PrintDefaults()
 	}
@@ -387,6 +398,79 @@ func cmdSkills(args []string) error {
 			return err
 		}
 		fmt.Printf("%s: published v%d as v%d; run `stift pull --skills --scope %s` to apply it locally\n", name, version, res.Version, key.Scope)
+	case "install":
+		name, err := unitArg()
+		if err != nil {
+			return err
+		}
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return err
+		}
+		s, err := skillsync.New(c, home, warnf)
+		if err != nil {
+			return err
+		}
+		org := skillsync.Target{Agent: *agent, Scope: "org"}
+		remote, err := c.GetBundle(org.Key(name), 0)
+		if err != nil {
+			return err
+		}
+		res, err := s.Install(*agent, remote, skillsync.InstallOptions{Replace: *replace, Upgrade: *upgrade, Force: *force})
+		if err != nil {
+			return err
+		}
+		verb := "installed"
+		if res.Upgraded {
+			verb = fmt.Sprintf("upgraded v%d →", res.Previous)
+		}
+		fmt.Printf("%s %s v%d → %s: %d written, %d unchanged", verb, name, res.Version, res.Dir, len(res.Apply.Written), res.Apply.Unchanged)
+		if len(res.Apply.Conflicts) > 0 {
+			fmt.Printf(", %d locally modified (kept; use --force to overwrite)", len(res.Apply.Conflicts))
+		}
+		fmt.Println()
+		if res.Replaced {
+			fmt.Printf("the org subscription link was replaced; this copy no longer follows org updates (`stift skills outdated` shows when it falls behind)\n")
+		}
+		if err := s.Report(*agent, name, res.Version, api.InstallReportFromInstall); err != nil {
+			warnf(fmt.Sprintf("could not report the install to the server: %v", err))
+		}
+	case "outdated":
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return err
+		}
+		s, err := skillsync.New(c, home, warnf)
+		if err != nil {
+			return err
+		}
+		names := s.State.InstallNames(s.Server)
+		if len(names) == 0 {
+			fmt.Println("nothing installed from this server")
+			return nil
+		}
+		fmt.Printf("%-8s %-28s %-9s %-9s %s\n", "AGENT", "NAME", "INSTALLED", "ORG", "STATUS")
+		behind := 0
+		for _, an := range names {
+			a, n := an[0], an[1]
+			e := s.State.GetInstall(s.Server, a, n)
+			head, err := c.GetBundle(client.BundleKey{Scope: "org", Agent: a, Name: n}, 0)
+			status := "up to date"
+			headV := "-"
+			if err != nil {
+				status = "gone from org: " + err.Error()
+			} else {
+				headV = fmt.Sprintf("v%d", head.Version)
+				if head.Version > e.Version {
+					status = "behind; `stift skills install " + n + " --upgrade --agent " + a + "`"
+					behind++
+				}
+			}
+			fmt.Printf("%-8s %-28s %-9s %-9s %s\n", a, n, fmt.Sprintf("v%d", e.Version), headV, status)
+		}
+		if behind > 0 {
+			return fmt.Errorf("%d install(s) behind the org head", behind)
+		}
 	case "delete", "rm":
 		name, err := unitArg()
 		if err != nil {

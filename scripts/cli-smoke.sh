@@ -107,6 +107,22 @@ OUT=$(STIFT_TOKEN=$USER_TOKEN "$STIFT" push --skills --scope org 2>&1 || true)
 echo "$OUT" | grep -q "org scope requires an admin token" || fail "org gate (non-admin): $OUT"
 "$STIFT" push --skills --scope org || fail "org push (admin)"
 "$STIFT" skills list --scope org | grep -q "skills/policy" || fail "org list"
+# install with provenance: subscribe first (reported), then fork with --replace, then outdated
+STIFT_TOKEN=$USER_TOKEN "$STIFT" pull --skills --scope org || fail "org pull (member)"
+[ -L "$HOME/.claude/skills/policy" ] || fail "org pull should symlink"
+OUT=$(STIFT_TOKEN=$USER_TOKEN "$STIFT" skills install skills/policy 2>&1 || true)
+echo "$OUT" | grep -q "already subscribed" || fail "install should refuse a subscription: $OUT"
+STIFT_TOKEN=$USER_TOKEN "$STIFT" skills install skills/policy --replace || fail "install --replace"
+[ -d "$HOME/.claude/skills/policy" ] && [ ! -L "$HOME/.claude/skills/policy" ] || fail "install should be a real directory"
+STIFT_TOKEN=$USER_TOKEN "$STIFT" skills outdated | grep -q "up to date" || fail "outdated (up to date)"
+echo "stricter" >>"$HOME/.stift/org/claude/skills/policy/SKILL.md"
+"$STIFT" push --skills --scope org || fail "org push v2"
+OUT=$(STIFT_TOKEN=$USER_TOKEN "$STIFT" skills outdated 2>&1 || true)
+echo "$OUT" | grep -q "behind" || fail "outdated (behind): $OUT"
+STIFT_TOKEN=$USER_TOKEN "$STIFT" skills install skills/policy --upgrade || fail "install --upgrade"
+grep -q stricter "$HOME/.claude/skills/policy/SKILL.md" || fail "upgraded content"
+curl -sf -H "Authorization: Bearer $STIFT_ADMIN_TOKEN" "http://localhost:$PORT/v1/installs?name=skills/policy" | grep -q '"from":"install"' || fail "install reported"
+curl -sf -H "Authorization: Bearer $STIFT_ADMIN_TOKEN" "http://localhost:$PORT/v1/installs?name=skills/policy" | grep -q '"version":2' || fail "install version reported"
 "$STIFT" skills delete skills/hello --scope user || fail "skills delete"
 
 echo "cli smoke: ok"

@@ -32,6 +32,42 @@ func (e BundleScope) Valid() bool {
 	}
 }
 
+// Defines values for InstallFrom.
+const (
+	InstallFromInstall   InstallFrom = "install"
+	InstallFromSubscribe InstallFrom = "subscribe"
+)
+
+// Valid indicates whether the value is a known member of the InstallFrom enum.
+func (e InstallFrom) Valid() bool {
+	switch e {
+	case InstallFromInstall:
+		return true
+	case InstallFromSubscribe:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InstallReportFrom.
+const (
+	InstallReportFromInstall   InstallReportFrom = "install"
+	InstallReportFromSubscribe InstallReportFrom = "subscribe"
+)
+
+// Valid indicates whether the value is a known member of the InstallReportFrom enum.
+func (e InstallReportFrom) Valid() bool {
+	switch e {
+	case InstallReportFromInstall:
+		return true
+	case InstallReportFromSubscribe:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MemberCreateRequestRole.
 const (
 	MemberCreateRequestRoleAdmin  MemberCreateRequestRole = "admin"
@@ -191,6 +227,44 @@ type BundleInput struct {
 type Error struct {
 	Error string `json:"error"`
 }
+
+// Install defines model for Install.
+type Install struct {
+	Agent string `json:"agent"`
+
+	// From install = detached copy, subscribe = org-scope mirror
+	From InstallFrom `json:"from"`
+	Host string      `json:"host"`
+
+	// Name unit name, e.g. skills/deploy
+	Name      string    `json:"name"`
+	UpdatedAt time.Time `json:"updated_at"`
+	User      UserRef   `json:"user"`
+
+	// Version org version the local copy was taken from
+	Version int `json:"version"`
+}
+
+// InstallFrom install = detached copy, subscribe = org-scope mirror
+type InstallFrom string
+
+// InstallReport defines model for InstallReport.
+type InstallReport struct {
+	Agent string `json:"agent"`
+
+	// From install = detached copy, subscribe = org-scope mirror
+	From InstallReportFrom `json:"from"`
+	Host string            `json:"host"`
+
+	// Name unit name, e.g. skills/deploy
+	Name string `json:"name"`
+
+	// Version org version the local copy was taken from
+	Version int `json:"version"`
+}
+
+// InstallReportFrom install = detached copy, subscribe = org-scope mirror
+type InstallReportFrom string
 
 // Member defines model for Member.
 type Member struct {
@@ -413,6 +487,12 @@ type PutV1BundlesScopeAgentNameParams struct {
 	Force string `form:"force,omitempty" json:"force,omitempty"`
 }
 
+// GetV1InstallsParams defines parameters for GetV1Installs.
+type GetV1InstallsParams struct {
+	Agent string `form:"agent,omitempty" json:"agent,omitempty"`
+	Name  string `form:"name,omitempty" json:"name,omitempty"`
+}
+
 // GetV1SessionsParams defines parameters for GetV1Sessions.
 type GetV1SessionsParams struct {
 	Agent   string `form:"agent,omitempty" json:"agent,omitempty"`
@@ -442,6 +522,9 @@ type PostV1BlobsCheckJSONRequestBody = BlobsCheckRequest
 
 // PutV1BundlesScopeAgentNameJSONRequestBody defines body for PutV1BundlesScopeAgentName for application/json ContentType.
 type PutV1BundlesScopeAgentNameJSONRequestBody = BundleInput
+
+// PostV1InstallsJSONRequestBody defines body for PostV1Installs for application/json ContentType.
+type PostV1InstallsJSONRequestBody = InstallReport
 
 // PostV1MembersJSONRequestBody defines body for PostV1Members for application/json ContentType.
 type PostV1MembersJSONRequestBody = MemberCreateRequest
