@@ -36,7 +36,7 @@ type SkillRow = typeof publishedSkills.$inferSelect;
 type VersionRow = typeof publishedVersions.$inferSelect;
 type UserRef = { id: string; name: string } | null;
 
-function toSkill(slug: string, r: SkillRow): PublishedSkill {
+export function toSkill(slug: string, r: SkillRow): PublishedSkill {
   return {
     org: slug,
     name: r.name,
@@ -51,7 +51,7 @@ function toSkill(slug: string, r: SkillRow): PublishedSkill {
   };
 }
 
-function toVersion(slug: string, name: string, r: VersionRow, by: UserRef): PublishedVersion {
+export function toVersion(slug: string, name: string, r: VersionRow, by: UserRef): PublishedVersion {
   return {
     org: slug,
     name,

@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import type { Readable } from "node:stream";
 import { and, asc, desc, eq, inArray, like, sql } from "drizzle-orm";
-import type { Bundle, BundleFile, PublishedSkillDetail, PublishedVersion, Session, SkillMeta } from "@stift/shared";
+import type { Bundle, BundleFile, PublishedSkillDetail, PublishedVersion, RegistrySearch, RegistrySkill, Session, SkillMeta } from "@stift/shared";
 import type { Db } from "../db/client.js";
 import { blobs, bundleVersions, bundles, sessions, users } from "../db/schema.js";
 import { BlobStore } from "./blobs.js";
@@ -9,6 +9,7 @@ import { countSkills, orgLimits, storageBytes } from "../limits.js";
 import { LimitError, MissingBlobError, NotFoundError, StaleError } from "./errors.js";
 import { parseFrontmatter } from "./frontmatter.js";
 import { listPublished, publish, restore, unpublish, type PublishInput } from "./published.js";
+import { getPublished, publishedBlobOrg, searchPublished, type SearchInput } from "./registry.js";
 import { type BundleKey, validateKey, validBundlePath, validSha, validOrgId } from "./validate.js";
 
 export type { BundleKey, PublishInput };
@@ -75,6 +76,17 @@ export interface Store {
   restore(orgId: string, name: string, version?: number): Promise<void>;
   /** The org's published skills with every version, hidden ones included. */
   listPublished(orgId: string): Promise<PublishedSkillDetail[]>;
+
+  // ---- public registry (no org: the slug in the ref is the namespace) ----
+
+  /** Visible published skills across every org, newest first. */
+  searchPublished(input: SearchInput): Promise<RegistrySearch>;
+  /** `@<org>/<name>` at `latest` (visible only) or at `version` (hidden ones
+   *  still resolve); NotFoundError otherwise. */
+  getPublished(org: string, name: string, version?: number): Promise<RegistrySkill>;
+  /** A blob of a published version; NotFoundError unless `sha` is in that
+   *  version's manifest, so private blobs are never reachable this way. */
+  openPublishedBlob(org: string, name: string, version: number, sha: string): Promise<Readable>;
 }
 
 const FRONTMATTER_LIMIT = 64 << 10;
@@ -460,6 +472,21 @@ export class PgStore implements Store {
 
   listPublished(orgId: string) {
     return listPublished(this.db, orgId);
+  }
+
+  // ---- public registry ----
+
+  searchPublished(input: SearchInput) {
+    return searchPublished(this.db, input);
+  }
+
+  getPublished(org: string, name: string, version?: number) {
+    return getPublished(this.db, org, name, version);
+  }
+
+  async openPublishedBlob(org: string, name: string, version: number, sha: string) {
+    const orgId = await publishedBlobOrg(this.db, org, name, version, sha);
+    return this.openBlob(orgId, sha);
   }
 
   /** Extracts name/description from every SKILL.md in files, sorted by path. */

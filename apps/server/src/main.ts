@@ -19,10 +19,13 @@ const auth = authFromEnv(db);
 if (auth.local) await bootstrap(db);
 const limits = limitsFromEnv();
 const features = (process.env.STIFT_FEATURES ?? "").split(",").map((f) => f.trim()).filter(Boolean);
+const registryEnv = process.env.STIFT_REGISTRY ?? "public";
+if (registryEnv !== "public" && registryEnv !== "off") throw new Error(`STIFT_REGISTRY: want "public" or "off", got "${registryEnv}"`);
+const registry = registryEnv === "public";
 const webDir = await findWebDir();
 if (!webDir) console.log("no web bundle found (STIFT_WEB_DIR); serving the API only");
 const store = new PgStore(db, new BlobStore(blobConfigFromEnv()));
 
-serve({ fetch: createApp({ version, auth: auth.authenticator, store, db, limits, features, webDir: webDir ?? undefined }).fetch, port }, (info) => {
+serve({ fetch: createApp({ version, auth: auth.authenticator, store, db, limits, features, webDir: webDir ?? undefined, registry }).fetch, port }, (info) => {
   console.log(`stift server ${version} listening on :${info.port}`);
 });

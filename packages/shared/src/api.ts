@@ -322,3 +322,17 @@ export type PublishedSkill = z.infer<typeof PublishedSkill>;
  *  first, hidden ones included. */
 export const PublishedSkillDetail = PublishedSkill.extend({ versions: z.array(PublishedVersion) }).meta({ id: "PublishedSkillDetail" });
 export type PublishedSkillDetail = z.infer<typeof PublishedSkillDetail>;
+
+/** Returned by the public registry for `@<org>/<name>[/<version>]`: the
+ *  skill and one of its versions (`latest` when no version is asked). */
+export const RegistrySkill = z.object({ skill: PublishedSkill, version: PublishedVersion }).meta({ id: "RegistrySkill" });
+export type RegistrySkill = z.infer<typeof RegistrySkill>;
+
+/** One page of registry search results, newest first. */
+export const RegistrySearch = z
+  .object({
+    skills: z.array(PublishedSkill),
+    next: z.string().nullable().describe("cursor for the next page; null on the last one"),
+  })
+  .meta({ id: "RegistrySearch" });
+export type RegistrySearch = z.infer<typeof RegistrySearch>;

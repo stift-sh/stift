@@ -2,7 +2,7 @@
 
 import { type Client, formDataBodySerializer, type Options as Options2, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { DeleteV1BundlesByScopeByAgentByNameData, DeleteV1BundlesByScopeByAgentByNameErrors, DeleteV1BundlesByScopeByAgentByNameResponses, DeleteV1MembersByIdData, DeleteV1MembersByIdErrors, DeleteV1MembersByIdResponses, DeleteV1PublishedByNameData, DeleteV1PublishedByNameErrors, DeleteV1PublishedByNameResponses, DeleteV1SessionsByIdData, DeleteV1SessionsByIdErrors, DeleteV1SessionsByIdResponses, DeleteV1TokensByIdData, DeleteV1TokensByIdErrors, DeleteV1TokensByIdResponses, GetApiVersionData, GetApiVersionResponses, GetHealthzData, GetHealthzResponses, GetV1BlobsByShaData, GetV1BlobsByShaErrors, GetV1BlobsByShaResponses, GetV1BundlesByScopeByAgentByNameData, GetV1BundlesByScopeByAgentByNameErrors, GetV1BundlesByScopeByAgentByNameResponses, GetV1BundlesData, GetV1BundlesErrors, GetV1BundlesResponses, GetV1InstallsData, GetV1InstallsErrors, GetV1InstallsResponses, GetV1MembersData, GetV1MembersErrors, GetV1MembersResponses, GetV1OrgData, GetV1OrgErrors, GetV1OrgResponses, GetV1PublishedData, GetV1PublishedErrors, GetV1PublishedResponses, GetV1SessionsByIdArchiveData, GetV1SessionsByIdArchiveErrors, GetV1SessionsByIdArchiveResponses, GetV1SessionsByIdData, GetV1SessionsByIdErrors, GetV1SessionsByIdResponses, GetV1SessionsData, GetV1SessionsErrors, GetV1SessionsResponses, GetV1TokensData, GetV1TokensErrors, GetV1TokensResponses, GetV1WhoamiData, GetV1WhoamiErrors, GetV1WhoamiResponses, PatchV1MembersByIdData, PatchV1MembersByIdErrors, PatchV1MembersByIdResponses, PatchV1OrgData, PatchV1OrgErrors, PatchV1OrgResponses, PostV1BlobsCheckData, PostV1BlobsCheckErrors, PostV1BlobsCheckResponses, PostV1InstallsData, PostV1InstallsErrors, PostV1InstallsResponses, PostV1MembersData, PostV1MembersErrors, PostV1MembersResponses, PostV1PublishedByNameRestoreData, PostV1PublishedByNameRestoreErrors, PostV1PublishedByNameRestoreResponses, PostV1PublishedData, PostV1PublishedErrors, PostV1PublishedResponses, PostV1SessionsData, PostV1SessionsErrors, PostV1SessionsResponses, PostV1TokensData, PostV1TokensErrors, PostV1TokensResponses, PutV1BlobsByShaData, PutV1BlobsByShaErrors, PutV1BlobsByShaResponses, PutV1BundlesByScopeByAgentByNameData, PutV1BundlesByScopeByAgentByNameErrors, PutV1BundlesByScopeByAgentByNameResponses } from './types.gen';
+import type { DeleteV1BundlesByScopeByAgentByNameData, DeleteV1BundlesByScopeByAgentByNameErrors, DeleteV1BundlesByScopeByAgentByNameResponses, DeleteV1MembersByIdData, DeleteV1MembersByIdErrors, DeleteV1MembersByIdResponses, DeleteV1PublishedByNameData, DeleteV1PublishedByNameErrors, DeleteV1PublishedByNameResponses, DeleteV1SessionsByIdData, DeleteV1SessionsByIdErrors, DeleteV1SessionsByIdResponses, DeleteV1TokensByIdData, DeleteV1TokensByIdErrors, DeleteV1TokensByIdResponses, GetApiVersionData, GetApiVersionResponses, GetHealthzData, GetHealthzResponses, GetV1BlobsByShaData, GetV1BlobsByShaErrors, GetV1BlobsByShaResponses, GetV1BundlesByScopeByAgentByNameData, GetV1BundlesByScopeByAgentByNameErrors, GetV1BundlesByScopeByAgentByNameResponses, GetV1BundlesData, GetV1BundlesErrors, GetV1BundlesResponses, GetV1InstallsData, GetV1InstallsErrors, GetV1InstallsResponses, GetV1MembersData, GetV1MembersErrors, GetV1MembersResponses, GetV1OrgData, GetV1OrgErrors, GetV1OrgResponses, GetV1PublishedData, GetV1PublishedErrors, GetV1PublishedResponses, GetV1RegistrySkillsByOrgByNameByVersionBlobsByShaData, GetV1RegistrySkillsByOrgByNameByVersionBlobsByShaErrors, GetV1RegistrySkillsByOrgByNameByVersionBlobsByShaResponses, GetV1RegistrySkillsByOrgByNameByVersionData, GetV1RegistrySkillsByOrgByNameByVersionErrors, GetV1RegistrySkillsByOrgByNameByVersionResponses, GetV1RegistrySkillsByOrgByNameData, GetV1RegistrySkillsByOrgByNameErrors, GetV1RegistrySkillsByOrgByNameResponses, GetV1RegistrySkillsData, GetV1RegistrySkillsErrors, GetV1RegistrySkillsResponses, GetV1SessionsByIdArchiveData, GetV1SessionsByIdArchiveErrors, GetV1SessionsByIdArchiveResponses, GetV1SessionsByIdData, GetV1SessionsByIdErrors, GetV1SessionsByIdResponses, GetV1SessionsData, GetV1SessionsErrors, GetV1SessionsResponses, GetV1TokensData, GetV1TokensErrors, GetV1TokensResponses, GetV1WhoamiData, GetV1WhoamiErrors, GetV1WhoamiResponses, PatchV1MembersByIdData, PatchV1MembersByIdErrors, PatchV1MembersByIdResponses, PatchV1OrgData, PatchV1OrgErrors, PatchV1OrgResponses, PostV1BlobsCheckData, PostV1BlobsCheckErrors, PostV1BlobsCheckResponses, PostV1InstallsData, PostV1InstallsErrors, PostV1InstallsResponses, PostV1MembersData, PostV1MembersErrors, PostV1MembersResponses, PostV1PublishedByNameRestoreData, PostV1PublishedByNameRestoreErrors, PostV1PublishedByNameRestoreResponses, PostV1PublishedData, PostV1PublishedErrors, PostV1PublishedResponses, PostV1SessionsData, PostV1SessionsErrors, PostV1SessionsResponses, PostV1TokensData, PostV1TokensErrors, PostV1TokensResponses, PutV1BlobsByShaData, PutV1BlobsByShaErrors, PutV1BlobsByShaResponses, PutV1BundlesByScopeByAgentByNameData, PutV1BundlesByScopeByAgentByNameErrors, PutV1BundlesByScopeByAgentByNameResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -28,6 +28,34 @@ export const getHealthz = <ThrowOnError extends boolean = false>(options?: Optio
 export const getApiVersion = <ThrowOnError extends boolean = false>(options?: Options<GetApiVersionData, ThrowOnError>) => {
     return (options?.client ?? client).get<GetApiVersionResponses, unknown, ThrowOnError>({
         url: '/api/version',
+        ...options
+    });
+};
+
+export const getV1RegistrySkills = <ThrowOnError extends boolean = false>(options?: Options<GetV1RegistrySkillsData, ThrowOnError>) => {
+    return (options?.client ?? client).get<GetV1RegistrySkillsResponses, GetV1RegistrySkillsErrors, ThrowOnError>({
+        url: '/v1/registry/skills',
+        ...options
+    });
+};
+
+export const getV1RegistrySkillsByOrgByName = <ThrowOnError extends boolean = false>(options: Options<GetV1RegistrySkillsByOrgByNameData, ThrowOnError>) => {
+    return (options.client ?? client).get<GetV1RegistrySkillsByOrgByNameResponses, GetV1RegistrySkillsByOrgByNameErrors, ThrowOnError>({
+        url: '/v1/registry/skills/{org}/{name}',
+        ...options
+    });
+};
+
+export const getV1RegistrySkillsByOrgByNameByVersion = <ThrowOnError extends boolean = false>(options: Options<GetV1RegistrySkillsByOrgByNameByVersionData, ThrowOnError>) => {
+    return (options.client ?? client).get<GetV1RegistrySkillsByOrgByNameByVersionResponses, GetV1RegistrySkillsByOrgByNameByVersionErrors, ThrowOnError>({
+        url: '/v1/registry/skills/{org}/{name}/{version}',
+        ...options
+    });
+};
+
+export const getV1RegistrySkillsByOrgByNameByVersionBlobsBySha = <ThrowOnError extends boolean = false>(options: Options<GetV1RegistrySkillsByOrgByNameByVersionBlobsByShaData, ThrowOnError>) => {
+    return (options.client ?? client).get<GetV1RegistrySkillsByOrgByNameByVersionBlobsByShaResponses, GetV1RegistrySkillsByOrgByNameByVersionBlobsByShaErrors, ThrowOnError>({
+        url: '/v1/registry/skills/{org}/{name}/{version}/blobs/{sha}',
         ...options
     });
 };

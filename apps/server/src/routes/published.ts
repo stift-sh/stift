@@ -27,9 +27,9 @@ const badBody = (result: { success: boolean; error?: z.ZodError }, c: Parameters
 /** The org's side of public sharing: what it publishes under
  *  `@<slug>/<name>`. Reading is open to every member; publishing, hiding
  *  and restoring need `skill.publish` (admins). The public, unauthenticated
- *  registry that serves what is published here is item 3. Mount behind
- *  `bearer`. */
-export function published(store: Store) {
+ *  registry that serves what is published here lives in registry.ts; with
+ *  the registry off, publishing is refused. Mount behind `bearer`. */
+export function published(store: Store, registryOn = true) {
   const r = new OpenAPIHono<AuthEnv>();
 
   r.openapi(
@@ -62,6 +62,7 @@ export function published(store: Store) {
     async (c) => {
       const id = c.var.identity;
       if (!can(id, { action: "skill.publish" })) return err(c, 403, "admin role required");
+      if (!registryOn) return err(c, 400, "publishing is off on this server (STIFT_REGISTRY=off)");
       const b = c.req.valid("json");
       try {
         return c.json(await store.publish(id.orgId, { ...b, userId: id.userId }), 201);

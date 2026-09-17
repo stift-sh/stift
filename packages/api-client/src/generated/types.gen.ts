@@ -16,6 +16,103 @@ export type Version = {
     features: Array<string>;
 };
 
+export type RegistrySearch = {
+    skills: Array<PublishedSkill>;
+    /**
+     * cursor for the next page; null on the last one
+     */
+    next: string | null;
+};
+
+export type PublishedSkill = {
+    /**
+     * org slug
+     */
+    org: string;
+    name: string;
+    /**
+     * the source unit's agent: a default for installs, not a constraint
+     */
+    agent: string;
+    /**
+     * the org-scope unit it is published from
+     */
+    unit: string;
+    /**
+     * from the SKILL.md frontmatter of the newest publish
+     */
+    description: string;
+    license: string;
+    /**
+     * newest visible version; 0 when every version is hidden
+     */
+    latest: number;
+    created_at: string;
+    updated_at: string;
+    /**
+     * set when the whole skill is hidden
+     */
+    unpublished_at: string | null;
+};
+
+export type _Error = {
+    error: string;
+};
+
+export type RegistrySkill = {
+    skill: PublishedSkill;
+    version: PublishedVersion;
+};
+
+export type PublishedVersion = {
+    /**
+     * org slug, the `@org` of the reference
+     */
+    org: string;
+    name: string;
+    /**
+     * publish sequence (1, 2, 3…), independent of source_version
+     */
+    version: number;
+    /**
+     * the org bundle version this was copied from
+     */
+    source_version: number;
+    files: Array<BundleFile>;
+    skills: Array<SkillMeta>;
+    /**
+     * the SKILL.md the README renders from
+     */
+    readme_path: string;
+    published_by?: UserRef;
+    created_at: string;
+    unpublished_at: string | null;
+};
+
+export type BundleFile = {
+    /**
+     * relative, forward slashes, no '..' / abs
+     */
+    path: string;
+    sha256: string;
+    size: number;
+    /**
+     * only the exec bit is honoured
+     */
+    mode: number;
+};
+
+export type SkillMeta = {
+    path: string;
+    name: string;
+    description: string;
+};
+
+export type UserRef = {
+    id: string;
+    name: string;
+};
+
 export type Whoami = {
     name: string;
     role: Role;
@@ -25,19 +122,10 @@ export type Whoami = {
 
 export type Role = 'admin' | 'member';
 
-export type UserRef = {
-    id: string;
-    name: string;
-};
-
 export type OrgRef = {
     id: string;
     slug: string;
     name: string;
-};
-
-export type _Error = {
-    error: string;
 };
 
 export type PushResult = {
@@ -138,25 +226,6 @@ export type Bundle = {
     skills: Array<SkillMeta>;
 };
 
-export type BundleFile = {
-    /**
-     * relative, forward slashes, no '..' / abs
-     */
-    path: string;
-    sha256: string;
-    size: number;
-    /**
-     * only the exec bit is honoured
-     */
-    mode: number;
-};
-
-export type SkillMeta = {
-    path: string;
-    name: string;
-    description: string;
-};
-
 export type BundleInput = {
     /**
      * version this was based on
@@ -197,31 +266,6 @@ export type PublishedSkillDetail = {
      */
     unpublished_at: string | null;
     versions: Array<PublishedVersion>;
-};
-
-export type PublishedVersion = {
-    /**
-     * org slug, the `@org` of the reference
-     */
-    org: string;
-    name: string;
-    /**
-     * publish sequence (1, 2, 3…), independent of source_version
-     */
-    version: number;
-    /**
-     * the org bundle version this was copied from
-     */
-    source_version: number;
-    files: Array<BundleFile>;
-    skills: Array<SkillMeta>;
-    /**
-     * the SKILL.md the README renders from
-     */
-    readme_path: string;
-    published_by?: UserRef;
-    created_at: string;
-    unpublished_at: string | null;
 };
 
 export type PublishRequest = {
@@ -414,6 +458,143 @@ export type GetApiVersionResponses = {
 };
 
 export type GetApiVersionResponse = GetApiVersionResponses[keyof GetApiVersionResponses];
+
+export type GetV1RegistrySkillsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * matches name, description or org slug, case-insensitively
+         */
+        q?: string;
+        /**
+         * page size, default 20, max 50
+         */
+        limit?: number;
+        /**
+         * `next` from the previous page
+         */
+        cursor?: string;
+    };
+    url: '/v1/registry/skills';
+};
+
+export type GetV1RegistrySkillsErrors = {
+    /**
+     * bad request
+     */
+    400: _Error;
+};
+
+export type GetV1RegistrySkillsError = GetV1RegistrySkillsErrors[keyof GetV1RegistrySkillsErrors];
+
+export type GetV1RegistrySkillsResponses = {
+    /**
+     * visible published skills, newest first
+     */
+    200: RegistrySearch;
+};
+
+export type GetV1RegistrySkillsResponse = GetV1RegistrySkillsResponses[keyof GetV1RegistrySkillsResponses];
+
+export type GetV1RegistrySkillsByOrgByNameData = {
+    body?: never;
+    path: {
+        /**
+         * org slug, written `@<org>` in the path
+         */
+        org: string;
+        name: string;
+    };
+    query?: never;
+    url: '/v1/registry/skills/{org}/{name}';
+};
+
+export type GetV1RegistrySkillsByOrgByNameErrors = {
+    /**
+     * not found
+     */
+    404: _Error;
+};
+
+export type GetV1RegistrySkillsByOrgByNameError = GetV1RegistrySkillsByOrgByNameErrors[keyof GetV1RegistrySkillsByOrgByNameErrors];
+
+export type GetV1RegistrySkillsByOrgByNameResponses = {
+    /**
+     * the skill at its latest visible version
+     */
+    200: RegistrySkill;
+};
+
+export type GetV1RegistrySkillsByOrgByNameResponse = GetV1RegistrySkillsByOrgByNameResponses[keyof GetV1RegistrySkillsByOrgByNameResponses];
+
+export type GetV1RegistrySkillsByOrgByNameByVersionData = {
+    body?: never;
+    path: {
+        /**
+         * org slug, written `@<org>` in the path
+         */
+        org: string;
+        name: string;
+        version: number;
+    };
+    query?: never;
+    url: '/v1/registry/skills/{org}/{name}/{version}';
+};
+
+export type GetV1RegistrySkillsByOrgByNameByVersionErrors = {
+    /**
+     * not found
+     */
+    404: _Error;
+};
+
+export type GetV1RegistrySkillsByOrgByNameByVersionError = GetV1RegistrySkillsByOrgByNameByVersionErrors[keyof GetV1RegistrySkillsByOrgByNameByVersionErrors];
+
+export type GetV1RegistrySkillsByOrgByNameByVersionResponses = {
+    /**
+     * the skill at that version; `unpublished_at` is set when it was hidden after publishing
+     */
+    200: RegistrySkill;
+};
+
+export type GetV1RegistrySkillsByOrgByNameByVersionResponse = GetV1RegistrySkillsByOrgByNameByVersionResponses[keyof GetV1RegistrySkillsByOrgByNameByVersionResponses];
+
+export type GetV1RegistrySkillsByOrgByNameByVersionBlobsByShaData = {
+    body?: never;
+    path: {
+        /**
+         * org slug, written `@<org>` in the path
+         */
+        org: string;
+        name: string;
+        version: number;
+        /**
+         * hex sha256 of a file in that version's manifest
+         */
+        sha: string;
+    };
+    query?: never;
+    url: '/v1/registry/skills/{org}/{name}/{version}/blobs/{sha}';
+};
+
+export type GetV1RegistrySkillsByOrgByNameByVersionBlobsByShaErrors = {
+    /**
+     * not found
+     */
+    404: _Error;
+};
+
+export type GetV1RegistrySkillsByOrgByNameByVersionBlobsByShaError = GetV1RegistrySkillsByOrgByNameByVersionBlobsByShaErrors[keyof GetV1RegistrySkillsByOrgByNameByVersionBlobsByShaErrors];
+
+export type GetV1RegistrySkillsByOrgByNameByVersionBlobsByShaResponses = {
+    /**
+     * blob content
+     */
+    200: Blob | File;
+};
+
+export type GetV1RegistrySkillsByOrgByNameByVersionBlobsByShaResponse = GetV1RegistrySkillsByOrgByNameByVersionBlobsByShaResponses[keyof GetV1RegistrySkillsByOrgByNameByVersionBlobsByShaResponses];
 
 export type GetV1WhoamiData = {
     body?: never;

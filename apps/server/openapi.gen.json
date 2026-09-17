@@ -37,6 +37,233 @@
           "features"
         ]
       },
+      "RegistrySearch": {
+        "type": "object",
+        "properties": {
+          "skills": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublishedSkill"
+            }
+          },
+          "next": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "cursor for the next page; null on the last one"
+          }
+        },
+        "required": [
+          "skills",
+          "next"
+        ]
+      },
+      "PublishedSkill": {
+        "type": "object",
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "org slug"
+          },
+          "name": {
+            "type": "string"
+          },
+          "agent": {
+            "type": "string",
+            "description": "the source unit's agent: a default for installs, not a constraint"
+          },
+          "unit": {
+            "type": "string",
+            "description": "the org-scope unit it is published from"
+          },
+          "description": {
+            "type": "string",
+            "description": "from the SKILL.md frontmatter of the newest publish"
+          },
+          "license": {
+            "type": "string"
+          },
+          "latest": {
+            "type": "integer",
+            "description": "newest visible version; 0 when every version is hidden"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "unpublished_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "set when the whole skill is hidden"
+          }
+        },
+        "required": [
+          "org",
+          "name",
+          "agent",
+          "unit",
+          "description",
+          "license",
+          "latest",
+          "created_at",
+          "updated_at",
+          "unpublished_at"
+        ]
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "RegistrySkill": {
+        "type": "object",
+        "properties": {
+          "skill": {
+            "$ref": "#/components/schemas/PublishedSkill"
+          },
+          "version": {
+            "$ref": "#/components/schemas/PublishedVersion"
+          }
+        },
+        "required": [
+          "skill",
+          "version"
+        ]
+      },
+      "PublishedVersion": {
+        "type": "object",
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "org slug, the `@org` of the reference"
+          },
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "description": "publish sequence (1, 2, 3…), independent of source_version"
+          },
+          "source_version": {
+            "type": "integer",
+            "description": "the org bundle version this was copied from"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BundleFile"
+            }
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SkillMeta"
+            }
+          },
+          "readme_path": {
+            "type": "string",
+            "description": "the SKILL.md the README renders from"
+          },
+          "published_by": {
+            "$ref": "#/components/schemas/UserRef"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "unpublished_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "org",
+          "name",
+          "version",
+          "source_version",
+          "files",
+          "skills",
+          "readme_path",
+          "created_at",
+          "unpublished_at"
+        ]
+      },
+      "BundleFile": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "relative, forward slashes, no '..' / abs"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer"
+          },
+          "mode": {
+            "type": "integer",
+            "description": "only the exec bit is honoured"
+          }
+        },
+        "required": [
+          "path",
+          "sha256",
+          "size",
+          "mode"
+        ]
+      },
+      "SkillMeta": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "name",
+          "description"
+        ]
+      },
+      "UserRef": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
       "Whoami": {
         "type": "object",
         "properties": {
@@ -66,21 +293,6 @@
           "member"
         ]
       },
-      "UserRef": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "name"
-        ]
-      },
       "OrgRef": {
         "type": "object",
         "properties": {
@@ -98,17 +310,6 @@
           "id",
           "slug",
           "name"
-        ]
-      },
-      "Error": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "error"
         ]
       },
       "PushResult": {
@@ -370,50 +571,6 @@
           "skills"
         ]
       },
-      "BundleFile": {
-        "type": "object",
-        "properties": {
-          "path": {
-            "type": "string",
-            "description": "relative, forward slashes, no '..' / abs"
-          },
-          "sha256": {
-            "type": "string"
-          },
-          "size": {
-            "type": "integer"
-          },
-          "mode": {
-            "type": "integer",
-            "description": "only the exec bit is honoured"
-          }
-        },
-        "required": [
-          "path",
-          "sha256",
-          "size",
-          "mode"
-        ]
-      },
-      "SkillMeta": {
-        "type": "object",
-        "properties": {
-          "path": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "path",
-          "name",
-          "description"
-        ]
-      },
       "BundleInput": {
         "type": "object",
         "properties": {
@@ -499,67 +656,6 @@
           "updated_at",
           "unpublished_at",
           "versions"
-        ]
-      },
-      "PublishedVersion": {
-        "type": "object",
-        "properties": {
-          "org": {
-            "type": "string",
-            "description": "org slug, the `@org` of the reference"
-          },
-          "name": {
-            "type": "string"
-          },
-          "version": {
-            "type": "integer",
-            "description": "publish sequence (1, 2, 3…), independent of source_version"
-          },
-          "source_version": {
-            "type": "integer",
-            "description": "the org bundle version this was copied from"
-          },
-          "files": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/BundleFile"
-            }
-          },
-          "skills": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/SkillMeta"
-            }
-          },
-          "readme_path": {
-            "type": "string",
-            "description": "the SKILL.md the README renders from"
-          },
-          "published_by": {
-            "$ref": "#/components/schemas/UserRef"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "unpublished_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "org",
-          "name",
-          "version",
-          "source_version",
-          "files",
-          "skills",
-          "readme_path",
-          "created_at",
-          "unpublished_at"
         ]
       },
       "PublishRequest": {
@@ -998,6 +1094,251 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Version"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/registry/skills": {
+      "get": {
+        "tags": [
+          "registry"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "matches name, description or org slug, case-insensitively"
+            },
+            "required": false,
+            "description": "matches name, description or org slug, case-insensitively",
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "description": "page size, default 20, max 50"
+            },
+            "required": false,
+            "description": "page size, default 20, max 50",
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "`next` from the previous page"
+            },
+            "required": false,
+            "description": "`next` from the previous page",
+            "name": "cursor",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "visible published skills, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrySearch"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/registry/skills/{org}/{name}": {
+      "get": {
+        "tags": [
+          "registry"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "org slug, written `@<org>` in the path",
+              "example": "@acme"
+            },
+            "required": true,
+            "description": "org slug, written `@<org>` in the path",
+            "name": "org",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "deploy"
+            },
+            "required": true,
+            "name": "name",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "the skill at its latest visible version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrySkill"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/registry/skills/{org}/{name}/{version}": {
+      "get": {
+        "tags": [
+          "registry"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "org slug, written `@<org>` in the path",
+              "example": "@acme"
+            },
+            "required": true,
+            "description": "org slug, written `@<org>` in the path",
+            "name": "org",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "deploy"
+            },
+            "required": true,
+            "name": "name",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "required": true,
+            "name": "version",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "the skill at that version; `unpublished_at` is set when it was hidden after publishing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrySkill"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/registry/skills/{org}/{name}/{version}/blobs/{sha}": {
+      "get": {
+        "tags": [
+          "registry"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "org slug, written `@<org>` in the path",
+              "example": "@acme"
+            },
+            "required": true,
+            "description": "org slug, written `@<org>` in the path",
+            "name": "org",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "deploy"
+            },
+            "required": true,
+            "name": "name",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "required": true,
+            "name": "version",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "hex sha256 of a file in that version's manifest"
+            },
+            "required": true,
+            "description": "hex sha256 of a file in that version's manifest",
+            "name": "sha",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "blob content",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }

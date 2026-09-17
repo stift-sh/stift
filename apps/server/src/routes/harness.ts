@@ -4,6 +4,7 @@
 import { sql } from "drizzle-orm";
 import type { PushMeta } from "@stift/shared";
 import { createApp, type App } from "../app.js";
+import type { Authenticator } from "../auth/authenticator.js";
 import { authFromEnv } from "../auth/config.js";
 import { ensureDefaultOrg } from "../auth/bootstrap.js";
 import { createToken } from "../auth/tokens.js";
@@ -16,7 +17,7 @@ export const dbUrl = process.env.STIFT_TEST_DATABASE_URL;
 export const skip = dbUrl ? false : "STIFT_TEST_DATABASE_URL not set";
 
 /** `admin` and `member` are tokens of two users of the default org. */
-export type TestApp = { app: App; admin: string; member: string; db: Db; close: () => Promise<void> };
+export type TestApp = { app: App; admin: string; member: string; db: Db; auth: Authenticator; store: PgStore; close: () => Promise<void> };
 
 /** Empties every table, like a fresh data dir per Go test. */
 export const resetDb = (db: Db) => db.execute(sql`truncate sessions, blobs, bundles, bundle_versions, published_skills, published_versions, installs`);
@@ -38,14 +39,10 @@ export async function createTestApp(limits: Partial<Limits> = {}): Promise<TestA
   await setOrgLimits(conn.db, "", { maxSkills: null, maxStorageBytes: null, maxSeats: null });
   const { raw: admin } = await createToken(conn.db, "", "admin", true);
   const { raw: member } = await createToken(conn.db, "", "dev", false);
-  const app = createApp({
-    version: "test",
-    auth: authFromEnv(conn.db, "local").authenticator,
-    store: new PgStore(conn.db, blobs),
-    db: conn.db,
-    limits: { ...DEFAULT_LIMITS, ...limits },
-  });
-  return { app, admin, member, db: conn.db, close: () => conn.pool.end() };
+  const auth = authFromEnv(conn.db, "local").authenticator;
+  const store = new PgStore(conn.db, blobs);
+  const app = createApp({ version: "test", auth, store, db: conn.db, limits: { ...DEFAULT_LIMITS, ...limits } });
+  return { app, admin, member, db: conn.db, auth, store, close: () => conn.pool.end() };
 }
 
 export function req(app: App, method: string, path: string, token?: string, body?: BodyInit, contentType?: string) {

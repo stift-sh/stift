@@ -9,6 +9,7 @@ import { installsRoutes } from "./routes/installs.js";
 import { members } from "./routes/members.js";
 import { org } from "./routes/org.js";
 import { published } from "./routes/published.js";
+import { registry } from "./routes/registry.js";
 import { tokens } from "./routes/tokens.js";
 import { whoami } from "./routes/whoami.js";
 import type { Store } from "./storage/store.js";
@@ -34,6 +35,9 @@ export type AppOptions = {
   /** Directory holding the built web app (index.html + assets). When unset the
    *  server is API-only and unknown paths 404. */
   webDir?: string;
+  /** The public, unauthenticated registry under `/v1/registry` (STIFT_REGISTRY).
+   *  Off: those routes 404 and publishing is refused. Default on. */
+  registry?: boolean;
 };
 
 const denyAll: Authenticator = { authenticate: async () => null };
@@ -52,17 +56,23 @@ function unavailable<T extends object>(what: string): T {
  *  OpenAPI emitter can construct it without starting a listener. */
 export function createApp(opts: AppOptions) {
   const app = new OpenAPIHono<AuthEnv>();
-  app.route("/", health(opts));
+  const registryOn = opts.registry ?? true;
+  const features = [...(opts.features ?? [])];
+  if (registryOn && !features.includes("registry")) features.push("registry");
+  app.route("/", health({ ...opts, features }));
+
+  const store = opts.store ?? unavailable<Store>("store");
+  // Public and read-only, so mounted ahead of `bearer`.
+  if (registryOn) app.route("/", registry(store));
 
   app.use("/v1/*", bearer(opts.auth ?? denyAll));
   app.route("/", whoami(opts.db));
   const db = opts.db ?? unavailable<Db>("database");
-  const store = opts.store ?? unavailable<Store>("store");
   const limits = opts.limits ?? DEFAULT_LIMITS;
   app.route("/", sessions(store, limits));
   app.route("/", blobs(store, limits));
   app.route("/", bundles(store));
-  app.route("/", published(store));
+  app.route("/", published(store, registryOn));
 
   app.route("/", tokens(db));
   app.route("/", org(db));

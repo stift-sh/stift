@@ -368,6 +368,31 @@ type PublishRequest struct {
 	Version int `json:"version,omitempty"`
 }
 
+// PublishedSkill defines model for PublishedSkill.
+type PublishedSkill struct {
+	// Agent the source unit's agent: a default for installs, not a constraint
+	Agent     string    `json:"agent"`
+	CreatedAt time.Time `json:"created_at"`
+
+	// Description from the SKILL.md frontmatter of the newest publish
+	Description string `json:"description"`
+
+	// Latest newest visible version; 0 when every version is hidden
+	Latest  int    `json:"latest"`
+	License string `json:"license"`
+	Name    string `json:"name"`
+
+	// Org org slug
+	Org string `json:"org"`
+
+	// Unit the org-scope unit it is published from
+	Unit string `json:"unit"`
+
+	// UnpublishedAt set when the whole skill is hidden
+	UnpublishedAt time.Time `json:"unpublished_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+}
+
 // PublishedSkillDetail defines model for PublishedSkillDetail.
 type PublishedSkillDetail struct {
 	// Agent the source unit's agent: a default for installs, not a constraint
@@ -448,6 +473,19 @@ type PushResult struct {
 
 // PushResultStatus defines model for PushResult.Status.
 type PushResultStatus string
+
+// RegistrySearch defines model for RegistrySearch.
+type RegistrySearch struct {
+	// Next cursor for the next page; null on the last one
+	Next   string           `json:"next"`
+	Skills []PublishedSkill `json:"skills"`
+}
+
+// RegistrySkill defines model for RegistrySkill.
+type RegistrySkill struct {
+	Skill   PublishedSkill   `json:"skill"`
+	Version PublishedVersion `json:"version"`
+}
 
 // Role defines model for Role.
 type Role string
@@ -599,6 +637,18 @@ type DeleteV1PublishedNameParams struct {
 type PostV1PublishedNameRestoreParams struct {
 	// Version one version; absent = the whole skill
 	Version int `form:"version,omitempty" json:"version,omitempty"`
+}
+
+// GetV1RegistrySkillsParams defines parameters for GetV1RegistrySkills.
+type GetV1RegistrySkillsParams struct {
+	// Q matches name, description or org slug, case-insensitively
+	Q string `form:"q,omitempty" json:"q,omitempty"`
+
+	// Limit page size, default 20, max 50
+	Limit int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor `next` from the previous page
+	Cursor string `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
 // GetV1SessionsParams defines parameters for GetV1Sessions.

@@ -8,9 +8,11 @@ import { createApp } from "./app.js";
 test("healthz and version", async () => {
   const app = createApp({ version: "1.2.3" });
   assert.equal(await (await app.request("/healthz")).text(), "ok");
-  assert.deepEqual(await (await app.request("/api/version")).json(), { version: "1.2.3", api: 1, features: [] });
+  assert.deepEqual(await (await app.request("/api/version")).json(), { version: "1.2.3", api: 1, features: ["registry"] });
   const flagged = createApp({ version: "1.2.3", features: ["cloud"] });
-  assert.deepEqual(await (await flagged.request("/api/version")).json(), { version: "1.2.3", api: 1, features: ["cloud"] });
+  assert.deepEqual(await (await flagged.request("/api/version")).json(), { version: "1.2.3", api: 1, features: ["cloud", "registry"] });
+  const off = createApp({ version: "1.2.3", registry: false });
+  assert.deepEqual(await (await off.request("/api/version")).json(), { version: "1.2.3", api: 1, features: [] });
 });
 
 test("whoami requires a bearer token", async () => {

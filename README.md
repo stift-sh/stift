@@ -309,6 +309,30 @@ and the web app shows inline. Lowering a limit below current usage removes
 nothing, it only blocks growth. `GET /v1/org` and the org card in the web
 app show limits next to current usage.
 
+### Public registry
+
+Every stift server is a registry. An admin sets the org slug (`STIFT_ORG_SLUG`,
+`PATCH /v1/org` or the org card), then publishes an org-scope skill as
+`@<slug>/<name>`; the slug is locked once anything is published. Anyone can
+then resolve it and fetch its files **without a token**:
+
+```sh
+curl https://stift.example.com/v1/registry/skills/@acme/deploy          # latest visible version
+curl https://stift.example.com/v1/registry/skills/@acme/deploy/2        # a numbered version, immutable
+curl https://stift.example.com/v1/registry/skills?q=deploy              # search
+```
+
+Versions are a publish sequence (1, 2, 3…). Publishing copies the manifest,
+so editing, rolling back or deleting the org unit never changes what was
+published. Unpublishing hides a version (or the skill) from search and
+`latest`; it still resolves by number so existing installs keep verifying.
+Only files listed in a published version's manifest are reachable through
+the registry; the org's other blobs stay behind the token. Nothing is
+exposed until an admin publishes, and `STIFT_REGISTRY=off` disables the
+routes and publishing altogether. The server does not rate-limit these
+routes; do that in your reverse proxy. The `stift skills publish|search|install
+@org/name` commands and the web UI for publishing follow.
+
 ### Environment variables
 
 | Variable | Used by | Meaning |
@@ -330,6 +354,7 @@ app show limits next to current usage.
 | `STIFT_MAX_SKILLS`, `STIFT_MAX_STORAGE_BYTES`, `STIFT_MAX_SEATS` | server | limits of the default org, applied at startup: a positive integer, or `unlimited` to clear one (default: unlimited). Writes over a limit get `402`; `GET /v1/org` shows limits and usage |
 | `STIFT_AUTH` | server | comma-separated authenticators (default `local`) |
 | `STIFT_FEATURES` | server | comma-separated feature flags advertised on `/api/version` (e.g. `cloud`); the web app shows matching screens only |
+| `STIFT_REGISTRY` | server | `public` (default) serves the unauthenticated registry under `/v1/registry` and advertises feature `registry`; `off` 404s those routes and refuses `POST /v1/published` |
 | `STIFT_WEB_DIR` | server | directory of the built web app to serve at `/` (default `apps/web/dist`, `/app/web` in the image); absent → API only |
 
 ## Server: deploy in one minute
@@ -369,7 +394,8 @@ usual reverse proxy; the server itself speaks plain HTTP.
 
 ## HTTP API
 
-All `/v1` endpoints require `Authorization: Bearer <token>`.
+All `/v1` endpoints require `Authorization: Bearer <token>`, except the
+read-only `/v1/registry` routes.
 
 | Method & path | Description |
 |---|---|
@@ -394,6 +420,12 @@ All `/v1` endpoints require `Authorization: Bearer <token>`.
 | `DELETE /v1/members/{id}` | admin: remove a member and their tokens; refuses self |
 | `GET /v1/org` | the org with its limits and current usage |
 | `GET/POST /v1/installs` | where org units are pulled or installed, per user, agent, unit and host |
+| `GET /v1/published` | the org's published skills with every version, hidden ones included |
+| `POST /v1/published` | admin: publish an org-scope skill as `@<slug>/<name>` (`agent`, `unit`, optional `name`, `license` (required the first time), source `version`); 409 when the same files are already published |
+| `DELETE /v1/published/{name}?version=` | admin: hide a version, or the whole skill; `POST /v1/published/{name}/restore?version=` undoes it |
+| `GET /v1/registry/skills?q=&limit=&cursor=` | **no auth**: search visible published skills, newest first |
+| `GET /v1/registry/skills/@{org}/{name}[/{version}]` | **no auth**: the skill and its latest visible version, or the numbered one (hidden versions still resolve, with `unpublished_at` set) |
+| `GET /v1/registry/skills/@{org}/{name}/{version}/blobs/{sha}` | **no auth**: a file of that version; 404 unless the sha is in its manifest |
 | `GET /healthz` | liveness (no auth) |
 
 ## Security notes
