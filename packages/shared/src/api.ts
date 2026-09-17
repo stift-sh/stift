@@ -268,3 +268,57 @@ export const Install = InstallReport.extend({
   updated_at: timestamp,
 }).meta({ id: "Install" });
 export type Install = z.infer<typeof Install>;
+
+/** Body of POST /v1/published (admins): publish an org-scope unit as
+ *  `@<org-slug>/<name>`. */
+export const PublishRequest = z
+  .object({
+    agent: z.string(),
+    unit: z.string().describe("org-scope unit containing a SKILL.md, e.g. skills/deploy"),
+    name: z.string().optional().describe("public name; default the unit's last segment, fixed after the first publish"),
+    license: z.string().optional().describe("SPDX identifier or LicenseRef-<name>; required on the first publish"),
+    version: z.int().min(1).optional().describe("source bundle version to publish; default head"),
+  })
+  .meta({ id: "PublishRequest" });
+export type PublishRequest = z.infer<typeof PublishRequest>;
+
+/** One published version: a copy of the source manifest, immutable once
+ *  published. Hidden versions still resolve by number with `unpublished_at`
+ *  set. */
+export const PublishedVersion = z
+  .object({
+    org: z.string().describe("org slug, the `@org` of the reference"),
+    name: z.string(),
+    version: z.int().describe("publish sequence (1, 2, 3…), independent of source_version"),
+    source_version: z.int().describe("the org bundle version this was copied from"),
+    files: z.array(BundleFile),
+    skills: z.array(SkillMeta),
+    readme_path: z.string().describe("the SKILL.md the README renders from"),
+    published_by: UserRef.optional(),
+    created_at: timestamp,
+    unpublished_at: timestamp.nullable(),
+  })
+  .meta({ id: "PublishedVersion" });
+export type PublishedVersion = z.infer<typeof PublishedVersion>;
+
+/** A skill an org shares as `@<org>/<name>`. */
+export const PublishedSkill = z
+  .object({
+    org: z.string().describe("org slug"),
+    name: z.string(),
+    agent: z.string().describe("the source unit's agent: a default for installs, not a constraint"),
+    unit: z.string().describe("the org-scope unit it is published from"),
+    description: z.string().describe("from the SKILL.md frontmatter of the newest publish"),
+    license: z.string(),
+    latest: z.int().describe("newest visible version; 0 when every version is hidden"),
+    created_at: timestamp,
+    updated_at: timestamp,
+    unpublished_at: timestamp.nullable().describe("set when the whole skill is hidden"),
+  })
+  .meta({ id: "PublishedSkill" });
+export type PublishedSkill = z.infer<typeof PublishedSkill>;
+
+/** Returned by GET /v1/published: a skill with every version, newest
+ *  first, hidden ones included. */
+export const PublishedSkillDetail = PublishedSkill.extend({ versions: z.array(PublishedVersion) }).meta({ id: "PublishedSkillDetail" });
+export type PublishedSkillDetail = z.infer<typeof PublishedSkillDetail>;

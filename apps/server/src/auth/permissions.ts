@@ -7,6 +7,7 @@ export type Subject =
   | { action: "token.manage" }
   | { action: "member.manage" }
   | { action: "org.manage" }
+  | { action: "skill.publish" }
   | { action: "session.delete"; ownerId: string | null };
 
 /**
@@ -23,6 +24,7 @@ export type Subject =
  * | token.manage     | the org's tokens            | no     | yes   |
  * | member.manage    | users and roles in the org  | no     | yes   |
  * | org.manage       | the org's name and slug     | no     | yes   |
+ * | skill.publish    | publishing under @<slug>/…  | no     | yes   |
  * | session.delete   | owner ≠ self                | no     | yes   |
  *
  * Unowned rows are writable by any member so data from before users
@@ -38,6 +40,7 @@ export function can(id: Pick<Identity, "userId" | "role">, s: Subject): boolean 
     case "token.manage":
     case "member.manage":
     case "org.manage":
+    case "skill.publish":
       return false;
     case "session.delete":
       return s.ownerId === null || s.ownerId === id.userId;

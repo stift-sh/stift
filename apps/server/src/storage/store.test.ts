@@ -45,7 +45,7 @@ describe("Store contract", { skip: dbUrl ? false : "STIFT_TEST_DATABASE_URL not 
     b = new PgStore(conn.db, blobStore);
   });
   beforeEach(async () => {
-    await conn.db.execute(sql`truncate sessions, blobs, bundles, bundle_versions, tokens, installs, memberships, users cascade`);
+    await conn.db.execute(sql`truncate sessions, blobs, bundles, bundle_versions, published_skills, published_versions, tokens, installs, memberships, users cascade`);
   });
   after(async () => {
     await conn.pool.end();

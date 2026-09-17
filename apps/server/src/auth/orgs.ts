@@ -1,6 +1,6 @@
-import { and, eq, ne } from "drizzle-orm";
+import { and, count, eq, ne } from "drizzle-orm";
 import type { Db } from "../db/client.js";
-import { orgs } from "../db/schema.js";
+import { orgs, publishedSkills } from "../db/schema.js";
 import { validSlug } from "../storage/validate.js";
 
 export class SlugError extends Error {}
@@ -8,10 +8,10 @@ export class SlugTakenError extends Error {}
 export class SlugLockedError extends Error {}
 
 /** Published skills pin the slug (`@<slug>/<name>` must keep resolving).
- *  Nothing can be published yet, so nothing locks; the publish model
- *  (skills-registry-4, item 2) counts the org's published skills here. */
-export async function publishedCount(_db: Pick<Db, "select">, _orgId: string): Promise<number> {
-  return 0;
+ *  Hidden skills count too: their versions still resolve by number. */
+export async function publishedCount(db: Pick<Db, "select">, orgId: string): Promise<number> {
+  const [r] = await db.select({ n: count() }).from(publishedSkills).where(eq(publishedSkills.orgId, orgId));
+  return r?.n ?? 0;
 }
 
 /** Renames the org and/or moves it to another slug. Returns false when the

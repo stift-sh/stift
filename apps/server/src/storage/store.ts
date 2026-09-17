@@ -1,16 +1,17 @@
 import { randomBytes } from "node:crypto";
 import type { Readable } from "node:stream";
 import { and, asc, desc, eq, inArray, like, sql } from "drizzle-orm";
-import type { Bundle, BundleFile, Session, SkillMeta } from "@stift/shared";
+import type { Bundle, BundleFile, PublishedSkillDetail, PublishedVersion, Session, SkillMeta } from "@stift/shared";
 import type { Db } from "../db/client.js";
 import { blobs, bundleVersions, bundles, sessions, users } from "../db/schema.js";
 import { BlobStore } from "./blobs.js";
 import { countSkills, orgLimits, storageBytes } from "../limits.js";
 import { LimitError, MissingBlobError, NotFoundError, StaleError } from "./errors.js";
 import { parseFrontmatter } from "./frontmatter.js";
+import { listPublished, publish, restore, unpublish, type PublishInput } from "./published.js";
 import { type BundleKey, validateKey, validBundlePath, validSha, validOrgId } from "./validate.js";
 
-export type { BundleKey };
+export type { BundleKey, PublishInput };
 
 /** Narrows list results; every field optional. */
 export type ListFilter = { agent?: string; project?: string; host?: string; query?: string };
@@ -64,6 +65,16 @@ export interface Store {
   deleteBundle(orgId: string, k: BundleKey): Promise<void>;
   /** `user_id` of the bundle row; null when unowned, undefined when there is no row. */
   bundleOwner(orgId: string, k: BundleKey): Promise<string | null | undefined>;
+
+  /** Copies an org-scope unit's manifest into the org's published skills as
+   *  `@<slug>/<name>`; NotFoundError when the unit or version does not exist,
+   *  PublishError / PublishConflictError otherwise (see published.ts). */
+  publish(orgId: string, input: PublishInput): Promise<PublishedVersion>;
+  /** Hides one version, or the whole skill when `version` is absent. */
+  unpublish(orgId: string, name: string, version?: number): Promise<void>;
+  restore(orgId: string, name: string, version?: number): Promise<void>;
+  /** The org's published skills with every version, hidden ones included. */
+  listPublished(orgId: string): Promise<PublishedSkillDetail[]>;
 }
 
 const FRONTMATTER_LIMIT = 64 << 10;
@@ -426,6 +437,29 @@ export class PgStore implements Store {
       .where(and(this.bundleWhere(orgId, k), sql`${bundles.head} > 0`))
       .returning({ id: bundles.id });
     if (deleted.length === 0) throw new NotFoundError("bundle not found");
+  }
+
+  // ---- published skills ----
+
+  async publish(orgId: string, input: PublishInput) {
+    assertOrgId(orgId);
+    const k: BundleKey = { scope: "org", agent: input.agent, name: input.unit };
+    if (validateKey(k)) throw new NotFoundError(`org unit ${input.agent} ${input.unit} not found`);
+    const source = await this.getBundle(orgId, k, input.version ?? 0);
+    if (!source) throw new NotFoundError(`org unit ${input.agent} ${input.unit}${input.version ? ` version ${input.version}` : ""} not found`);
+    return publish(this.db, orgId, source, input);
+  }
+
+  unpublish(orgId: string, name: string, version?: number) {
+    return unpublish(this.db, orgId, name, version);
+  }
+
+  restore(orgId: string, name: string, version?: number) {
+    return restore(this.db, orgId, name, version);
+  }
+
+  listPublished(orgId: string) {
+    return listPublished(this.db, orgId);
   }
 
   /** Extracts name/description from every SKILL.md in files, sorted by path. */

@@ -34,3 +34,15 @@ export class LimitError extends Error {
     super(`limit: ${limit} ${what} per org`);
   }
 }
+
+/** Thrown by publish when the request cannot be honoured as asked: no org
+ *  slug, not an org-scope unit, no SKILL.md, a bad name or license (HTTP 400). */
+export class PublishError extends Error {
+  readonly name = "PublishError";
+}
+
+/** Thrown by publish when the manifest is already published or the public
+ *  name is taken by another unit (HTTP 409). */
+export class PublishConflictError extends Error {
+  readonly name = "PublishConflictError";
+}

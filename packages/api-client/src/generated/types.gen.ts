@@ -167,6 +167,83 @@ export type BundleInput = {
     files?: Array<BundleFile>;
 };
 
+export type PublishedSkillDetail = {
+    /**
+     * org slug
+     */
+    org: string;
+    name: string;
+    /**
+     * the source unit's agent: a default for installs, not a constraint
+     */
+    agent: string;
+    /**
+     * the org-scope unit it is published from
+     */
+    unit: string;
+    /**
+     * from the SKILL.md frontmatter of the newest publish
+     */
+    description: string;
+    license: string;
+    /**
+     * newest visible version; 0 when every version is hidden
+     */
+    latest: number;
+    created_at: string;
+    updated_at: string;
+    /**
+     * set when the whole skill is hidden
+     */
+    unpublished_at: string | null;
+    versions: Array<PublishedVersion>;
+};
+
+export type PublishedVersion = {
+    /**
+     * org slug, the `@org` of the reference
+     */
+    org: string;
+    name: string;
+    /**
+     * publish sequence (1, 2, 3…), independent of source_version
+     */
+    version: number;
+    /**
+     * the org bundle version this was copied from
+     */
+    source_version: number;
+    files: Array<BundleFile>;
+    skills: Array<SkillMeta>;
+    /**
+     * the SKILL.md the README renders from
+     */
+    readme_path: string;
+    published_by?: UserRef;
+    created_at: string;
+    unpublished_at: string | null;
+};
+
+export type PublishRequest = {
+    agent: string;
+    /**
+     * org-scope unit containing a SKILL.md, e.g. skills/deploy
+     */
+    unit: string;
+    /**
+     * public name; default the unit's last segment, fixed after the first publish
+     */
+    name?: string;
+    /**
+     * SPDX identifier or LicenseRef-<name>; required on the first publish
+     */
+    license?: string;
+    /**
+     * source bundle version to publish; default head
+     */
+    version?: number;
+};
+
 export type TokenInfo = {
     id: string;
     name: string;
@@ -886,6 +963,166 @@ export type PutV1BundlesByScopeByAgentByNameResponses = {
 };
 
 export type PutV1BundlesByScopeByAgentByNameResponse = PutV1BundlesByScopeByAgentByNameResponses[keyof PutV1BundlesByScopeByAgentByNameResponses];
+
+export type GetV1PublishedData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/published';
+};
+
+export type GetV1PublishedErrors = {
+    /**
+     * missing or invalid bearer token
+     */
+    401: _Error;
+};
+
+export type GetV1PublishedError = GetV1PublishedErrors[keyof GetV1PublishedErrors];
+
+export type GetV1PublishedResponses = {
+    /**
+     * the org's published skills with every version, hidden ones included
+     */
+    200: Array<PublishedSkillDetail>;
+};
+
+export type GetV1PublishedResponse = GetV1PublishedResponses[keyof GetV1PublishedResponses];
+
+export type PostV1PublishedData = {
+    body: PublishRequest;
+    path?: never;
+    query?: never;
+    url: '/v1/published';
+};
+
+export type PostV1PublishedErrors = {
+    /**
+     * bad request
+     */
+    400: _Error;
+    /**
+     * missing or invalid bearer token
+     */
+    401: _Error;
+    /**
+     * forbidden
+     */
+    403: _Error;
+    /**
+     * not found
+     */
+    404: _Error;
+    /**
+     * conflict
+     */
+    409: _Error;
+};
+
+export type PostV1PublishedError = PostV1PublishedErrors[keyof PostV1PublishedErrors];
+
+export type PostV1PublishedResponses = {
+    /**
+     * the new version
+     */
+    201: PublishedVersion;
+};
+
+export type PostV1PublishedResponse = PostV1PublishedResponses[keyof PostV1PublishedResponses];
+
+export type DeleteV1PublishedByNameData = {
+    body?: never;
+    path: {
+        /**
+         * public name, the `<name>` of `@<org>/<name>`
+         */
+        name: string;
+    };
+    query?: {
+        /**
+         * one version; absent = the whole skill
+         */
+        version?: number;
+    };
+    url: '/v1/published/{name}';
+};
+
+export type DeleteV1PublishedByNameErrors = {
+    /**
+     * bad request
+     */
+    400: _Error;
+    /**
+     * missing or invalid bearer token
+     */
+    401: _Error;
+    /**
+     * forbidden
+     */
+    403: _Error;
+    /**
+     * not found
+     */
+    404: _Error;
+};
+
+export type DeleteV1PublishedByNameError = DeleteV1PublishedByNameErrors[keyof DeleteV1PublishedByNameErrors];
+
+export type DeleteV1PublishedByNameResponses = {
+    /**
+     * hidden from search and `latest`; versions still resolve by number
+     */
+    204: void;
+};
+
+export type DeleteV1PublishedByNameResponse = DeleteV1PublishedByNameResponses[keyof DeleteV1PublishedByNameResponses];
+
+export type PostV1PublishedByNameRestoreData = {
+    body?: never;
+    path: {
+        /**
+         * public name, the `<name>` of `@<org>/<name>`
+         */
+        name: string;
+    };
+    query?: {
+        /**
+         * one version; absent = the whole skill
+         */
+        version?: number;
+    };
+    url: '/v1/published/{name}/restore';
+};
+
+export type PostV1PublishedByNameRestoreErrors = {
+    /**
+     * bad request
+     */
+    400: _Error;
+    /**
+     * missing or invalid bearer token
+     */
+    401: _Error;
+    /**
+     * forbidden
+     */
+    403: _Error;
+    /**
+     * not found
+     */
+    404: _Error;
+};
+
+export type PostV1PublishedByNameRestoreError = PostV1PublishedByNameRestoreErrors[keyof PostV1PublishedByNameRestoreErrors];
+
+export type PostV1PublishedByNameRestoreResponses = {
+    /**
+     * visible again
+     */
+    204: void;
+};
+
+export type PostV1PublishedByNameRestoreResponse = PostV1PublishedByNameRestoreResponses[keyof PostV1PublishedByNameRestoreResponses];
 
 export type GetV1TokensData = {
     body?: never;

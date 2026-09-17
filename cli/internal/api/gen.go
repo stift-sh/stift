@@ -351,6 +351,71 @@ type OrgUpdateRequest struct {
 	Slug string `json:"slug,omitempty"`
 }
 
+// PublishRequest defines model for PublishRequest.
+type PublishRequest struct {
+	Agent string `json:"agent"`
+
+	// License SPDX identifier or LicenseRef-<name>; required on the first publish
+	License string `json:"license,omitempty"`
+
+	// Name public name; default the unit's last segment, fixed after the first publish
+	Name string `json:"name,omitempty"`
+
+	// Unit org-scope unit containing a SKILL.md, e.g. skills/deploy
+	Unit string `json:"unit"`
+
+	// Version source bundle version to publish; default head
+	Version int `json:"version,omitempty"`
+}
+
+// PublishedSkillDetail defines model for PublishedSkillDetail.
+type PublishedSkillDetail struct {
+	// Agent the source unit's agent: a default for installs, not a constraint
+	Agent     string    `json:"agent"`
+	CreatedAt time.Time `json:"created_at"`
+
+	// Description from the SKILL.md frontmatter of the newest publish
+	Description string `json:"description"`
+
+	// Latest newest visible version; 0 when every version is hidden
+	Latest  int    `json:"latest"`
+	License string `json:"license"`
+	Name    string `json:"name"`
+
+	// Org org slug
+	Org string `json:"org"`
+
+	// Unit the org-scope unit it is published from
+	Unit string `json:"unit"`
+
+	// UnpublishedAt set when the whole skill is hidden
+	UnpublishedAt time.Time          `json:"unpublished_at"`
+	UpdatedAt     time.Time          `json:"updated_at"`
+	Versions      []PublishedVersion `json:"versions"`
+}
+
+// PublishedVersion defines model for PublishedVersion.
+type PublishedVersion struct {
+	CreatedAt time.Time    `json:"created_at"`
+	Files     []BundleFile `json:"files"`
+	Name      string       `json:"name"`
+
+	// Org org slug, the `@org` of the reference
+	Org         string  `json:"org"`
+	PublishedBy UserRef `json:"published_by,omitempty"`
+
+	// ReadmePath the SKILL.md the README renders from
+	ReadmePath string      `json:"readme_path"`
+	Skills     []SkillMeta `json:"skills"`
+
+	// SourceVersion the org bundle version this was copied from
+	SourceVersion int       `json:"source_version"`
+	UnpublishedAt time.Time `json:"unpublished_at"`
+
+	// Version publish sequence (1, 2, 3…), independent of source_version
+	Version int `json:"version"`
+}
+
 // PushMeta JSON; must precede archive
 type PushMeta struct {
 	Agent string `json:"agent"`
@@ -524,6 +589,18 @@ type GetV1InstallsParams struct {
 	Name  string `form:"name,omitempty" json:"name,omitempty"`
 }
 
+// DeleteV1PublishedNameParams defines parameters for DeleteV1PublishedName.
+type DeleteV1PublishedNameParams struct {
+	// Version one version; absent = the whole skill
+	Version int `form:"version,omitempty" json:"version,omitempty"`
+}
+
+// PostV1PublishedNameRestoreParams defines parameters for PostV1PublishedNameRestore.
+type PostV1PublishedNameRestoreParams struct {
+	// Version one version; absent = the whole skill
+	Version int `form:"version,omitempty" json:"version,omitempty"`
+}
+
 // GetV1SessionsParams defines parameters for GetV1Sessions.
 type GetV1SessionsParams struct {
 	Agent   string `form:"agent,omitempty" json:"agent,omitempty"`
@@ -565,6 +642,9 @@ type PatchV1MembersIDJSONRequestBody = MemberUpdateRequest
 
 // PatchV1OrgJSONRequestBody defines body for PatchV1Org for application/json ContentType.
 type PatchV1OrgJSONRequestBody = OrgUpdateRequest
+
+// PostV1PublishedJSONRequestBody defines body for PostV1Published for application/json ContentType.
+type PostV1PublishedJSONRequestBody = PublishRequest
 
 // PostV1SessionsMultipartRequestBody defines body for PostV1Sessions for multipart/form-data ContentType.
 type PostV1SessionsMultipartRequestBody PostV1SessionsMultipartBody

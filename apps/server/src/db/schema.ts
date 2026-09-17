@@ -1,5 +1,6 @@
 import {
   bigint,
+  boolean,
   index,
   integer,
   jsonb,
@@ -9,7 +10,7 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import type { Bundle } from "@stift/shared";
+import type { Bundle, BundleFile, SkillMeta } from "@stift/shared";
 
 // Every table carries a `orgId` column ("" = default orgId), mirroring the
 // Go Backend's orgId parameter. Real org/user tables arrive with the first
@@ -158,4 +159,64 @@ export const installs = pgTable(
     updatedAt: ts("updated_at").notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.orgId, t.userId, t.agent, t.name, t.host] })],
+);
+
+/** A skill an org shares beyond the company as `@<org-slug>/<name>`.
+ *  Publishing copies the source unit's manifest (see `published_versions`),
+ *  so editing, rolling back or deleting the org unit cannot change or break
+ *  a published version. `latest` is the newest visible version, 0 when every
+ *  version is hidden; `unpublished_at` hides the whole skill. */
+export const publishedSkills = pgTable(
+  "published_skills",
+  {
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    orgId: text("org_id")
+      .notNull()
+      .references(() => orgs.id, { onDelete: "cascade" }),
+    /** Public name, one slug segment; fixed at first publish. */
+    name: text("name").notNull(),
+    /** The source unit's agent: a default for installs, not a constraint. */
+    agent: text("agent").notNull(),
+    /** The org-scope unit this is published from, e.g. `skills/deploy`. */
+    unit: text("unit").notNull(),
+    /** Refreshed from the SKILL.md frontmatter on every publish. */
+    description: text("description").notNull().default(""),
+    /** SPDX identifier or `LicenseRef-<name>`; the publisher's, not ours. */
+    license: text("license").notNull(),
+    latest: integer("latest").notNull().default(0),
+    /** Reserved for the trust ADR; nothing sets it yet. */
+    publisherVerified: boolean("publisher_verified").notNull().default(false),
+    unpublishedAt: ts("unpublished_at"),
+    createdAt: ts("created_at").notNull().defaultNow(),
+    updatedAt: ts("updated_at").notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("published_skills_org_name").on(t.orgId, t.name)],
+);
+
+/** What a published version pins: the file list and parsed skills of the
+ *  source manifest. Blobs stay in the org's content-addressed store; a
+ *  blob GC, should one arrive, must treat every row here as a root. */
+export type PublishedManifest = { files: BundleFile[]; skills: SkillMeta[] };
+
+export const publishedVersions = pgTable(
+  "published_versions",
+  {
+    skillId: bigint("skill_id", { mode: "number" })
+      .notNull()
+      .references(() => publishedSkills.id, { onDelete: "cascade" }),
+    /** Publish sequence (1, 2, 3…), independent of the source version. */
+    version: integer("version").notNull(),
+    /** The org bundle version this was copied from. */
+    sourceVersion: integer("source_version").notNull(),
+    manifest: jsonb("manifest").$type<PublishedManifest>().notNull(),
+    /** The SKILL.md the registry README renders from. */
+    readmePath: text("readme_path").notNull(),
+    publishedBy: text("published_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: ts("created_at").notNull().defaultNow(),
+    /** Hidden from search and `latest`; still resolves by number. */
+    unpublishedAt: ts("unpublished_at"),
+    /** Reserved for the trust ADR. */
+    signature: text("signature"),
+  },
+  (t) => [primaryKey({ columns: [t.skillId, t.version] })],
 );

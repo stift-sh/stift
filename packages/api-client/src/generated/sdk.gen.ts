@@ -2,7 +2,7 @@
 
 import { type Client, formDataBodySerializer, type Options as Options2, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { DeleteV1BundlesByScopeByAgentByNameData, DeleteV1BundlesByScopeByAgentByNameErrors, DeleteV1BundlesByScopeByAgentByNameResponses, DeleteV1MembersByIdData, DeleteV1MembersByIdErrors, DeleteV1MembersByIdResponses, DeleteV1SessionsByIdData, DeleteV1SessionsByIdErrors, DeleteV1SessionsByIdResponses, DeleteV1TokensByIdData, DeleteV1TokensByIdErrors, DeleteV1TokensByIdResponses, GetApiVersionData, GetApiVersionResponses, GetHealthzData, GetHealthzResponses, GetV1BlobsByShaData, GetV1BlobsByShaErrors, GetV1BlobsByShaResponses, GetV1BundlesByScopeByAgentByNameData, GetV1BundlesByScopeByAgentByNameErrors, GetV1BundlesByScopeByAgentByNameResponses, GetV1BundlesData, GetV1BundlesErrors, GetV1BundlesResponses, GetV1InstallsData, GetV1InstallsErrors, GetV1InstallsResponses, GetV1MembersData, GetV1MembersErrors, GetV1MembersResponses, GetV1OrgData, GetV1OrgErrors, GetV1OrgResponses, GetV1SessionsByIdArchiveData, GetV1SessionsByIdArchiveErrors, GetV1SessionsByIdArchiveResponses, GetV1SessionsByIdData, GetV1SessionsByIdErrors, GetV1SessionsByIdResponses, GetV1SessionsData, GetV1SessionsErrors, GetV1SessionsResponses, GetV1TokensData, GetV1TokensErrors, GetV1TokensResponses, GetV1WhoamiData, GetV1WhoamiErrors, GetV1WhoamiResponses, PatchV1MembersByIdData, PatchV1MembersByIdErrors, PatchV1MembersByIdResponses, PatchV1OrgData, PatchV1OrgErrors, PatchV1OrgResponses, PostV1BlobsCheckData, PostV1BlobsCheckErrors, PostV1BlobsCheckResponses, PostV1InstallsData, PostV1InstallsErrors, PostV1InstallsResponses, PostV1MembersData, PostV1MembersErrors, PostV1MembersResponses, PostV1SessionsData, PostV1SessionsErrors, PostV1SessionsResponses, PostV1TokensData, PostV1TokensErrors, PostV1TokensResponses, PutV1BlobsByShaData, PutV1BlobsByShaErrors, PutV1BlobsByShaResponses, PutV1BundlesByScopeByAgentByNameData, PutV1BundlesByScopeByAgentByNameErrors, PutV1BundlesByScopeByAgentByNameResponses } from './types.gen';
+import type { DeleteV1BundlesByScopeByAgentByNameData, DeleteV1BundlesByScopeByAgentByNameErrors, DeleteV1BundlesByScopeByAgentByNameResponses, DeleteV1MembersByIdData, DeleteV1MembersByIdErrors, DeleteV1MembersByIdResponses, DeleteV1PublishedByNameData, DeleteV1PublishedByNameErrors, DeleteV1PublishedByNameResponses, DeleteV1SessionsByIdData, DeleteV1SessionsByIdErrors, DeleteV1SessionsByIdResponses, DeleteV1TokensByIdData, DeleteV1TokensByIdErrors, DeleteV1TokensByIdResponses, GetApiVersionData, GetApiVersionResponses, GetHealthzData, GetHealthzResponses, GetV1BlobsByShaData, GetV1BlobsByShaErrors, GetV1BlobsByShaResponses, GetV1BundlesByScopeByAgentByNameData, GetV1BundlesByScopeByAgentByNameErrors, GetV1BundlesByScopeByAgentByNameResponses, GetV1BundlesData, GetV1BundlesErrors, GetV1BundlesResponses, GetV1InstallsData, GetV1InstallsErrors, GetV1InstallsResponses, GetV1MembersData, GetV1MembersErrors, GetV1MembersResponses, GetV1OrgData, GetV1OrgErrors, GetV1OrgResponses, GetV1PublishedData, GetV1PublishedErrors, GetV1PublishedResponses, GetV1SessionsByIdArchiveData, GetV1SessionsByIdArchiveErrors, GetV1SessionsByIdArchiveResponses, GetV1SessionsByIdData, GetV1SessionsByIdErrors, GetV1SessionsByIdResponses, GetV1SessionsData, GetV1SessionsErrors, GetV1SessionsResponses, GetV1TokensData, GetV1TokensErrors, GetV1TokensResponses, GetV1WhoamiData, GetV1WhoamiErrors, GetV1WhoamiResponses, PatchV1MembersByIdData, PatchV1MembersByIdErrors, PatchV1MembersByIdResponses, PatchV1OrgData, PatchV1OrgErrors, PatchV1OrgResponses, PostV1BlobsCheckData, PostV1BlobsCheckErrors, PostV1BlobsCheckResponses, PostV1InstallsData, PostV1InstallsErrors, PostV1InstallsResponses, PostV1MembersData, PostV1MembersErrors, PostV1MembersResponses, PostV1PublishedByNameRestoreData, PostV1PublishedByNameRestoreErrors, PostV1PublishedByNameRestoreResponses, PostV1PublishedData, PostV1PublishedErrors, PostV1PublishedResponses, PostV1SessionsData, PostV1SessionsErrors, PostV1SessionsResponses, PostV1TokensData, PostV1TokensErrors, PostV1TokensResponses, PutV1BlobsByShaData, PutV1BlobsByShaErrors, PutV1BlobsByShaResponses, PutV1BundlesByScopeByAgentByNameData, PutV1BundlesByScopeByAgentByNameErrors, PutV1BundlesByScopeByAgentByNameResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -216,6 +216,62 @@ export const putV1BundlesByScopeByAgentByName = <ThrowOnError extends boolean = 
             'Content-Type': 'application/json',
             ...options.headers
         }
+    });
+};
+
+export const getV1Published = <ThrowOnError extends boolean = false>(options?: Options<GetV1PublishedData, ThrowOnError>) => {
+    return (options?.client ?? client).get<GetV1PublishedResponses, GetV1PublishedErrors, ThrowOnError>({
+        security: [
+            {
+                scheme: 'bearer',
+                type: 'http'
+            }
+        ],
+        url: '/v1/published',
+        ...options
+    });
+};
+
+export const postV1Published = <ThrowOnError extends boolean = false>(options: Options<PostV1PublishedData, ThrowOnError>) => {
+    return (options.client ?? client).post<PostV1PublishedResponses, PostV1PublishedErrors, ThrowOnError>({
+        security: [
+            {
+                scheme: 'bearer',
+                type: 'http'
+            }
+        ],
+        url: '/v1/published',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+export const deleteV1PublishedByName = <ThrowOnError extends boolean = false>(options: Options<DeleteV1PublishedByNameData, ThrowOnError>) => {
+    return (options.client ?? client).delete<DeleteV1PublishedByNameResponses, DeleteV1PublishedByNameErrors, ThrowOnError>({
+        security: [
+            {
+                scheme: 'bearer',
+                type: 'http'
+            }
+        ],
+        url: '/v1/published/{name}',
+        ...options
+    });
+};
+
+export const postV1PublishedByNameRestore = <ThrowOnError extends boolean = false>(options: Options<PostV1PublishedByNameRestoreData, ThrowOnError>) => {
+    return (options.client ?? client).post<PostV1PublishedByNameRestoreResponses, PostV1PublishedByNameRestoreErrors, ThrowOnError>({
+        security: [
+            {
+                scheme: 'bearer',
+                type: 'http'
+            }
+        ],
+        url: '/v1/published/{name}/restore',
+        ...options
     });
 };
 

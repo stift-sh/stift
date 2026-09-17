@@ -19,12 +19,12 @@ export const skip = dbUrl ? false : "STIFT_TEST_DATABASE_URL not set";
 export type TestApp = { app: App; admin: string; member: string; db: Db; close: () => Promise<void> };
 
 /** Empties every table, like a fresh data dir per Go test. */
-export const resetDb = (db: Db) => db.execute(sql`truncate sessions, blobs, bundles, bundle_versions, installs`);
+export const resetDb = (db: Db) => db.execute(sql`truncate sessions, blobs, bundles, bundle_versions, published_skills, published_versions, installs`);
 
 export async function createTestApp(limits: Partial<Limits> = {}): Promise<TestApp> {
   const conn = connect(dbUrl!);
   await runMigrations(conn.db);
-  await conn.db.execute(sql`truncate sessions, blobs, bundles, bundle_versions, tokens, installs, memberships, users cascade`);
+  await conn.db.execute(sql`truncate sessions, blobs, bundles, bundle_versions, published_skills, published_versions, tokens, installs, memberships, users cascade`);
   const blobs = new BlobStore({
     bucket: process.env.STIFT_S3_BUCKET ?? "stift",
     endpoint: process.env.STIFT_S3_ENDPOINT ?? "http://localhost:9000",

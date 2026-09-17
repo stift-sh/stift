@@ -435,6 +435,162 @@
           }
         }
       },
+      "PublishedSkillDetail": {
+        "type": "object",
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "org slug"
+          },
+          "name": {
+            "type": "string"
+          },
+          "agent": {
+            "type": "string",
+            "description": "the source unit's agent: a default for installs, not a constraint"
+          },
+          "unit": {
+            "type": "string",
+            "description": "the org-scope unit it is published from"
+          },
+          "description": {
+            "type": "string",
+            "description": "from the SKILL.md frontmatter of the newest publish"
+          },
+          "license": {
+            "type": "string"
+          },
+          "latest": {
+            "type": "integer",
+            "description": "newest visible version; 0 when every version is hidden"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "unpublished_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "set when the whole skill is hidden"
+          },
+          "versions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublishedVersion"
+            }
+          }
+        },
+        "required": [
+          "org",
+          "name",
+          "agent",
+          "unit",
+          "description",
+          "license",
+          "latest",
+          "created_at",
+          "updated_at",
+          "unpublished_at",
+          "versions"
+        ]
+      },
+      "PublishedVersion": {
+        "type": "object",
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "org slug, the `@org` of the reference"
+          },
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "description": "publish sequence (1, 2, 3…), independent of source_version"
+          },
+          "source_version": {
+            "type": "integer",
+            "description": "the org bundle version this was copied from"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BundleFile"
+            }
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SkillMeta"
+            }
+          },
+          "readme_path": {
+            "type": "string",
+            "description": "the SKILL.md the README renders from"
+          },
+          "published_by": {
+            "$ref": "#/components/schemas/UserRef"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "unpublished_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "org",
+          "name",
+          "version",
+          "source_version",
+          "files",
+          "skills",
+          "readme_path",
+          "created_at",
+          "unpublished_at"
+        ]
+      },
+      "PublishRequest": {
+        "type": "object",
+        "properties": {
+          "agent": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string",
+            "description": "org-scope unit containing a SKILL.md, e.g. skills/deploy"
+          },
+          "name": {
+            "type": "string",
+            "description": "public name; default the unit's last segment, fixed after the first publish"
+          },
+          "license": {
+            "type": "string",
+            "description": "SPDX identifier or LicenseRef-<name>; required on the first publish"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "source bundle version to publish; default head"
+          }
+        },
+        "required": [
+          "agent",
+          "unit"
+        ]
+      },
       "TokenInfo": {
         "type": "object",
         "properties": {
@@ -1878,6 +2034,285 @@
         "responses": {
           "204": {
             "description": "deleted"
+          },
+          "400": {
+            "description": "bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "missing or invalid bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/published": {
+      "get": {
+        "tags": [
+          "published"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "the org's published skills with every version, hidden ones included",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PublishedSkillDetail"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "missing or invalid bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "published"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "the new version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishedVersion"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "missing or invalid bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/published/{name}": {
+      "delete": {
+        "tags": [
+          "published"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "public name, the `<name>` of `@<org>/<name>`"
+            },
+            "required": true,
+            "description": "public name, the `<name>` of `@<org>/<name>`",
+            "name": "name",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "one version; absent = the whole skill"
+            },
+            "required": false,
+            "description": "one version; absent = the whole skill",
+            "name": "version",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "hidden from search and `latest`; versions still resolve by number"
+          },
+          "400": {
+            "description": "bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "missing or invalid bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/published/{name}/restore": {
+      "post": {
+        "tags": [
+          "published"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "public name, the `<name>` of `@<org>/<name>`"
+            },
+            "required": true,
+            "description": "public name, the `<name>` of `@<org>/<name>`",
+            "name": "name",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "one version; absent = the whole skill"
+            },
+            "required": false,
+            "description": "one version; absent = the whole skill",
+            "name": "version",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "visible again"
           },
           "400": {
             "description": "bad request",
