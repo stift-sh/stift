@@ -4,6 +4,8 @@ import { createHash } from "node:crypto";
 import type { BundleInput, Org } from "@stift/shared";
 import { bootstrap } from "../auth/bootstrap.js";
 import { orgLimitsFromEnv, setOrgLimits } from "../limits.js";
+import { sql } from "drizzle-orm";
+import { ensureDefaultOrg } from "../auth/bootstrap.js";
 import { createTestApp, req, resetDb, skip, type TestApp } from "./harness.js";
 
 const shaOf = (b: Uint8Array) => createHash("sha256").update(b).digest("hex");
@@ -48,6 +50,7 @@ describe("org limits", { skip }, () => {
       id: "",
       slug: "default",
       name: "Default",
+      slug_locked: false,
       limits: { skills: null, storage_bytes: null, seats: null },
       usage: { skills: 0, storage_bytes: 0, seats: 2 },
     });
@@ -105,6 +108,64 @@ describe("org limits", { skip }, () => {
     r = await add("seat-four");
     assert.equal(r.status, 201);
     await req(t.app, "DELETE", `/v1/members/${((await r.json()) as { id: string }).id}`, t.admin);
+  });
+
+  describe("PATCH /v1/org", () => {
+    const patch = (token: string | undefined, body: unknown) => req(t.app, "PATCH", "/v1/org", token, JSON.stringify(body), "application/json");
+    // Other suites expect the seeded org.
+    const reset = async () => {
+      await t.db.execute(sql`delete from orgs where id = 'other'`);
+      await t.db.execute(sql`update orgs set slug = 'default', name = 'Default' where id = ''`);
+    };
+    beforeEach(reset);
+    after(reset);
+
+    test("admins only", async () => {
+      assert.equal((await patch(undefined, { slug: "acme" })).status, 401);
+      const r = await patch(t.member, { slug: "acme" });
+      assert.equal(r.status, 403);
+      assert.deepEqual(await r.json(), { error: "admin role required" });
+      assert.equal((await getOrg(t.admin)).slug, "default");
+    });
+
+    test("sets name and slug, each on its own", async () => {
+      let r = await patch(t.admin, { slug: "acme" });
+      assert.equal(r.status, 200);
+      let o = (await r.json()) as Org;
+      assert.deepEqual([o.slug, o.name, o.slug_locked], ["acme", "Default", false]);
+
+      r = await patch(t.admin, { name: "  Acme Inc  " });
+      o = (await r.json()) as Org;
+      assert.deepEqual([o.slug, o.name], ["acme", "Acme Inc"]);
+      assert.deepEqual(await getOrg(t.member), o);
+
+      // Nothing to change, and the current slug again, are both fine.
+      assert.equal((await patch(t.admin, {})).status, 200);
+      assert.equal((await patch(t.admin, { slug: "acme" })).status, 200);
+    });
+
+    test("invalid slugs and names are 400", async () => {
+      for (const slug of ["a", "Acme", "-acme", "ac me", "acme_inc", "@acme", "a".repeat(40), ""]) {
+        const r = await patch(t.admin, { slug });
+        assert.equal(r.status, 400, slug);
+        assert.match(((await r.json()) as { error: string }).error, /^invalid slug/);
+      }
+      assert.equal((await patch(t.admin, { name: "   " })).status, 400);
+      assert.equal((await getOrg(t.admin)).slug, "default");
+    });
+
+    test("a slug another org holds is 409", async () => {
+      await t.db.execute(sql`insert into orgs (id, slug, name) values ('other', 'taken', 'Other')`);
+      const r = await patch(t.admin, { slug: "taken" });
+      assert.equal(r.status, 409);
+      assert.deepEqual(await r.json(), { error: 'slug "taken" is taken' });
+    });
+
+    test("STIFT_ORG_SLUG sets the seeded slug once, and is validated", async () => {
+      assert.equal((await ensureDefaultOrg(t.db, { STIFT_ORG_SLUG: "acme" })).slug, "acme");
+      assert.equal((await ensureDefaultOrg(t.db, { STIFT_ORG_SLUG: "other" })).slug, "acme");
+      await assert.rejects(ensureDefaultOrg(t.db, { STIFT_ORG_SLUG: "Not Valid" }), /STIFT_ORG_SLUG/);
+    });
   });
 
   test("env sets the default org's limits on start; unset leaves the row alone", async () => {

@@ -10,3 +10,10 @@
 .meter::-webkit-meter-bar { background: var(--rule); border: none; height: 4px; border-radius: 2px; }
 .meter::-webkit-meter-optimum-value { background: var(--accent-2); }
 .meter::-moz-meter-bar { background: var(--accent-2); }
+.head { display: flex; align-items: baseline; justify-content: space-between; }
+.slug { margin: -16px 0 20px; font-size: 14px; }
+.form { max-width: 480px; margin: 0 0 20px; }
+.form .field { margin: 12px 0; }
+.hint { font-size: 13px; margin: -6px 0 12px; }
+.error { color: var(--accent); font-size: 14px; margin: 0 0 12px; }
+.actions { display: flex; gap: 12px; }

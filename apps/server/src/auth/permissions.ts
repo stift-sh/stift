@@ -6,6 +6,7 @@ export type Subject =
   | { action: "bundle.write"; scope: string; ownerId: string | null }
   | { action: "token.manage" }
   | { action: "member.manage" }
+  | { action: "org.manage" }
   | { action: "session.delete"; ownerId: string | null };
 
 /**
@@ -21,6 +22,7 @@ export type Subject =
  * | bundle.write     | scope project               | yes    | yes   |
  * | token.manage     | the org's tokens            | no     | yes   |
  * | member.manage    | users and roles in the org  | no     | yes   |
+ * | org.manage       | the org's name and slug     | no     | yes   |
  * | session.delete   | owner ≠ self                | no     | yes   |
  *
  * Unowned rows are writable by any member so data from before users
@@ -35,6 +37,7 @@ export function can(id: Pick<Identity, "userId" | "role">, s: Subject): boolean 
       return true;
     case "token.manage":
     case "member.manage":
+    case "org.manage":
       return false;
     case "session.delete":
       return s.ownerId === null || s.ownerId === id.userId;

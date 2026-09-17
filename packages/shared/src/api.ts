@@ -19,6 +19,7 @@ const quota = z.int().nullable();
 /** Returned by GET /v1/org: the caller's org with its limits (null =
  *  unlimited) and what it currently uses of them. */
 export const Org = OrgRef.extend({
+  slug_locked: z.boolean().describe("true once the org has published skills: `@<slug>/…` references must keep resolving"),
   limits: z.object({ skills: quota, storage_bytes: quota, seats: quota }),
   usage: z.object({
     skills: z.int().describe("units with at least one version, in every scope"),
@@ -27,6 +28,15 @@ export const Org = OrgRef.extend({
   }),
 }).meta({ id: "Org" });
 export type Org = z.infer<typeof Org>;
+
+/** Body of PATCH /v1/org (admins). */
+export const OrgUpdateRequest = z
+  .object({
+    name: z.string().trim().min(1).max(80).optional(),
+    slug: z.string().optional().describe("lowercase letters, digits and hyphens, 2-39 characters"),
+  })
+  .meta({ id: "OrgUpdateRequest" });
+export type OrgUpdateRequest = z.infer<typeof OrgUpdateRequest>;
 
 export const Role = z.enum(["admin", "member"]).meta({ id: "Role" });
 export type Role = z.infer<typeof Role>;

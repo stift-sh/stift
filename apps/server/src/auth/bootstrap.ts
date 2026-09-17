@@ -2,15 +2,19 @@ import { and, eq } from "drizzle-orm";
 import type { Db } from "../db/client.js";
 import { orgs } from "../db/schema.js";
 import { orgLimitsFromEnv, setOrgLimits } from "../limits.js";
+import { validSlug } from "../storage/validate.js";
 import { createToken, hasTokens, registerToken } from "./tokens.js";
 
 /** The single org of a self-hosted server. Its id is "" so rows written
  *  before orgs existed already belong to it. */
 export const DEFAULT_ORG = "";
 
-/** Ensures the default org exists. Name from STIFT_ORG_NAME (first start
- *  only; rename via the API later). Safe to run on every start. */
+/** Ensures the default org exists. Name from STIFT_ORG_NAME and slug from
+ *  STIFT_ORG_SLUG (first start only; change them via the API later). Safe
+ *  to run on every start. */
 export async function ensureDefaultOrg(db: Db, env: NodeJS.ProcessEnv = process.env) {
+  const slug = env.STIFT_ORG_SLUG;
+  if (slug && !validSlug(slug)) throw new Error("STIFT_ORG_SLUG: expected 2-39 lowercase letters, digits or hyphens");
   await db
     .insert(orgs)
     .values({ id: DEFAULT_ORG, slug: "default", name: env.STIFT_ORG_NAME ?? "Default" })
@@ -20,6 +24,9 @@ export async function ensureDefaultOrg(db: Db, env: NodeJS.ProcessEnv = process.
   if (env.STIFT_ORG_NAME) {
     await db.update(orgs).set({ name: env.STIFT_ORG_NAME }).where(and(eq(orgs.id, DEFAULT_ORG), eq(orgs.name, "Default")));
   }
+  // Same rule for the slug: only while it is still the seeded "default",
+  // which can never have published anything.
+  if (slug) await db.update(orgs).set({ slug }).where(and(eq(orgs.id, DEFAULT_ORG), eq(orgs.slug, "default")));
   return (await db.query.orgs.findFirst({ where: eq(orgs.id, DEFAULT_ORG) }))!;
 }
 

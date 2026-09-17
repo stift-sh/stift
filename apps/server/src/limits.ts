@@ -2,6 +2,7 @@ import { and, count, eq, gt, sum } from "drizzle-orm";
 import type { Org } from "@stift/shared";
 import type { Db } from "./db/client.js";
 import { blobs, bundles, memberships, orgs } from "./db/schema.js";
+import { publishedCount } from "./auth/orgs.js";
 
 /** Upload size limits; defaults match the Go server. A request-size guard,
  *  global to the server; the per-org quota is `OrgLimits` below. */
@@ -92,11 +93,17 @@ export async function countSeats(db: Pick<Db, "select">, orgId: string) {
 export async function orgOverview(db: Db, orgId: string): Promise<Org | undefined> {
   const [org] = await db.select().from(orgs).where(eq(orgs.id, orgId));
   if (!org) return undefined;
-  const [skills, storage_bytes, seats] = await Promise.all([countSkills(db, orgId), storageBytes(db, orgId), countSeats(db, orgId)]);
+  const [skills, storage_bytes, seats, published] = await Promise.all([
+    countSkills(db, orgId),
+    storageBytes(db, orgId),
+    countSeats(db, orgId),
+    publishedCount(db, orgId),
+  ]);
   return {
     id: org.id,
     slug: org.slug,
     name: org.name,
+    slug_locked: published > 0,
     limits: { skills: org.maxSkills, storage_bytes: org.maxStorageBytes, seats: org.maxSeats },
     usage: { skills, storage_bytes, seats },
   };

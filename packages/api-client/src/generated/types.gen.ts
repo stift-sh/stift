@@ -195,6 +195,10 @@ export type Org = {
     id: string;
     slug: string;
     name: string;
+    /**
+     * true once the org has published skills: `@<slug>/…` references must keep resolving
+     */
+    slug_locked: boolean;
     limits: {
         skills: number | null;
         storage_bytes: number | null;
@@ -214,6 +218,14 @@ export type Org = {
          */
         seats: number;
     };
+};
+
+export type OrgUpdateRequest = {
+    name?: string;
+    /**
+     * lowercase letters, digits and hyphens, 2-39 characters
+     */
+    slug?: string;
 };
 
 export type Member = {
@@ -1000,6 +1012,47 @@ export type GetV1OrgResponses = {
 };
 
 export type GetV1OrgResponse = GetV1OrgResponses[keyof GetV1OrgResponses];
+
+export type PatchV1OrgData = {
+    body: OrgUpdateRequest;
+    path?: never;
+    query?: never;
+    url: '/v1/org';
+};
+
+export type PatchV1OrgErrors = {
+    /**
+     * bad request
+     */
+    400: _Error;
+    /**
+     * missing or invalid bearer token
+     */
+    401: _Error;
+    /**
+     * forbidden
+     */
+    403: _Error;
+    /**
+     * not found
+     */
+    404: _Error;
+    /**
+     * conflict
+     */
+    409: _Error;
+};
+
+export type PatchV1OrgError = PatchV1OrgErrors[keyof PatchV1OrgErrors];
+
+export type PatchV1OrgResponses = {
+    /**
+     * the updated org
+     */
+    200: Org;
+};
+
+export type PatchV1OrgResponse = PatchV1OrgResponses[keyof PatchV1OrgResponses];
 
 export type GetV1MembersData = {
     body?: never;

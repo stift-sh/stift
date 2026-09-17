@@ -324,6 +324,7 @@ app show limits next to current usage.
 | `PORT` | server | listen port (default `8580`) |
 | `STIFT_ADMIN_TOKEN` | server | register a fixed admin token at startup (user `env-admin`) |
 | `STIFT_ORG_NAME` | server | display name of the org (default `Default`); applied while the org still has the default name, so a rename is not overwritten |
+| `STIFT_ORG_SLUG` | server | slug of the org (default `default`): 2-39 lowercase letters, digits or hyphens. Applied while the slug is still `default`; admins change it later with `PATCH /v1/org` or on the org card |
 | `STIFT_DATABASE_URL` | server | Postgres connection string (required) |
 | `STIFT_S3_BUCKET`, `STIFT_S3_ENDPOINT`, `STIFT_S3_REGION`, `STIFT_S3_ACCESS_KEY`, `STIFT_S3_SECRET_KEY`, `STIFT_S3_FORCE_PATH_STYLE`, `STIFT_S3_PREFIX` | server | blob storage (any S3-compatible API) |
 | `STIFT_MAX_SKILLS`, `STIFT_MAX_STORAGE_BYTES`, `STIFT_MAX_SEATS` | server | limits of the default org, applied at startup: a positive integer, or `unlimited` to clear one (default: unlimited). Writes over a limit get `402`; `GET /v1/org` shows limits and usage |

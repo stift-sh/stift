@@ -319,9 +319,12 @@ type Org struct {
 		Skills       int `json:"skills"`
 		StorageBytes int `json:"storage_bytes"`
 	} `json:"limits"`
-	Name  string `json:"name"`
-	Slug  string `json:"slug"`
-	Usage struct {
+	Name string `json:"name"`
+	Slug string `json:"slug"`
+
+	// SlugLocked true once the org has published skills: `@<slug>/…` references must keep resolving
+	SlugLocked bool `json:"slug_locked"`
+	Usage      struct {
 		// Seats members
 		Seats int `json:"seats"`
 
@@ -338,6 +341,14 @@ type OrgRef struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 	Slug string `json:"slug"`
+}
+
+// OrgUpdateRequest defines model for OrgUpdateRequest.
+type OrgUpdateRequest struct {
+	Name string `json:"name,omitempty"`
+
+	// Slug lowercase letters, digits and hyphens, 2-39 characters
+	Slug string `json:"slug,omitempty"`
 }
 
 // PushMeta JSON; must precede archive
@@ -551,6 +562,9 @@ type PostV1MembersJSONRequestBody = MemberCreateRequest
 
 // PatchV1MembersIDJSONRequestBody defines body for PatchV1MembersID for application/json ContentType.
 type PatchV1MembersIDJSONRequestBody = MemberUpdateRequest
+
+// PatchV1OrgJSONRequestBody defines body for PatchV1Org for application/json ContentType.
+type PatchV1OrgJSONRequestBody = OrgUpdateRequest
 
 // PostV1SessionsMultipartRequestBody defines body for PostV1Sessions for multipart/form-data ContentType.
 type PostV1SessionsMultipartRequestBody PostV1SessionsMultipartBody

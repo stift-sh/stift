@@ -27,6 +27,7 @@ services:
       # STIFT_ADMIN_TOKEN: stf_change-me
       # Optional: name the org, cap it (default: unlimited).
       # STIFT_ORG_NAME: Acme
+      # STIFT_ORG_SLUG: acme
       # STIFT_MAX_SEATS: "25"
     restart: unless-stopped
 

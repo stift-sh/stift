@@ -8,6 +8,12 @@ export function validOrgId(orgId: string): boolean {
   return orgId === "" || /^[A-Za-z0-9_-]+$/.test(orgId);
 }
 
+/** Org slugs are the public namespace (`@<slug>/<name>`): lowercase, 2-39
+ *  characters, no leading hyphen. */
+export function validSlug(slug: string): boolean {
+  return /^[a-z0-9][a-z0-9-]{1,38}$/.test(slug);
+}
+
 /** Lowercase hex SHA-256 digest. */
 export function validSha(sha: string): boolean {
   return /^[0-9a-f]{64}$/.test(sha);
