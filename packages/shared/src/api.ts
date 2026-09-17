@@ -70,7 +70,8 @@ export const TokenInfo = z
   .object({
     id: z.string(),
     name: z.string(),
-    admin: z.boolean(),
+    /** The role of the token's user; a token has no role of its own. */
+    role: Role,
     created_at: timestamp,
     /** Null until the token authenticates a request; updated at most once a minute. */
     last_used_at: timestamp.nullable(),
@@ -88,10 +89,8 @@ export type TokenCreated = z.infer<typeof TokenCreated>;
 export const Whoami = z
   .object({
     name: z.string(),
-    /** Derived from `role`; kept for older clients. */
-    admin: z.boolean(),
-    role: Role.optional(),
-    user: UserRef.optional(),
+    role: Role,
+    user: UserRef,
     org: OrgRef.optional(),
   })
   .meta({ id: "Whoami" });
@@ -201,7 +200,6 @@ export type BundleInput = z.infer<typeof BundleInput>;
 export const TokenCreateRequest = z
   .object({
     name: z.string(),
-    admin: z.boolean().optional(),
     /** Admins only: mint the token for another member (by user id or name). */
     user: z.string().optional(),
   })

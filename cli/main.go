@@ -92,6 +92,8 @@ Client:
   stift pull --skills [flags]       Download agent config; --scope user,project,org
   stift skills list|history NAME|diff NAME [N]|rollback NAME N|delete NAME
                                     Inspect and roll back per-unit config versions
+  stift skills install NAME | outdated
+                                    Copy an org unit for editing; list copies behind the org
   stift list [flags]                List sessions stored on the server
   stift delete ID...                Delete sessions from the server
   stift agents [flags]              Show sessions detected on this machine

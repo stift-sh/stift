@@ -32,7 +32,7 @@ describe("local tokens", { skip: dbUrl ? false : "STIFT_TEST_DATABASE_URL not se
     const auth = new TokenAuthenticator(conn.db);
     const id = await auth.authenticate(raw);
     assert.equal(id?.userId.length, 16);
-    assert.deepEqual(id, { id: info.id, userId: id!.userId, userName: "ci", orgId: "", name: "ci", role: "member", admin: false });
+    assert.deepEqual(id, { id: info.id, userId: id!.userId, userName: "ci", orgId: "", name: "ci", role: "member" });
     assert.equal(await auth.authenticate(raw.slice(0, -1) + (raw.endsWith("0") ? "1" : "0")), null);
     assert.equal(await auth.authenticate("nope"), null);
   });
@@ -70,7 +70,7 @@ describe("local tokens", { skip: dbUrl ? false : "STIFT_TEST_DATABASE_URL not se
     const list = await listTokens(conn.db, "");
     assert.equal(list.length, 1);
     assert.equal(list[0]!.name, "env-admin");
-    assert.equal(list[0]!.admin, true);
+    assert.equal(list[0]!.role, "admin");
 
     // A rotated env token is a second token of the same env-admin user.
     await bootstrap(conn.db, { STIFT_ADMIN_TOKEN: "stf_" + "c".repeat(48) }, (m) => logs.push(m));
@@ -95,11 +95,11 @@ describe("local tokens", { skip: dbUrl ? false : "STIFT_TEST_DATABASE_URL not se
     await conn.db.update(memberships).set({ role: "admin" }).where(eq(memberships.userId, before!.userId));
     const after = await auth.authenticate(raw);
     assert.equal(after?.role, "admin");
-    assert.equal(after?.admin, true);
-    assert.equal((await listTokens(conn.db, ""))[0]!.admin, true);
+    assert.equal(after?.role, "admin");
+    assert.equal((await listTokens(conn.db, ""))[0]!.role, "admin");
     // A second token for the same user shares the role.
     const second = await createToken(conn.db, "", "desktop", { userId: before!.userId });
-    assert.equal(second.info.admin, true);
+    assert.equal(second.info.role, "admin");
     assert.equal((await auth.authenticate(second.raw))?.userId, before!.userId);
   });
 });

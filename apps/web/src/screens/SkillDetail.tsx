@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
-import { ApiError, roleOf, useIdentity } from "../api/auth";
+import { ApiError, useIdentity } from "../api/auth";
 import { useMembers } from "../api/members";
 import { useInstalls } from "../api/org";
 import { fetchBlobText, isEditable, keyHref, type SkillKey, unitLabel, useBlobText, useBundle, useBundleHistory, useDeleteBundle, usePublish, useRollback } from "../api/skills";
@@ -38,7 +38,7 @@ export function SkillDetail() {
   const del = useDeleteBundle();
   const removeFile = usePublish();
   // Org units are published by admins; other members read them.
-  const canWrite = roleOf(useIdentity().data) === "admin" || key.scope !== "org";
+  const canWrite = useIdentity().data?.role === "admin" || key.scope !== "org";
   const [confirm, setConfirm] = useState<"delete" | "rollback" | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
   const [raw, setRaw] = useState(false);

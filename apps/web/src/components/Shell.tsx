@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from "react-router";
-import { roleOf, useIdentity, useLogout } from "../api/auth";
+import { useIdentity, useLogout } from "../api/auth";
 import { useServerVersion } from "../api/version";
 import { Logo } from "./Logo";
 import s from "./Shell.module.css";
@@ -22,7 +22,7 @@ export function Shell() {
   const logout = useLogout();
   const features = version.data?.features ?? [];
   const cloud = features.includes("cloud");
-  const nav = NAV.filter((i) => (!i.admin || roleOf(me.data) === "admin") && (!i.feature || features.includes(i.feature)));
+  const nav = NAV.filter((i) => (!i.admin || me.data?.role === "admin") && (!i.feature || features.includes(i.feature)));
 
   return (
     <div className={s.app}>
@@ -49,7 +49,7 @@ export function Shell() {
             <span className={s.identity}>
               <span className={s.name}>{me.data.user?.name ?? me.data.name}</span>
               {me.data.org && <> · {me.data.org.name}</>}
-              <> · {roleOf(me.data)}</>
+              <> · {me.data?.role}</>
             </span>
           )}
           <button type="button" className="btn btn--sm btn--ghost" onClick={logout}>

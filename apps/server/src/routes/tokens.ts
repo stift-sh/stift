@@ -61,11 +61,9 @@ export function tokens(db: Db) {
       const body = c.req.valid("json");
       const id = c.var.identity;
       if (!body.name) return err(c, 400, "name is required");
-      // `admin` is a property of the caller's role now, not of the token.
-      if (body.admin && !can(id, { action: "token.manage" })) return err(c, 403, "admin token required");
       let userId = id.userId;
       if (body.user) {
-        if (!can(id, { action: "member.manage" })) return err(c, 403, "admin token required");
+        if (!can(id, { action: "member.manage" })) return err(c, 403, "admin role required");
         const m = await memberByName(db, id.orgId, body.user);
         if (!m) return err(c, 404, "no such member");
         userId = m.id;

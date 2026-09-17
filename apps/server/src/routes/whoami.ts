@@ -30,7 +30,6 @@ export function whoami(db?: Db) {
       return c.json(
         {
           name: id.name,
-          admin: id.admin,
           role: id.role,
           user: { id: id.userId, name: id.userName },
           ...(org ? { org: { id: org.id, slug: org.slug, name: org.name } } : {}),

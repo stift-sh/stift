@@ -415,29 +415,28 @@ type SkillMeta struct {
 
 // TokenCreateRequest defines model for TokenCreateRequest.
 type TokenCreateRequest struct {
-	Admin bool   `json:"admin,omitempty"`
-	Name  string `json:"name"`
-	User  string `json:"user,omitempty"`
+	Name string `json:"name"`
+	User string `json:"user,omitempty"`
 }
 
 // TokenCreated defines model for TokenCreated.
 type TokenCreated struct {
-	Admin      bool      `json:"admin"`
 	CreatedAt  time.Time `json:"created_at"`
 	ID         string    `json:"id"`
 	LastUsedAt time.Time `json:"last_used_at"`
 	Name       string    `json:"name"`
+	Role       Role      `json:"role"`
 	Token      string    `json:"token"`
 	User       UserRef   `json:"user,omitempty"`
 }
 
 // TokenInfo defines model for TokenInfo.
 type TokenInfo struct {
-	Admin      bool      `json:"admin"`
 	CreatedAt  time.Time `json:"created_at"`
 	ID         string    `json:"id"`
 	LastUsedAt time.Time `json:"last_used_at"`
 	Name       string    `json:"name"`
+	Role       Role      `json:"role"`
 	User       UserRef   `json:"user,omitempty"`
 }
 
@@ -459,11 +458,10 @@ type Version struct {
 
 // Whoami defines model for Whoami.
 type Whoami struct {
-	Admin bool    `json:"admin"`
-	Name  string  `json:"name"`
-	Org   OrgRef  `json:"org,omitempty"`
-	Role  Role    `json:"role,omitempty"`
-	User  UserRef `json:"user,omitempty"`
+	Name string  `json:"name"`
+	Org  OrgRef  `json:"org,omitempty"`
+	Role Role    `json:"role"`
+	User UserRef `json:"user"`
 }
 
 // GetV1BundlesParams defines parameters for GetV1Bundles.

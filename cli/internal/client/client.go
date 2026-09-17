@@ -167,9 +167,9 @@ func (c *Client) Delete(id string) error {
 
 // TokenCreate mints a token for the caller, or for another member (admins
 // only) when user is set.
-func (c *Client) TokenCreate(name string, admin bool, user string) (api.TokenCreated, error) {
+func (c *Client) TokenCreate(name string, user string) (api.TokenCreated, error) {
 	var out api.TokenCreated
-	return out, c.postJSON("/v1/tokens", api.TokenCreateRequest{Name: name, Admin: admin, User: user}, &out)
+	return out, c.postJSON("/v1/tokens", api.TokenCreateRequest{Name: name, User: user}, &out)
 }
 
 func (c *Client) postJSON(path string, in, out any) error {

@@ -4,7 +4,7 @@ import type { TokenInfo } from "@stift/shared";
 import type { Db } from "../db/client.js";
 import { memberships, tokens, users, type Role } from "../db/schema.js";
 import type { Authenticator } from "./authenticator.js";
-import { identity, type Identity } from "./identity.js";
+import type { Identity } from "./identity.js";
 
 /** Marks stift access tokens so they are recognizable in configs and secret
  *  scanners. Format and hashing are byte-compatible with the Go server. */
@@ -17,7 +17,7 @@ type UserRow = { id: string; name: string };
 const info = (r: Row, role: Role, user: UserRow): TokenInfo => ({
   id: r.id,
   name: r.name,
-  admin: role === "admin",
+  role,
   created_at: r.createdAt.toISOString(),
   last_used_at: r.lastUsedAt ? r.lastUsedAt.toISOString() : null,
   user,
@@ -118,6 +118,6 @@ export class TokenAuthenticator implements Authenticator {
       .where(and(eq(tokens.id, row.token.id), sql`(${tokens.lastUsedAt} is null or ${tokens.lastUsedAt} < now() - interval '1 minute')`))
       .catch(() => {});
     const t = row.token;
-    return identity({ id: t.id, userId: t.userId, userName: row.user.name, orgId: t.orgId, name: t.name, role: row.role ?? "member" });
+    return { id: t.id, userId: t.userId, userName: row.user.name, orgId: t.orgId, name: t.name, role: row.role ?? "member" };
   }
 }

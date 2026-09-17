@@ -50,7 +50,7 @@ export function members(db: Db) {
     }),
     async (c) => {
       const id = c.var.identity;
-      if (!can(id, { action: "member.manage" })) return err(c, 403, "admin token required");
+      if (!can(id, { action: "member.manage" })) return err(c, 403, "admin role required");
       const body = c.req.valid("json");
       const name = body.name.trim();
       if (!name) return err(c, 400, "name is required");
@@ -82,7 +82,7 @@ export function members(db: Db) {
     }),
     async (c) => {
       const id = c.var.identity;
-      if (!can(id, { action: "member.manage" })) return err(c, 403, "admin token required");
+      if (!can(id, { action: "member.manage" })) return err(c, 403, "admin role required");
       const m = await findMember(db, id.orgId, c.req.valid("param").id);
       if (!m) return err(c, 404, "no such member");
       const { role } = c.req.valid("json");
@@ -108,7 +108,7 @@ export function members(db: Db) {
     }),
     async (c) => {
       const id = c.var.identity;
-      if (!can(id, { action: "member.manage" })) return err(c, 403, "admin token required");
+      if (!can(id, { action: "member.manage" })) return err(c, 403, "admin role required");
       const m = await findMember(db, id.orgId, c.req.valid("param").id);
       if (!m) return err(c, 404, "no such member");
       if (m.id === id.userId) return err(c, 400, "refusing to remove yourself");

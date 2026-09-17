@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from "react";
 import type { Member, MemberCreated, Role } from "@stift/shared";
-import { roleOf, useIdentity } from "../api/auth";
+import { useIdentity } from "../api/auth";
 import { useAddMember, useMembers, useRemoveMember, useSetRole } from "../api/members";
 import { isLimit, LimitNotice } from "../components/LimitNotice";
 import { OrgCard } from "../components/OrgCard";
@@ -12,7 +12,7 @@ import s from "./Tokens.module.css";
 export function Members() {
   const members = useMembers();
   const me = useIdentity();
-  const admin = roleOf(me.data) === "admin";
+  const admin = me.data?.role === "admin";
   const [adding, setAdding] = useState(false);
   const [added, setAdded] = useState<MemberCreated | null>(null);
 

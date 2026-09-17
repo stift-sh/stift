@@ -23,7 +23,7 @@ describe("tokens routes", { skip }, () => {
     assert.equal(r.status, 201);
     const created = (await r.json()) as TokenCreated;
     assert.ok(created.token.startsWith("stf_"));
-    assert.equal(created.admin, true); // the admin's own token
+    assert.equal(created.role, "admin"); // the admin's own token
     assert.equal(created.user?.name, "admin");
 
     r = await req(t.app, "GET", "/v1/whoami", created.token);
@@ -47,22 +47,22 @@ describe("tokens routes", { skip }, () => {
   test("members see and manage only their own tokens", async () => {
     let r = await req(t.app, "GET", "/v1/whoami", t.member);
     const me = (await r.json()) as Whoami;
-    assert.equal(me.admin, false);
     assert.equal(me.role, "member");
 
     r = await create(t.member, JSON.stringify({ name: "phone" }));
     assert.equal(r.status, 201);
     const mine = (await r.json()) as TokenCreated;
-    assert.equal(mine.admin, false);
+    assert.equal(mine.role, "member");
     assert.equal(mine.user?.name, "dev");
 
+    // A token has the role of its user: a stale `admin` in the body is ignored.
     r = await create(t.member, JSON.stringify({ name: "x", admin: true }));
-    assert.equal(r.status, 403);
-    assert.deepEqual(await r.json(), { error: "admin token required" });
+    assert.equal(r.status, 201);
+    assert.equal(((await r.json()) as TokenCreated).role, "member");
 
     r = await req(t.app, "GET", "/v1/tokens", t.member);
     const list = (await r.json()) as TokenInfo[];
-    assert.deepEqual(list.map((x) => x.name), ["dev", "phone"]);
+    assert.deepEqual(list.map((x) => x.name), ["dev", "phone", "x"]);
 
     // Someone else's token: 404, not 403.
     const admins = (await (await req(t.app, "GET", "/v1/tokens", t.admin)).json()) as TokenInfo[];

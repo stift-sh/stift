@@ -143,7 +143,7 @@ describe("bundles routes", { skip }, () => {
 
     let r = await putBundle(user, "/v1/bundles/org/claude/CLAUDE.md", m);
     assert.equal(r.status, 403);
-    assert.deepEqual(await r.json(), { error: "org scope requires an admin token" });
+    assert.deepEqual(await r.json(), { error: "org scope requires the admin role" });
     r = await putBundle(t.admin, "/v1/bundles/org/claude/CLAUDE.md", m);
     assert.equal(r.status, 201);
     assert.equal((await getJson(user, "/v1/bundles/org/claude/CLAUDE.md")).status, 200);

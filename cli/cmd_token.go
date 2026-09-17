@@ -21,10 +21,9 @@ func cmdToken(args []string) error {
 	switch args[0] {
 	case "create":
 		fs := flag.NewFlagSet("token create", flag.ExitOnError)
-		admin := fs.Bool("admin", false, "accepted for admins only; a token has the role of its user")
 		user := fs.String("user", "", "mint the token for another member (admins only)")
 		fs.Usage = func() {
-			fmt.Fprintln(os.Stderr, "usage: stift token create [--user <member>] [--admin] <name>")
+			fmt.Fprintln(os.Stderr, "usage: stift token create [--user <member>] <name>")
 			fs.PrintDefaults()
 		}
 		fs.Parse(args[1:])
@@ -32,7 +31,7 @@ func cmdToken(args []string) error {
 			fs.Usage()
 			os.Exit(2)
 		}
-		created, err := c.TokenCreate(fs.Arg(0), *admin, *user)
+		created, err := c.TokenCreate(fs.Arg(0), *user)
 		if err != nil {
 			return err
 		}
@@ -45,13 +44,13 @@ func cmdToken(args []string) error {
 			return err
 		}
 		w := tabwriter.NewWriter(os.Stdout, 2, 4, 2, ' ', 0)
-		fmt.Fprintln(w, "ID\tNAME\tUSER\tADMIN\tCREATED\tLAST USED")
+		fmt.Fprintln(w, "ID\tNAME\tUSER\tROLE\tCREATED\tLAST USED")
 		for _, t := range tokens {
 			last := "never"
 			if !t.LastUsedAt.IsZero() {
 				last = t.LastUsedAt.Local().Format("2006-01-02 15:04")
 			}
-			fmt.Fprintf(w, "%s\t%s\t%s\t%v\t%s\t%s\n", t.ID, t.Name, t.User.Name, t.Admin, t.CreatedAt.Local().Format("2006-01-02 15:04"), last)
+			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n", t.ID, t.Name, t.User.Name, t.Role, t.CreatedAt.Local().Format("2006-01-02 15:04"), last)
 		}
 		return w.Flush()
 	case "revoke":

@@ -14,15 +14,15 @@ beforeEach(() => {
   posted = [];
   setToken(TOKEN);
   tokens = [
-    { id: "t1", name: "laptop", admin: false, created_at: "2026-08-27T10:00:00Z", last_used_at: null, user: { id: "u-dev", name: "dev" } },
-    { id: "t2", name: "root", admin: true, created_at: "2026-08-20T10:00:00Z", last_used_at: "2026-08-20T12:00:00Z", user: { id: "u-root", name: "root" } },
+    { id: "t1", name: "laptop", role: "member", created_at: "2026-08-27T10:00:00Z", last_used_at: null, user: { id: "u-dev", name: "dev" } },
+    { id: "t2", name: "root", role: "admin", created_at: "2026-08-20T10:00:00Z", last_used_at: "2026-08-20T12:00:00Z", user: { id: "u-root", name: "root" } },
   ];
   server.use(
     http.get("*/v1/tokens", () => HttpResponse.json(tokens)),
     http.post("*/v1/tokens", async ({ request }) => {
-      const body = (await request.json()) as { name: string; admin?: boolean; user?: string };
+      const body = (await request.json()) as { name: string; user?: string };
       posted.push(body);
-      const info = { id: "t3", name: body.name, admin: body.admin ?? false, created_at: "2026-08-27T11:00:00Z", last_used_at: null };
+      const info: TokenInfo = { id: "t3", name: body.name, role: body.user ? "member" : "admin", created_at: "2026-08-27T11:00:00Z", last_used_at: null };
       tokens = [...tokens, info];
       return HttpResponse.json({ ...info, token: SECRET }, { status: 201 });
     }),
@@ -45,7 +45,7 @@ test("lists tokens with their role and, for admins, their user", async () => {
   expect(screen.getByText("root", { selector: "td.mono" }).closest("tr")).toHaveTextContent(/never|ago/);
 });
 
-test("members see their own tokens without the user column or admin checkbox", async () => {
+test("members see their own tokens without the user column", async () => {
   server.use(
     http.get("*/v1/whoami", () => HttpResponse.json(member)),
     http.get("*/v1/tokens", () => HttpResponse.json([tokens[0]])),
@@ -56,8 +56,7 @@ test("members see their own tokens without the user column or admin checkbox", a
   expect(screen.queryByRole("columnheader", { name: "User" })).not.toBeInTheDocument();
   expect(screen.queryByText("root", { selector: "td" })).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "Create token" }));
-  const form = screen.getByRole("form", { name: "Create token" });
-  expect(within(form).queryByRole("checkbox")).not.toBeInTheDocument();
+  expect(within(screen.getByRole("form", { name: "Create token" })).queryByLabelText("For")).not.toBeInTheDocument();
 });
 
 test("empty list explains the secret is shown once", async () => {
@@ -72,7 +71,6 @@ test("create shows the secret once and refreshes the list", async () => {
   await userEvent.click(screen.getByRole("button", { name: "Create token" }));
   const form = screen.getByRole("form", { name: "Create token" });
   await userEvent.type(within(form).getByLabelText("Name"), "ci");
-  await userEvent.click(within(form).getByRole("checkbox"));
   await userEvent.click(within(form).getByRole("button", { name: "Create" }));
 
   const created = await screen.findByRole("region", { name: "Token created" });
@@ -122,5 +120,5 @@ test("admins can mint a token for another member", async () => {
   await userEvent.selectOptions(await within(form).findByLabelText("For"), "dev");
   await userEvent.click(within(form).getByRole("button", { name: "Create" }));
   await screen.findByRole("region", { name: "Token created" });
-  expect(posted).toEqual([{ name: "desktop", admin: false, user: "u-dev" }]);
+  expect(posted).toEqual([{ name: "desktop", user: "u-dev" }]);
 });

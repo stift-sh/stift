@@ -27,7 +27,7 @@ describe("members routes", { skip }, () => {
 
     r = await post(t.member, { name: "eve" });
     assert.equal(r.status, 403);
-    assert.deepEqual(await r.json(), { error: "admin token required" });
+    assert.deepEqual(await r.json(), { error: "admin role required" });
     r = await patch(t.member, list[0]!.id, { role: "member" });
     assert.equal(r.status, 403);
     r = await req(t.app, "DELETE", `/v1/members/${list[0]!.id}`, t.member);
@@ -98,7 +98,7 @@ describe("members routes", { skip }, () => {
     assert.equal(r.status, 201);
     const tok = (await r.json()) as TokenCreated;
     assert.equal(tok.user?.name, "dev");
-    assert.equal(tok.admin, false);
+    assert.equal(tok.role, "member");
     r = await req(t.app, "GET", "/v1/whoami", tok.token);
     assert.equal(((await r.json()) as Whoami).role, "member");
 
@@ -110,6 +110,6 @@ describe("members routes", { skip }, () => {
     assert.equal(r.status, 404);
     r = await create(t.member, { name: "x", user: "admin" });
     assert.equal(r.status, 403);
-    assert.deepEqual(await r.json(), { error: "admin token required" });
+    assert.deepEqual(await r.json(), { error: "admin role required" });
   });
 });

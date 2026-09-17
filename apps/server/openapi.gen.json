@@ -43,9 +43,6 @@
           "name": {
             "type": "string"
           },
-          "admin": {
-            "type": "boolean"
-          },
           "role": {
             "$ref": "#/components/schemas/Role"
           },
@@ -58,7 +55,8 @@
         },
         "required": [
           "name",
-          "admin"
+          "role",
+          "user"
         ]
       },
       "Role": {
@@ -446,8 +444,8 @@
           "name": {
             "type": "string"
           },
-          "admin": {
-            "type": "boolean"
+          "role": {
+            "$ref": "#/components/schemas/Role"
           },
           "created_at": {
             "type": "string",
@@ -467,7 +465,7 @@
         "required": [
           "id",
           "name",
-          "admin",
+          "role",
           "created_at",
           "last_used_at"
         ]
@@ -481,8 +479,8 @@
           "name": {
             "type": "string"
           },
-          "admin": {
-            "type": "boolean"
+          "role": {
+            "$ref": "#/components/schemas/Role"
           },
           "created_at": {
             "type": "string",
@@ -505,7 +503,7 @@
         "required": [
           "id",
           "name",
-          "admin",
+          "role",
           "created_at",
           "last_used_at",
           "token"
@@ -516,9 +514,6 @@
         "properties": {
           "name": {
             "type": "string"
-          },
-          "admin": {
-            "type": "boolean"
           },
           "user": {
             "type": "string"

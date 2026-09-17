@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from "react";
 import type { TokenCreated, TokenInfo } from "@stift/shared";
-import { roleOf, useIdentity } from "../api/auth";
+import { useIdentity } from "../api/auth";
 import { useMembers } from "../api/members";
 import { useCreateToken, useRevokeToken, useTokens } from "../api/tokens";
 import { EmptyState, ErrorState, PageHeader, Spinner } from "../components/States";
@@ -11,7 +11,7 @@ import s from "./Tokens.module.css";
 export function Tokens() {
   const tokens = useTokens();
   const me = useIdentity();
-  const admin = roleOf(me.data) === "admin";
+  const admin = me.data?.role === "admin";
   const [creating, setCreating] = useState(false);
   const [created, setCreated] = useState<TokenCreated | null>(null);
   const [user, setUser] = useState("");
@@ -100,14 +100,12 @@ function CreateForm({ admin: isAdmin, self, onCancel, onCreated }: { admin: bool
   const create = useCreateToken();
   const members = useMembers(isAdmin);
   const [name, setName] = useState("");
-  const [admin, setAdmin] = useState(false);
   const [forUser, setForUser] = useState("");
 
   function submit(e: FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
-    // A token has the role of its user; `admin` is only meaningful for admins.
-    create.mutate(isAdmin ? { name: name.trim(), admin, user: forUser || undefined } : { name: name.trim() }, { onSuccess: onCreated });
+    create.mutate({ name: name.trim(), user: forUser || undefined }, { onSuccess: onCreated });
   }
 
   return (
@@ -140,12 +138,6 @@ function CreateForm({ admin: isAdmin, self, onCancel, onCreated }: { admin: bool
           </select>
         </label>
       )}
-      {isAdmin && (
-        <label className={s.check}>
-          <input type="checkbox" checked={admin} onChange={(e) => setAdmin(e.target.checked)} disabled={create.isPending} />
-          Admin (may manage tokens and org-scope skills)
-        </label>
-      )}
       {create.isError && (
         <p className={s.error} role="alert">
           {create.error.message}
@@ -170,7 +162,7 @@ function Row({ token, showUser }: { token: TokenInfo; showUser: boolean }) {
     <tr>
       <td className="mono">{token.name}</td>
       {showUser && <td>{token.user?.name ?? <span className="dim">—</span>}</td>}
-      <td>{token.admin ? <span className="badge badge--admin">admin</span> : <span className="badge">member</span>}</td>
+      <td>{token.role === "admin" ? <span className="badge badge--admin">admin</span> : <span className="badge">member</span>}</td>
       <td className="mono dim">{token.id}</td>
       <td className="num dim" title={fmtTime(token.created_at)}>
         {ago(token.created_at)}

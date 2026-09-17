@@ -53,7 +53,7 @@ export function bundles(store: Store) {
   const denyWrite = async (c: Context<AuthEnv>, k: BundleKey) => {
     const id = c.var.identity;
     if (k.scope === "org" && !can(id, { action: "bundle.write", scope: "org", ownerId: null })) {
-      return err(c, 403, "org scope requires an admin token");
+      return err(c, 403, "org scope requires the admin role");
     }
     if (k.scope !== "user") return undefined;
     const ownerId = (await store.bundleOwner(id.orgId, k)) ?? null;
@@ -62,10 +62,10 @@ export function bundles(store: Store) {
   };
 
   r.use(keyPath.replace("{scope}", ":scope").replace("{agent}", ":agent").replace("{name}{.+}", "*"), async (c, next) => {
-    // Org scope writes need an admin token (requireScopeWrite); checked here
+    // Org scope writes need the admin role (requireScopeWrite); checked here
     // so the wording precedes body validation, as in the Go server.
-    if ((c.req.method === "PUT" || c.req.method === "DELETE") && c.req.path.startsWith("/v1/bundles/org/") && !c.var.identity.admin) {
-      return err(c, 403, "org scope requires an admin token");
+    if ((c.req.method === "PUT" || c.req.method === "DELETE") && c.req.path.startsWith("/v1/bundles/org/") && c.var.identity.role !== "admin") {
+      return err(c, 403, "org scope requires the admin role");
     }
     if (c.req.method === "PUT") {
       try {

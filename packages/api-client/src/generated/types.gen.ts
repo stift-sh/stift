@@ -18,9 +18,8 @@ export type Version = {
 
 export type Whoami = {
     name: string;
-    admin: boolean;
-    role?: Role;
-    user?: UserRef;
+    role: Role;
+    user: UserRef;
     org?: OrgRef;
 };
 
@@ -171,7 +170,7 @@ export type BundleInput = {
 export type TokenInfo = {
     id: string;
     name: string;
-    admin: boolean;
+    role: Role;
     created_at: string;
     last_used_at: string | null;
     user?: UserRef;
@@ -180,7 +179,7 @@ export type TokenInfo = {
 export type TokenCreated = {
     id: string;
     name: string;
-    admin: boolean;
+    role: Role;
     created_at: string;
     last_used_at: string | null;
     user?: UserRef;
@@ -189,7 +188,6 @@ export type TokenCreated = {
 
 export type TokenCreateRequest = {
     name: string;
-    admin?: boolean;
     user?: string;
 };
 

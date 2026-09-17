@@ -58,16 +58,14 @@ USER_TOKEN=$(echo "$OUT" | grep -o 'stf_[0-9a-f]*')
 OUT=$("$STIFT" user add dev 2>&1 || true)
 echo "$OUT" | grep -q 'already exists' || fail "duplicate user: $OUT"
 OUT=$(STIFT_TOKEN=$USER_TOKEN "$STIFT" user add eve 2>&1 || true)
-echo "$OUT" | grep -q 'admin token required' || fail "member user add: $OUT"
+echo "$OUT" | grep -q 'admin role required' || fail "member user add: $OUT"
 STIFT_TOKEN=$USER_TOKEN "$STIFT" user list | grep -q admin || fail "member user list"
 "$STIFT" token create --user dev dev-phone | grep -q 'created for dev' || fail "token create --user"
 "$STIFT" user role dev admin | grep -q 'now admin' || fail "user role admin"
-STIFT_TOKEN=$USER_TOKEN "$STIFT" token list | grep -q 'true' || fail "promoted member token has admin role"
+STIFT_TOKEN=$USER_TOKEN "$STIFT" token list | grep -q 'dev-laptop.*admin' || fail "promoted member token has admin role"
 "$STIFT" user role dev member | grep -q 'now member' || fail "user role member"
 OUT=$("$STIFT" user role env-admin member 2>&1 || true)
 echo "$OUT" | grep -q 'last admin' || fail "last admin guard: $OUT"
-OUT=$(STIFT_TOKEN=$USER_TOKEN "$STIFT" token create --admin x 2>&1 || true)
-echo "$OUT" | grep -q "admin token required" || fail "member --admin: $OUT"
 STIFT_TOKEN=$USER_TOKEN "$STIFT" token list | grep -q dev-laptop || fail "member token list"
 STIFT_TOKEN=$USER_TOKEN "$STIFT" token list | grep -q laptop$ && fail "member sees admin tokens"
 "$STIFT" token list | grep -q dev-laptop || fail "admin sees member tokens"
@@ -104,7 +102,7 @@ grep -q more "$HOME/.claude/skills/hello/SKILL.md" && fail "v1 should not contai
 mkdir -p "$HOME/.stift/org/claude/skills/policy"
 printf -- '---\nname: policy\ndescription: org rules\n---\n' >"$HOME/.stift/org/claude/skills/policy/SKILL.md"
 OUT=$(STIFT_TOKEN=$USER_TOKEN "$STIFT" push --skills --scope org 2>&1 || true)
-echo "$OUT" | grep -q "org scope requires an admin token" || fail "org gate (non-admin): $OUT"
+echo "$OUT" | grep -q "org scope requires the admin role" || fail "org gate (non-admin): $OUT"
 "$STIFT" push --skills --scope org || fail "org push (admin)"
 "$STIFT" skills list --scope org | grep -q "skills/policy" || fail "org list"
 # install with provenance: subscribe first (reported), then fork with --replace, then outdated

@@ -52,14 +52,6 @@ test("header shows user, org and role; members reach /tokens", async () => {
   expect(await screen.findByText("No tokens yet")).toBeInTheDocument();
 });
 
-test("an older server without roles falls back to the admin flag", async () => {
-  server.use(http.get("*/v1/whoami", () => HttpResponse.json({ name: "old", admin: true })));
-  setToken(TOKEN);
-  renderApp({ path: "/sessions" });
-  expect(await screen.findByText("old")).toBeInTheDocument();
-  expect(screen.getByText("old").closest("span")!.parentElement).toHaveTextContent("old · admin");
-});
-
 test("cloud entries appear only with the cloud feature", async () => {
   setToken(TOKEN);
   const first = renderApp({ path: "/sessions" });

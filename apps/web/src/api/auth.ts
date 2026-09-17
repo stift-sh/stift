@@ -70,10 +70,6 @@ export function useIdentity() {
   return useQuery({ queryKey: ["whoami"], queryFn: whoami, staleTime: Infinity, retry: false });
 }
 
-/** The caller's role; servers older than roles only send `admin`. */
-export const roleOf = (me: Pick<Whoami, "admin" | "role"> | undefined): "admin" | "member" | undefined =>
-  me && (me.role ?? (me.admin ? "admin" : "member"));
-
 export function useLogin() {
   const qc = useQueryClient();
   return useMutation({

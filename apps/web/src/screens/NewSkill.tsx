@@ -1,7 +1,7 @@
 // Create a unit from the browser: scope, agent, name and a first SKILL.md.
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { roleOf, useIdentity } from "../api/auth";
+import { useIdentity } from "../api/auth";
 import { keyHref, usePublish } from "../api/skills";
 import { isLimit, LimitNotice } from "../components/LimitNotice";
 import { PageHeader } from "../components/States";
@@ -45,7 +45,7 @@ export function NewSkill() {
             <span className="field-label">Scope</span>
             <select className="input" value={scope} onChange={(e) => setScope(e.target.value as "user" | "org")}>
               <option value="user">user</option>
-              {roleOf(me.data) === "admin" && <option value="org">org</option>}
+              {me.data?.role === "admin" && <option value="org">org</option>}
             </select>
           </label>
           <label className="field">

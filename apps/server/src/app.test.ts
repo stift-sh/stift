@@ -1,7 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
-import { identity } from "./auth/identity.js";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createApp } from "./app.js";
@@ -17,11 +16,11 @@ test("healthz and version", async () => {
 test("whoami requires a bearer token", async () => {
   const app = createApp({
     version: "1",
-    auth: { authenticate: async (raw) => (raw === "stf_ok" ? identity({ id: "1", userName: "u", userId: "u", orgId: "", name: "me", role: "admin" }) : null) },
+    auth: { authenticate: async (raw) => (raw === "stf_ok" ? { id: "1", userName: "u", userId: "u", orgId: "", name: "me", role: "admin" } : null) },
   });
   assert.equal((await app.request("/v1/whoami")).status, 401);
   const r = await app.request("/v1/whoami", { headers: { Authorization: "Bearer stf_ok" } });
-  assert.deepEqual(await r.json(), { name: "me", admin: true, role: "admin", user: { id: "u", name: "u" } });
+  assert.deepEqual(await r.json(), { name: "me", role: "admin", user: { id: "u", name: "u" } });
 });
 
 test("serves the web bundle with SPA fallback", async () => {
