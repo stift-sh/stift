@@ -2,7 +2,7 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { setToken } from "./api/client";
 import { renderApp } from "./test/render";
-import { http, HttpResponse, member, server } from "./test/msw";
+import { http, HttpResponse, member, orgOverview, server } from "./test/msw";
 
 const TOKEN = "stf_" + "a".repeat(48);
 beforeEach(() => setToken(TOKEN));
@@ -29,4 +29,14 @@ test("copy writes the command to the clipboard", async () => {
   await userEvent.click(screen.getAllByRole("button", { name: "Copy to clipboard" })[0]);
   expect(write).toHaveBeenCalledWith("curl -fsSL https://stift.sh/install.sh | sh");
   expect(await screen.findByText("Copied")).toBeInTheDocument();
+});
+
+test("the org card shows usage against the limits", async () => {
+  server.use(http.get("*/v1/org", () => HttpResponse.json({ ...orgOverview, limits: { skills: 2, storage_bytes: 4096, seats: null } })));
+  renderApp({ path: "/start" });
+  const card = await screen.findByRole("region", { name: "Organization" });
+  expect(card).toHaveTextContent("Acme");
+  expect(card).toHaveTextContent("2 / 2");
+  expect(card).toHaveTextContent("2.0 KB / 4.0 KB");
+  expect(card).toHaveTextContent("2 · unlimited");
 });

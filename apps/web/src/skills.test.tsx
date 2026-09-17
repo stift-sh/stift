@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import type { Bundle } from "@stift/shared";
 import { setToken } from "./api/client";
 import { renderApp } from "./test/render";
-import { http, HttpResponse, server } from "./test/msw";
+import { http, HttpResponse, member, server } from "./test/msw";
 
 const TOKEN = "stf_" + "a".repeat(48);
 const SHA1 = "1".repeat(64);
@@ -251,4 +251,78 @@ test("new skill publishes v1 of skills/<name> and lands on its page", async () =
   await userEvent.click(screen.getByRole("button", { name: "Publish v1" }));
   await waitFor(() => expect(router.state.location.pathname).toBe("/skills/user/claude/skills/greet"));
   expect(puts[0]).toMatchObject({ parent: 0, host: "web", name: "skills/greet", scope: "user" });
+});
+
+test("an org skill shows who pulled which version", async () => {
+  server.use(
+    http.get("*/v1/installs", ({ request }) => {
+      const q = new URL(request.url).searchParams;
+      expect([q.get("agent"), q.get("name")]).toEqual(["claude", "skills/hello"]);
+      return HttpResponse.json([
+        { agent: "claude", name: "skills/hello", version: 1, host: "old-mac", from: "install", user: { id: "u-root", name: "root" }, updated_at: "2026-09-01T10:00:00Z" },
+        { agent: "claude", name: "skills/hello", version: 2, host: "mac", from: "subscribe", user: { id: "u-root", name: "root" }, updated_at: "2026-09-02T10:00:00Z" },
+        { agent: "claude", name: "skills/hello", version: 1, host: "laptop", from: "install", user: { id: "u-dev", name: "dev" }, updated_at: "2026-09-02T10:00:00Z" },
+      ]);
+    }),
+  );
+  renderApp({ path: "/skills/org/claude/skills/hello" });
+  const pulls = await screen.findByRole("region", { name: "Pulls" });
+  await waitFor(() => expect(pulls).toHaveTextContent("1 of 2 members on v2"));
+  expect(pulls).toHaveTextContent("1 behind");
+  expect(within(pulls).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["rootv2on mac (subscribe)", "devv1on laptop (install)"]);
+});
+
+test("user-scope skills have no pulls card; org skills without reports say so", async () => {
+  renderApp({ path: "/skills/user/claude/skills/hello" });
+  await screen.findByRole("heading", { name: "hello" });
+  expect(screen.queryByRole("region", { name: "Pulls" })).not.toBeInTheDocument();
+});
+
+test("members read org skills without any write affordance", async () => {
+  server.use(http.get("*/v1/whoami", () => HttpResponse.json(member)));
+  renderApp({ path: "/skills/org/claude/skills/hello?v=1" });
+  await screen.findByRole("heading", { name: "hello" });
+  expect(await screen.findByRole("region", { name: "Pulls" })).toHaveTextContent("No pulls reported yet");
+  expect(screen.getByTestId("rendered")).toBeInTheDocument();
+  for (const name of ["edit", "+ add file"]) expect(screen.queryByRole("link", { name })).not.toBeInTheDocument();
+  for (const name of ["Delete", /Roll back/, "remove"]) expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
+});
+
+test("members keep every affordance on user-scope skills", async () => {
+  server.use(http.get("*/v1/whoami", () => HttpResponse.json(member)));
+  renderApp({ path: "/skills/user/claude/skills/hello" });
+  await screen.findByRole("heading", { name: "hello" });
+  expect(screen.getByRole("button", { name: "Delete" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "+ add file" })).toBeInTheDocument();
+});
+
+test("an edit deep link on an org skill tells a member who publishes it", async () => {
+  server.use(http.get("*/v1/whoami", () => HttpResponse.json(member)));
+  renderApp({ path: "/skills/org/claude/skills/hello?edit=SKILL.md" });
+  expect(await screen.findByText(/Org skills are published by admins/)).toBeInTheDocument();
+  expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+});
+
+test("new skill: members get no org scope, and a 402 says the org is at its limit", async () => {
+  server.use(
+    http.get("*/v1/whoami", () => HttpResponse.json(member)),
+    http.put("*/v1/bundles/:scope/:agent/*", () => HttpResponse.json({ error: "limit: 1 skills per org" }, { status: 402 })),
+  );
+  renderApp({ path: "/skills/new" });
+  await screen.findByRole("heading", { name: "New skill" });
+  expect(within(screen.getByLabelText("Scope")).queryByRole("option", { name: "org" })).not.toBeInTheDocument();
+  await userEvent.type(screen.getByLabelText(/Name/), "second");
+  await userEvent.click(screen.getByRole("button", { name: "Publish v1" }));
+  const alert = await screen.findByRole("alert");
+  expect(alert).toHaveTextContent("This org is at its limit.");
+  expect(alert).toHaveTextContent("limit: 1 skills per org");
+});
+
+test("the editor reports a storage 402 the same way", async () => {
+  server.use(http.put("*/v1/blobs/:sha", () => HttpResponse.json({ error: "limit: 10 bytes of storage per org" }, { status: 402 })));
+  renderApp({ path: "/skills/user/claude/skills/hello?edit=SKILL.md" });
+  const box = await screen.findByRole("textbox", { name: "SKILL.md source" });
+  await userEvent.type(box, "x");
+  await userEvent.click(screen.getByRole("button", { name: /Save as v3/ }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("limit: 10 bytes of storage per org");
 });

@@ -10,6 +10,7 @@ const NAV: NavItem[] = [
   { to: "/sessions", label: "Sessions" },
   { to: "/skills", label: "Skills" },
   { to: "/tokens", label: "Tokens" },
+  { to: "/members", label: "Members", admin: true },
   { to: "/billing", label: "Billing", feature: "cloud" },
   { to: "/start", label: "Get started" },
 ];
@@ -21,7 +22,7 @@ export function Shell() {
   const logout = useLogout();
   const features = version.data?.features ?? [];
   const cloud = features.includes("cloud");
-  const nav = NAV.filter((i) => (!i.admin || me.data?.admin) && (!i.feature || features.includes(i.feature)));
+  const nav = NAV.filter((i) => (!i.admin || roleOf(me.data) === "admin") && (!i.feature || features.includes(i.feature)));
 
   return (
     <div className={s.app}>

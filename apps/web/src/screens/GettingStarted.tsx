@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 import { useIdentity } from "../api/auth";
 import { CopyField } from "../components/CopyField";
+import { OrgCard } from "../components/OrgCard";
 import { PageHeader } from "../components/States";
 import s from "./GettingStarted.module.css";
 
@@ -27,6 +28,7 @@ export function GettingStarted() {
   return (
     <section>
       <PageHeader title="Get started" subtitle="Install the CLI, point it at this server, and push." />
+      <OrgCard />
       <ol className={s.steps}>
         <Step n={1} title="Install the CLI">
           <p>Stift is one static binary. Install it with the one-liner or grab a release from GitHub:</p>

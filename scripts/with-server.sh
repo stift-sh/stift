@@ -27,7 +27,7 @@ trap cleanup EXIT
   import pg from "pg";
   const c = new pg.Client({ connectionString: process.env.STIFT_DATABASE_URL });
   await c.connect();
-  await c.query("truncate sessions, blobs, bundles, bundle_versions, tokens");
+  await c.query("truncate sessions, blobs, bundles, bundle_versions, tokens, installs, memberships, users cascade");
   await c.end();
 ')
 

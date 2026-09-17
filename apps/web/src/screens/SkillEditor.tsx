@@ -7,6 +7,7 @@ import { Link, useNavigate } from "react-router";
 import type { Bundle } from "@stift/shared";
 import { ApiError } from "../api/auth";
 import { isEditable, keyHref, type SkillKey, useBlobText, usePublish } from "../api/skills";
+import { isLimit, LimitNotice } from "../components/LimitNotice";
 import { ErrorState, Spinner } from "../components/States";
 import { ago } from "../lib/format";
 import s from "./SkillDetail.module.css";
@@ -112,7 +113,8 @@ function Form({ skillKey, from, head, existing, sha }: { skillKey: SkillKey; fro
           </span>
         </div>
       )}
-      {save.isError && !stale && <p className={s.error}>{save.error.message}</p>}
+      <LimitNotice error={save.error} />
+      {save.isError && !stale && !isLimit(save.error) && <p className={s.error}>{save.error.message}</p>}
       <div className={s.editorBar}>
         <span className={s.editorNote}>
           Only <code>*.md</code> files are editable here; other files change via <code>stift push --skills</code>. Machines syncing this scope pull the new version on their

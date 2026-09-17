@@ -121,6 +121,7 @@ export function useRollback() {
       ),
     onSuccess: (_, { key }) => {
       void qc.invalidateQueries({ queryKey: ["bundles"] });
+      void qc.invalidateQueries({ queryKey: ["org"] });
       void qc.invalidateQueries({ queryKey: ["bundles", "history", ...keyId(key)] });
     },
   });
@@ -135,6 +136,7 @@ export function useDeleteBundle() {
       qc.removeQueries({ queryKey: ["bundles", "detail", ...keyId(key)] });
       qc.removeQueries({ queryKey: ["bundles", "history", ...keyId(key)] });
       void qc.invalidateQueries({ queryKey: ["bundles"] });
+      void qc.invalidateQueries({ queryKey: ["org"] });
     },
   });
 }
@@ -191,6 +193,7 @@ export function usePublish() {
     mutationFn: publish,
     onSuccess: (_, { key }) => {
       void qc.invalidateQueries({ queryKey: ["bundles"] });
+      void qc.invalidateQueries({ queryKey: ["org"] });
       void qc.invalidateQueries({ queryKey: ["bundles", "history", ...keyId(key)] });
     },
   });

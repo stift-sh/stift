@@ -73,3 +73,8 @@
 .prefixed input { flex: 1; }
 .rowActions { display: inline-flex; gap: 10px; font-size: 13px; white-space: nowrap; }
 .rowActions button { font: inherit; color: var(--ink-faint); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
+.pullsHead { font-size: 14px; margin: 0 0 10px; }
+.pullsNote { font-size: 13px; color: var(--ink-soft); margin: 0; }
+.pulls { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 13px; }
+.pulls li { display: grid; grid-template-columns: 1fr auto; column-gap: 8px; align-items: baseline; }
+.pulls li > :last-child { grid-column: 1 / -1; font-size: 12px; }

@@ -1,4 +1,4 @@
-// Tokens: list, create (secret returned once), revoke. Admin only.
+// Tokens: list, create (secret returned once), revoke. Own tokens for members, the org for admins.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { deleteV1TokensById, getV1Tokens, postV1Tokens } from "@stift/api-client";
 import type { TokenCreated, TokenCreateRequest, TokenInfo } from "@stift/shared";

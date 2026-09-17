@@ -1,0 +1,2 @@
+.notice { background: var(--accent-soft); border-radius: var(--radius-cards); padding: 12px 16px; margin: 12px 0; font-size: 14px; }
+.notice p { margin: 6px 0 0; color: var(--ink-soft); }

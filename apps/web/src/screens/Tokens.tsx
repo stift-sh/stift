@@ -1,9 +1,10 @@
 import { type FormEvent, useState } from "react";
 import type { TokenCreated, TokenInfo } from "@stift/shared";
 import { roleOf, useIdentity } from "../api/auth";
+import { useMembers } from "../api/members";
 import { useCreateToken, useRevokeToken, useTokens } from "../api/tokens";
-import { CopyField } from "../components/CopyField";
 import { EmptyState, ErrorState, PageHeader, Spinner } from "../components/States";
+import { TokenCreated as CreatedCard } from "../components/TokenCreated";
 import { ago, fmtTime } from "../lib/format";
 import s from "./Tokens.module.css";
 
@@ -13,7 +14,11 @@ export function Tokens() {
   const admin = roleOf(me.data) === "admin";
   const [creating, setCreating] = useState(false);
   const [created, setCreated] = useState<TokenCreated | null>(null);
-  const items = tokens.data ?? [];
+  const [user, setUser] = useState("");
+  const all = tokens.data ?? [];
+  // Admins see the whole org; the filter appears once two users hold tokens.
+  const users = [...new Map(all.flatMap((t) => (t.user ? [[t.user.id, t.user.name] as const] : []))).entries()];
+  const items = user ? all.filter((t) => t.user?.id === user) : all;
 
   return (
     <section>
@@ -36,6 +41,7 @@ export function Tokens() {
       {creating && (
         <CreateForm
           admin={admin}
+          self={me.data?.user?.id}
           onCancel={() => setCreating(false)}
           onCreated={(t) => {
             setCreating(false);
@@ -43,16 +49,28 @@ export function Tokens() {
           }}
         />
       )}
-      {created && <Created token={created} onDone={() => setCreated(null)} />}
+      {created && <CreatedCard token={created.token} name={created.name} onDone={() => setCreated(null)} />}
 
       {tokens.isPending && <Spinner />}
       {tokens.isError && <ErrorState error={tokens.error} onRetry={() => tokens.refetch()} />}
-      {tokens.data && items.length === 0 && (
+      {tokens.data && all.length === 0 && (
         <EmptyState title="No tokens yet">
           <p>Create a token to connect the CLI. The secret is shown once, right after creating it.</p>
         </EmptyState>
       )}
-      {tokens.data && items.length > 0 && (
+      {admin && users.length > 1 && (
+        <div className={s.filters}>
+          <select className={`input ${s.select}`} aria-label="User" value={user} onChange={(e) => setUser(e.target.value)}>
+            <option value="">All users</option>
+            {users.map(([id, name]) => (
+              <option key={id} value={id}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      {tokens.data && all.length > 0 && (
         <div className="table-wrap">
           <table className="table">
             <thead>
@@ -78,16 +96,18 @@ export function Tokens() {
   );
 }
 
-function CreateForm({ admin: isAdmin, onCancel, onCreated }: { admin: boolean; onCancel: () => void; onCreated: (t: TokenCreated) => void }) {
+function CreateForm({ admin: isAdmin, self, onCancel, onCreated }: { admin: boolean; self?: string; onCancel: () => void; onCreated: (t: TokenCreated) => void }) {
   const create = useCreateToken();
+  const members = useMembers(isAdmin);
   const [name, setName] = useState("");
   const [admin, setAdmin] = useState(false);
+  const [forUser, setForUser] = useState("");
 
   function submit(e: FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
     // A token has the role of its user; `admin` is only meaningful for admins.
-    create.mutate(isAdmin ? { name: name.trim(), admin } : { name: name.trim() }, { onSuccess: onCreated });
+    create.mutate(isAdmin ? { name: name.trim(), admin, user: forUser || undefined } : { name: name.trim() }, { onSuccess: onCreated });
   }
 
   return (
@@ -105,6 +125,21 @@ function CreateForm({ admin: isAdmin, onCancel, onCreated }: { admin: boolean; o
           disabled={create.isPending}
         />
       </label>
+      {isAdmin && (members.data?.length ?? 0) > 1 && (
+        <label className="field">
+          <span className="field-label">For</span>
+          <select className="input" value={forUser} onChange={(e) => setForUser(e.target.value)} disabled={create.isPending}>
+            <option value="">Yourself</option>
+            {members.data!
+              .filter((m) => m.id !== self)
+              .map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+          </select>
+        </label>
+      )}
       {isAdmin && (
         <label className={s.check}>
           <input type="checkbox" checked={admin} onChange={(e) => setAdmin(e.target.checked)} disabled={create.isPending} />
@@ -125,26 +160,6 @@ function CreateForm({ admin: isAdmin, onCancel, onCreated }: { admin: boolean; o
         </button>
       </div>
     </form>
-  );
-}
-
-function Created({ token, onDone }: { token: TokenCreated; onDone: () => void }) {
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://your-server";
-  return (
-    <div className={`card ${s.form}`} role="region" aria-label="Token created">
-      <span className="card-eyebrow">Token created</span>
-      <p className={s.warn}>
-        <strong>Copy it now.</strong> This is the only time the secret is shown.
-      </p>
-      <CopyField value={token.token} label={token.name} />
-      <p className="dim">Use it with the CLI:</p>
-      <CopyField value={`stift login ${origin} --token ${token.token}`} prompt="$" label="login command" />
-      <div className={s.actions}>
-        <button type="button" className="btn btn--primary" onClick={onDone}>
-          Done
-        </button>
-      </div>
-    </div>
   );
 }
 

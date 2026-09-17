@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
-import { ApiError } from "../api/auth";
+import { ApiError, roleOf, useIdentity } from "../api/auth";
+import { useMembers } from "../api/members";
+import { useInstalls } from "../api/org";
 import { fetchBlobText, isEditable, keyHref, type SkillKey, unitLabel, useBlobText, useBundle, useBundleHistory, useDeleteBundle, usePublish, useRollback } from "../api/skills";
 import { SkillEditor } from "./SkillEditor";
 import { ErrorState, NotFound, PageHeader, Spinner } from "../components/States";
@@ -35,6 +37,8 @@ export function SkillDetail() {
   const rollback = useRollback();
   const del = useDeleteBundle();
   const removeFile = usePublish();
+  // Org units are published by admins; other members read them.
+  const canWrite = roleOf(useIdentity().data) === "admin" || key.scope !== "org";
   const [confirm, setConfirm] = useState<"delete" | "rollback" | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
   const [raw, setRaw] = useState(false);
@@ -111,7 +115,7 @@ export function SkillDetail() {
                 Cancel
               </button>
             </span>
-          ) : (
+          ) : canWrite ? (
             <>
               {!isHead && (
                 <button type="button" className="btn btn--sm btn--primary" onClick={() => setConfirm("rollback")} disabled={busy}>
@@ -122,7 +126,7 @@ export function SkillDetail() {
                 Delete
               </button>
             </>
-          )
+          ) : undefined
         }
       />
       {actionError && (
@@ -138,7 +142,12 @@ export function SkillDetail() {
 
       <div className={s.grid}>
         <div>
-          {editing ? (
+          {editing && !canWrite ? (
+            <p className={s.notice} role="alert">
+              Org skills are published by admins. <Link to={keyHref(key)}>Back to the skill</Link>, or run{" "}
+              <code>stift skills install {key.name}</code> for a copy of your own to edit.
+            </p>
+          ) : editing ? (
             <SkillEditor key={editPath ?? "+"} skillKey={key} from={it} head={current} path={adding ? undefined : editPath} />
           ) : diffTo ? (
             <DiffView key={diffTo} skillKey={key} to={diffTo} />
@@ -151,7 +160,7 @@ export function SkillDetail() {
                       {md.path} · {fmtBytes(md.size)}
                     </span>
                     <span className={s.toggle} role="group" aria-label="View">
-                      <Link to={keyHref(key, { v: wanted || undefined, edit: md.path })}>edit</Link>
+                      {canWrite && <Link to={keyHref(key, { v: wanted || undefined, edit: md.path })}>edit</Link>}
                       <button type="button" className={raw ? "" : s.on} aria-pressed={!raw} onClick={() => setRaw(false)}>rendered</button>
                       <button type="button" className={raw ? s.on : ""} aria-pressed={raw} onClick={() => setRaw(true)}>raw</button>
                     </span>
@@ -167,7 +176,7 @@ export function SkillDetail() {
                       <th className="num">Size</th>
                       <th className="num">Mode</th>
                       <th className="num">
-                        <Link to={keyHref(key, { v: wanted || undefined, add: true })}>+ add file</Link>
+                        {canWrite && <Link to={keyHref(key, { v: wanted || undefined, add: true })}>+ add file</Link>}
                       </th>
                     </tr>
                   </thead>
@@ -178,7 +187,7 @@ export function SkillDetail() {
                         <td className="num mono dim">{fmtBytes(f.size)}</td>
                         <td className="num mono dim">{modeString(f.mode)}</td>
                         <td className="num">
-                          {removing === f.path ? (
+                          {!canWrite ? null : removing === f.path ? (
                             <span className={s.rowActions}>
                               remove in v{current.version + 1}?
                               <button type="button" onClick={() => doRemove(f.path)} disabled={busy}>
@@ -218,6 +227,7 @@ export function SkillDetail() {
               ))}
             </dl>
           </div>
+          {key.scope === "org" && <Pulls skillKey={key} head={current.version} />}
           <div className="card">
             <span className="card-eyebrow">History</span>
             {history.isPending && <Spinner label="Loading history…" />}
@@ -250,6 +260,51 @@ export function SkillDetail() {
         </aside>
       </div>
     </section>
+  );
+}
+
+/** Who has this org unit on a machine, from what the CLI reported on
+ *  install and on org-scope pulls. A user on several hosts counts at their
+ *  newest version. Reporting only: no report means unknown. */
+function Pulls({ skillKey, head }: { skillKey: SkillKey; head: number }) {
+  const installs = useInstalls({ agent: skillKey.agent, name: skillKey.name });
+  const members = useMembers();
+  if (!installs.data) return null;
+  const byUser = new Map<string, { name: string; version: number; host: string; from: string }>();
+  for (const i of installs.data) {
+    const seen = byUser.get(i.user.id);
+    if (!seen || i.version > seen.version) byUser.set(i.user.id, { name: i.user.name, version: i.version, host: i.host, from: i.from });
+  }
+  const users = [...byUser.values()].sort((a, b) => b.version - a.version || a.name.localeCompare(b.name));
+  const current = users.filter((u) => u.version >= head).length;
+  const behind = users.length - current;
+  return (
+    <div className="card" role="region" aria-label="Pulls">
+      <span className="card-eyebrow">Pulls</span>
+      {users.length === 0 ? (
+        <p className={s.pullsNote}>
+          No pulls reported yet. Members get it with <code>stift pull --skills --scope org</code> or <code>stift skills install {skillKey.name}</code>.
+        </p>
+      ) : (
+        <>
+          <p className={s.pullsHead}>
+            {current} of {members.data?.length ?? users.length} member{(members.data?.length ?? users.length) === 1 ? "" : "s"} on v{head}
+            {behind > 0 && <span className={s.mod}> · {behind} behind</span>}
+          </p>
+          <ul className={s.pulls}>
+            {users.map((u) => (
+              <li key={u.name}>
+                <span>{u.name}</span>
+                <span className={`mono ${u.version >= head ? "" : s.mod}`}>v{u.version}</span>
+                <span className="dim">
+                  on <span className="mono">{u.host}</span> ({u.from})
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
   );
 }
 

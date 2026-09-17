@@ -8,6 +8,7 @@ import { SessionDetail } from "./screens/SessionDetail";
 import { Skills } from "./screens/Skills";
 import { SkillDetail } from "./screens/SkillDetail";
 import { NewSkill } from "./screens/NewSkill";
+import { Members } from "./screens/Members";
 import { Tokens } from "./screens/Tokens";
 import { GettingStarted } from "./screens/GettingStarted";
 
@@ -36,6 +37,7 @@ export const routes: RouteObject[] = [
           { path: "skills/new", Component: NewSkill },
           { path: "skills/:scope/:agent/*", Component: SkillDetail },
           { path: "tokens", Component: Tokens },
+          { path: "members", Component: Members },
           { path: "billing", Component: Billing },
           { path: "start", Component: GettingStarted },
           { path: "*", element: <NotFound /> },

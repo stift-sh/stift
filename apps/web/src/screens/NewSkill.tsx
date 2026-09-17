@@ -1,8 +1,9 @@
 // Create a unit from the browser: scope, agent, name and a first SKILL.md.
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { useIdentity } from "../api/auth";
+import { roleOf, useIdentity } from "../api/auth";
 import { keyHref, usePublish } from "../api/skills";
+import { isLimit, LimitNotice } from "../components/LimitNotice";
 import { PageHeader } from "../components/States";
 import s from "./SkillDetail.module.css";
 
@@ -44,7 +45,7 @@ export function NewSkill() {
             <span className="field-label">Scope</span>
             <select className="input" value={scope} onChange={(e) => setScope(e.target.value as "user" | "org")}>
               <option value="user">user</option>
-              {me.data?.admin && <option value="org">org</option>}
+              {roleOf(me.data) === "admin" && <option value="org">org</option>}
             </select>
           </label>
           <label className="field">
@@ -70,7 +71,8 @@ export function NewSkill() {
           <span>v1</span>
         </p>
         <textarea className={s.textarea} aria-label="SKILL.md source" spellCheck={false} value={text || body} onChange={(e) => setText(e.target.value)} rows={16} />
-        {save.isError && <p className={s.error}>{save.error.message}</p>}
+        <LimitNotice error={save.error} />
+        {save.isError && !isLimit(save.error) && <p className={s.error}>{save.error.message}</p>}
         <div className={s.editorBar}>
           <span className={s.editorNote}>Same as <code>stift push --skills</code> from a machine; syncing machines pull it next.</span>
           <span className="page-actions">
