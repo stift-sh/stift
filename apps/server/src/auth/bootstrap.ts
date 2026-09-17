@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { Db } from "../db/client.js";
 import { orgs } from "../db/schema.js";
 import { orgLimitsFromEnv, setOrgLimits } from "../limits.js";
@@ -15,6 +15,11 @@ export async function ensureDefaultOrg(db: Db, env: NodeJS.ProcessEnv = process.
     .insert(orgs)
     .values({ id: DEFAULT_ORG, slug: "default", name: env.STIFT_ORG_NAME ?? "Default" })
     .onConflictDoNothing();
+  // The tenancy migration seeds the row as "Default" before this runs, so
+  // "first start" means: still carrying the seeded name.
+  if (env.STIFT_ORG_NAME) {
+    await db.update(orgs).set({ name: env.STIFT_ORG_NAME }).where(and(eq(orgs.id, DEFAULT_ORG), eq(orgs.name, "Default")));
+  }
   return (await db.query.orgs.findFirst({ where: eq(orgs.id, DEFAULT_ORG) }))!;
 }
 

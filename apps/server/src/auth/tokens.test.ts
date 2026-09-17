@@ -56,6 +56,13 @@ describe("local tokens", { skip: dbUrl ? false : "STIFT_TEST_DATABASE_URL not se
     assert.equal(await new TokenAuthenticator(conn.db).authenticate(raw), null);
   });
 
+  test("bootstrap: STIFT_ORG_NAME names the seeded org once", async () => {
+    await conn.db.execute(sql`update orgs set name = 'Default' where id = ''`);
+    assert.equal((await ensureDefaultOrg(conn.db, { STIFT_ORG_NAME: "Acme" })).name, "Acme");
+    assert.equal((await ensureDefaultOrg(conn.db, { STIFT_ORG_NAME: "Other" })).name, "Acme");
+    await conn.db.execute(sql`update orgs set name = 'Default' where id = ''`);
+  });
+
   test("bootstrap: env token, else first-start token, both idempotent", async () => {
     const logs: string[] = [];
     await bootstrap(conn.db, { STIFT_ADMIN_TOKEN: GO_RAW }, (m) => logs.push(m));
