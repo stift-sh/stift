@@ -65,6 +65,12 @@ describe("local tokens", { skip: dbUrl ? false : "STIFT_TEST_DATABASE_URL not se
     assert.equal(list[0]!.name, "env-admin");
     assert.equal(list[0]!.admin, true);
 
+    // A rotated env token is a second token of the same env-admin user.
+    await bootstrap(conn.db, { STIFT_ADMIN_TOKEN: "stf_" + "c".repeat(48) }, (m) => logs.push(m));
+    const rotated = await listTokens(conn.db, "");
+    assert.equal(rotated.length, 2);
+    assert.equal(rotated[0]!.user!.id, rotated[1]!.user!.id);
+
     await conn.db.execute(sql`truncate tokens`);
     logs.length = 0;
     await bootstrap(conn.db, {}, (m) => logs.push(m));

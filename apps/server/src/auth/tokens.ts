@@ -55,9 +55,18 @@ export async function registerToken(db: Db, orgId: string, raw: string, name: st
     if ("userId" in o) {
       userId = o.userId;
     } else {
-      userId = randomBytes(8).toString("hex");
-      await tx.insert(users).values({ id: userId, name: o.newUser.name, email: o.newUser.email ?? null });
-      await tx.insert(memberships).values({ orgId, userId, role: o.newUser.role });
+      // Names are unique within an org: a rotated STIFT_ADMIN_TOKEN belongs
+      // to the `env-admin` that is already there, not to a second one.
+      const [member] = await tx
+        .select({ id: users.id })
+        .from(memberships)
+        .innerJoin(users, eq(users.id, memberships.userId))
+        .where(and(eq(memberships.orgId, orgId), eq(users.name, o.newUser.name)));
+      userId = member?.id ?? randomBytes(8).toString("hex");
+      if (!member) {
+        await tx.insert(users).values({ id: userId, name: o.newUser.name, email: o.newUser.email ?? null });
+        await tx.insert(memberships).values({ orgId, userId, role: o.newUser.role });
+      }
     }
     const [row] = await tx
       .insert(tokens)
