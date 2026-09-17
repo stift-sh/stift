@@ -14,6 +14,20 @@ export type UserRef = z.infer<typeof UserRef>;
 export const OrgRef = z.object({ id: z.string(), slug: z.string(), name: z.string() }).meta({ id: "OrgRef" });
 export type OrgRef = z.infer<typeof OrgRef>;
 
+const quota = z.int().nullable();
+
+/** Returned by GET /v1/org: the caller's org with its limits (null =
+ *  unlimited) and what it currently uses of them. */
+export const Org = OrgRef.extend({
+  limits: z.object({ skills: quota, storage_bytes: quota, seats: quota }),
+  usage: z.object({
+    skills: z.int().describe("units with at least one version, in every scope"),
+    storage_bytes: z.int().describe("bytes of bundle file content"),
+    seats: z.int().describe("members"),
+  }),
+}).meta({ id: "Org" });
+export type Org = z.infer<typeof Org>;
+
 export const Role = z.enum(["admin", "member"]).meta({ id: "Role" });
 export type Role = z.infer<typeof Role>;
 

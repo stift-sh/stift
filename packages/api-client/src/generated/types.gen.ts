@@ -193,6 +193,31 @@ export type TokenCreateRequest = {
     user?: string;
 };
 
+export type Org = {
+    id: string;
+    slug: string;
+    name: string;
+    limits: {
+        skills: number | null;
+        storage_bytes: number | null;
+        seats: number | null;
+    };
+    usage: {
+        /**
+         * units with at least one version, in every scope
+         */
+        skills: number;
+        /**
+         * bytes of bundle file content
+         */
+        storage_bytes: number;
+        /**
+         * members
+         */
+        seats: number;
+    };
+};
+
 export type Member = {
     id: string;
     name: string;
@@ -626,6 +651,10 @@ export type PutV1BlobsByShaErrors = {
      */
     401: _Error;
     /**
+     * the org is at one of its limits
+     */
+    402: _Error;
+    /**
      * Content-Length required
      */
     411: _Error;
@@ -820,6 +849,10 @@ export type PutV1BundlesByScopeByAgentByNameErrors = {
      */
     401: _Error;
     /**
+     * the org is at one of its limits
+     */
+    402: _Error;
+    /**
      * forbidden
      */
     403: _Error;
@@ -941,6 +974,35 @@ export type DeleteV1TokensByIdResponses = {
 
 export type DeleteV1TokensByIdResponse = DeleteV1TokensByIdResponses[keyof DeleteV1TokensByIdResponses];
 
+export type GetV1OrgData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/org';
+};
+
+export type GetV1OrgErrors = {
+    /**
+     * missing or invalid bearer token
+     */
+    401: _Error;
+    /**
+     * not found
+     */
+    404: _Error;
+};
+
+export type GetV1OrgError = GetV1OrgErrors[keyof GetV1OrgErrors];
+
+export type GetV1OrgResponses = {
+    /**
+     * the caller's org
+     */
+    200: Org;
+};
+
+export type GetV1OrgResponse = GetV1OrgResponses[keyof GetV1OrgResponses];
+
 export type GetV1MembersData = {
     body?: never;
     path?: never;
@@ -982,6 +1044,10 @@ export type PostV1MembersErrors = {
      * missing or invalid bearer token
      */
     401: _Error;
+    /**
+     * the org is at one of its limits
+     */
+    402: _Error;
     /**
      * forbidden
      */

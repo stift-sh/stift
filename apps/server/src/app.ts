@@ -7,6 +7,7 @@ import { sessions } from "./routes/sessions.js";
 import { health } from "./routes/health.js";
 import { installsRoutes } from "./routes/installs.js";
 import { members } from "./routes/members.js";
+import { org } from "./routes/org.js";
 import { tokens } from "./routes/tokens.js";
 import { whoami } from "./routes/whoami.js";
 import type { Store } from "./storage/store.js";
@@ -62,6 +63,7 @@ export function createApp(opts: AppOptions) {
   app.route("/", bundles(store));
 
   app.route("/", tokens(db));
+  app.route("/", org(db));
   app.route("/", members(db));
   app.route("/", installsRoutes(db));
 

@@ -125,4 +125,21 @@ curl -sf -H "Authorization: Bearer $STIFT_ADMIN_TOKEN" "http://localhost:$PORT/v
 curl -sf -H "Authorization: Bearer $STIFT_ADMIN_TOKEN" "http://localhost:$PORT/v1/installs?name=skills/policy" | grep -q '"version":2' || fail "install version reported"
 "$STIFT" skills delete skills/hello --scope user || fail "skills delete"
 
+# org limits: self-host edits the row; a new unit over max_skills is a 402 the CLI prints
+orgsql() { (cd apps/server && node --input-type=module -e '
+  import pg from "pg";
+  const c = new pg.Client({ connectionString: process.env.STIFT_DATABASE_URL });
+  await c.connect();
+  await c.query(process.argv[1]);
+  await c.end();
+' "$1"); }
+orgsql "update orgs set max_skills = 1 where id = ''"
+mkdir -p "$HOME/.claude/skills/extra"
+printf -- '---\nname: extra\ndescription: one too many\n---\n' >"$HOME/.claude/skills/extra/SKILL.md"
+OUT=$("$STIFT" push --skills --scope user --name skills/extra 2>&1 || true)
+echo "$OUT" | grep -q "limit: 1 skills per org" || fail "skills limit: $OUT"
+curl -sf -H "Authorization: Bearer $STIFT_ADMIN_TOKEN" "http://localhost:$PORT/v1/org" | grep -q '"limits":{"skills":1,' || fail "org limits reported"
+orgsql "update orgs set max_skills = null where id = ''"
+"$STIFT" push --skills --scope user --name skills/extra || fail "push after the limit is lifted"
+
 echo "cli smoke: ok"

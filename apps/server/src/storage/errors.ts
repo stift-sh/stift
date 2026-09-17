@@ -21,3 +21,16 @@ export class NotFoundError extends Error {
     super(what);
   }
 }
+
+/** Thrown when a write would take an org over one of its limits (HTTP 402,
+ *  so clients can key an "upgrade" affordance on it). The message is what
+ *  the CLI prints. */
+export class LimitError extends Error {
+  readonly name = "LimitError";
+  constructor(
+    readonly limit: number,
+    readonly what: "skills" | "bytes of storage" | "seats",
+  ) {
+    super(`limit: ${limit} ${what} per org`);
+  }
+}

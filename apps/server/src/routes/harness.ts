@@ -8,7 +8,7 @@ import { authFromEnv } from "../auth/config.js";
 import { ensureDefaultOrg } from "../auth/bootstrap.js";
 import { createToken } from "../auth/tokens.js";
 import { connect, runMigrations, type Db } from "../db/client.js";
-import { DEFAULT_LIMITS, type Limits } from "../limits.js";
+import { DEFAULT_LIMITS, setOrgLimits, type Limits } from "../limits.js";
 import { BlobStore } from "../storage/blobs.js";
 import { PgStore } from "../storage/store.js";
 
@@ -35,6 +35,7 @@ export async function createTestApp(limits: Partial<Limits> = {}): Promise<TestA
     prefix: "test",
   });
   await ensureDefaultOrg(conn.db, {});
+  await setOrgLimits(conn.db, "", { maxSkills: null, maxStorageBytes: null, maxSeats: null });
   const { raw: admin } = await createToken(conn.db, "", "admin", true);
   const { raw: member } = await createToken(conn.db, "", "dev", false);
   const app = createApp({

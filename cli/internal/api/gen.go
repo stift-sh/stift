@@ -311,6 +311,28 @@ type MemberUpdateRequest struct {
 	Role Role `json:"role"`
 }
 
+// Org defines model for Org.
+type Org struct {
+	ID     string `json:"id"`
+	Limits struct {
+		Seats        int `json:"seats"`
+		Skills       int `json:"skills"`
+		StorageBytes int `json:"storage_bytes"`
+	} `json:"limits"`
+	Name  string `json:"name"`
+	Slug  string `json:"slug"`
+	Usage struct {
+		// Seats members
+		Seats int `json:"seats"`
+
+		// Skills units with at least one version, in every scope
+		Skills int `json:"skills"`
+
+		// StorageBytes bytes of bundle file content
+		StorageBytes int `json:"storage_bytes"`
+	} `json:"usage"`
+}
+
 // OrgRef defines model for OrgRef.
 type OrgRef struct {
 	ID   string `json:"id"`

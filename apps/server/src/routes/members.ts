@@ -5,6 +5,7 @@ import { addMember, countAdmins, findMember, listMembers, MemberExistsError, rem
 import { can } from "../auth/permissions.js";
 import { createToken } from "../auth/tokens.js";
 import type { Db } from "../db/client.js";
+import { LimitError } from "../storage/errors.js";
 import { err, errors } from "./_errors.js";
 
 const security = [{ bearerAuth: [] }];
@@ -42,6 +43,7 @@ export function members(db: Db) {
         201: json("the new member; `token` (when requested) is shown once", MemberCreated),
         400: errors[400],
         401: errors[401],
+        402: errors[402],
         403: errors[403],
         409: errors[409],
       },
@@ -57,6 +59,7 @@ export function members(db: Db) {
         m = await addMember(db, id.orgId, { name, email: body.email, role: body.role ?? "member" });
       } catch (e) {
         if (e instanceof MemberExistsError) return err(c, 409, e.message);
+        if (e instanceof LimitError) return err(c, 402, e.message);
         throw e;
       }
       if (!body.token) return c.json(m, 201);

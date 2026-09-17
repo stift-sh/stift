@@ -2,7 +2,7 @@ import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { ApiError } from "@stift/shared";
 import { HashMismatchError } from "../storage/blobs.js";
-import { MissingBlobError, NotFoundError, StaleError } from "../storage/errors.js";
+import { LimitError, MissingBlobError, NotFoundError, StaleError } from "../storage/errors.js";
 
 /** `{"error": msg}` with the exact Go server wording; the CLI prints it. */
 export const err = <S extends ContentfulStatusCode>(c: Context, status: S, error: string) => c.json({ error }, status);
@@ -13,6 +13,7 @@ const json = (description: string) => ({ description, content: { "application/js
 export const errors = {
   400: json("bad request"),
   401: json("missing or invalid bearer token"),
+  402: json("the org is at one of its limits"),
   403: json("forbidden"),
   404: json("not found"),
   409: json("conflict"),
@@ -28,5 +29,6 @@ export function storeError(c: Context, e: unknown) {
   if (e instanceof StaleError) return err(c, 409, e.message);
   if (e instanceof MissingBlobError) return err(c, 412, e.message);
   if (e instanceof HashMismatchError) return err(c, 400, e.message);
+  if (e instanceof LimitError) return err(c, 402, e.message);
   throw e;
 }

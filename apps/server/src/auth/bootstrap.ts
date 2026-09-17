@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import type { Db } from "../db/client.js";
 import { orgs } from "../db/schema.js";
+import { orgLimitsFromEnv, setOrgLimits } from "../limits.js";
 import { createToken, hasTokens, registerToken } from "./tokens.js";
 
 /** The single org of a self-hosted server. Its id is "" so rows written
@@ -20,9 +21,11 @@ export async function ensureDefaultOrg(db: Db, env: NodeJS.ProcessEnv = process.
 /** Ensures a self-hosted server has its default org and an admin token.
  *  Mirrors the former cmd_serve.go: STIFT_ADMIN_TOKEN is registered
  *  idempotently (as user `env-admin`); otherwise an admin token is minted on
- *  first start and printed once. Safe to run on every start. */
+ *  first start and printed once. STIFT_MAX_SKILLS / _STORAGE_BYTES / _SEATS
+ *  set the default org's limits. Safe to run on every start. */
 export async function bootstrap(db: Db, env: NodeJS.ProcessEnv = process.env, out = console.log) {
   await ensureDefaultOrg(db, env);
+  await setOrgLimits(db, DEFAULT_ORG, orgLimitsFromEnv(env));
   const envTok = env.STIFT_ADMIN_TOKEN;
   if (envTok) {
     await registerToken(db, DEFAULT_ORG, envTok, "env-admin", true);

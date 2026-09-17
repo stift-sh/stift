@@ -5,7 +5,8 @@ import type { Bundle, BundleFile, Session, SkillMeta } from "@stift/shared";
 import type { Db } from "../db/client.js";
 import { blobs, bundleVersions, bundles, sessions, users } from "../db/schema.js";
 import { BlobStore } from "./blobs.js";
-import { MissingBlobError, NotFoundError, StaleError } from "./errors.js";
+import { countSkills, orgLimits, storageBytes } from "../limits.js";
+import { LimitError, MissingBlobError, NotFoundError, StaleError } from "./errors.js";
 import { parseFrontmatter } from "./frontmatter.js";
 import { type BundleKey, validateKey, validBundlePath, validSha, validOrgId } from "./validate.js";
 
@@ -46,11 +47,13 @@ export interface Store {
 
   /** Reports which of the given sha256 digests are not stored. */
   hasBlobs(orgId: string, shas: string[]): Promise<string[]>;
-  /** Stores content under its sha256; hash and size are verified. Re-putting is a no-op. */
+  /** Stores content under its sha256; hash and size are verified. Re-putting
+   *  is a no-op. LimitError when `size` would take the org over its storage limit. */
   putBlob(orgId: string, sha: string, body: Readable, size: number): Promise<void>;
   openBlob(orgId: string, sha: string): Promise<Readable>;
 
-  /** Writes version HEAD+1 atomically; StaleError / MissingBlobError on conflict. */
+  /** Writes version HEAD+1 atomically; StaleError / MissingBlobError on
+   *  conflict, LimitError when a new unit would exceed the org's skill limit. */
   putBundle(orgId: string, k: BundleKey, b: BundleInput, force?: boolean): Promise<Bundle>;
   /** Version 0 means HEAD. */
   getBundle(orgId: string, k: BundleKey, version?: number): Promise<Bundle | undefined>;
@@ -275,6 +278,11 @@ export class PgStore implements Store {
       body.resume(); // already stored; drain and ignore
       return;
     }
+    const { maxStorageBytes } = await orgLimits(this.db, orgId);
+    if (maxStorageBytes !== null && (await storageBytes(this.db, orgId)) + size > maxStorageBytes) {
+      body.resume();
+      throw new LimitError(maxStorageBytes, "bytes of storage");
+    }
     const stored = await this.blobStore.putVerified(this.blobStore.blobKey(orgId, sha), body, { sha256: sha, size });
     await this.db.insert(blobs).values({ orgId, sha256: sha, size: stored.size }).onConflictDoNothing();
   }
@@ -332,6 +340,11 @@ export class PgStore implements Store {
       if (stillMissing.length > 0) throw new MissingBlobError(stillMissing);
 
       if (!force && parent !== row.head) throw new StaleError(row.head, parent);
+      if (row.head === 0) {
+        // A new unit; the org row is locked so concurrent creates count each other.
+        const { maxSkills } = await orgLimits(tx, orgId, true);
+        if (maxSkills !== null && (await countSkills(tx, orgId)) >= maxSkills) throw new LimitError(maxSkills, "skills");
+      }
       // The first write claims an unowned (legacy) row.
       if (row.userId === null && b.userId) await tx.update(bundles).set({ userId: b.userId }).where(eq(bundles.id, row.id));
       const created = new Date();
@@ -433,4 +446,4 @@ export class PgStore implements Store {
   }
 }
 
-export { BlobStore, MissingBlobError, NotFoundError, StaleError };
+export { BlobStore, LimitError, MissingBlobError, NotFoundError, StaleError };

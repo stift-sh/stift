@@ -3,6 +3,8 @@ import { and, asc, count, eq, or } from "drizzle-orm";
 import type { Member } from "@stift/shared";
 import type { Db } from "../db/client.js";
 import { memberships, tokens, users, type Role } from "../db/schema.js";
+import { countSeats, orgLimits } from "../limits.js";
+import { LimitError } from "../storage/errors.js";
 
 /** Users of an org with their role and token count, oldest membership first. */
 export async function listMembers(db: Db, orgId: string): Promise<Member[]> {
@@ -33,11 +35,14 @@ export async function memberByName(db: Db, orgId: string, name: string) {
   return row ?? null;
 }
 
-/** Creates a user and its membership. Names are unique within an org. */
+/** Creates a user and its membership. Names are unique within an org;
+ *  LimitError when the org is at its seat limit. */
 export async function addMember(db: Db, orgId: string, input: { name: string; email?: string; role: Role }): Promise<Member> {
   if (await memberByName(db, orgId, input.name)) throw new MemberExistsError(input.name);
   const id = randomBytes(8).toString("hex");
   return db.transaction(async (tx) => {
+    const { maxSeats } = await orgLimits(tx, orgId, true);
+    if (maxSeats !== null && (await countSeats(tx, orgId)) >= maxSeats) throw new LimitError(maxSeats, "seats");
     const [u] = await tx.insert(users).values({ id, name: input.name, email: input.email ?? null }).returning();
     const [m] = await tx.insert(memberships).values({ orgId, userId: id, role: input.role }).returning();
     return member(u!, m!.role, m!.createdAt, 0);

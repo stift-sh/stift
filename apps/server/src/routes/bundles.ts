@@ -3,7 +3,7 @@ import type { Context } from "hono";
 import { Bundle, BundleFilter, BundleInput } from "@stift/shared";
 import type { AuthEnv } from "../auth/middleware.js";
 import { can } from "../auth/permissions.js";
-import { MissingBlobError, NotFoundError, StaleError } from "../storage/errors.js";
+import { LimitError, MissingBlobError, NotFoundError, StaleError } from "../storage/errors.js";
 import type { Store } from "../storage/store.js";
 import { validUnitName, type BundleKey } from "../storage/validate.js";
 import { err, errors } from "./_errors.js";
@@ -92,6 +92,7 @@ export function bundles(store: Store) {
         201: json("the stored version", Bundle),
         400: errors[400],
         401: errors[401],
+        402: errors[402],
         403: errors[403],
         409: errors[409],
         412: errors[412],
@@ -114,6 +115,7 @@ export function bundles(store: Store) {
           return err(c, 409, msg);
         }
         if (e instanceof MissingBlobError) return err(c, 412, e.message);
+        if (e instanceof LimitError) return err(c, 402, e.message);
         if (e instanceof Error && !(e instanceof NotFoundError)) return err(c, 400, e.message);
         throw e;
       }

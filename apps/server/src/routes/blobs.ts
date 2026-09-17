@@ -7,6 +7,7 @@ import type { Limits } from "../limits.js";
 import type { Store } from "../storage/store.js";
 import { validSha } from "../storage/validate.js";
 import { HashMismatchError } from "../storage/blobs.js";
+import { LimitError } from "../storage/errors.js";
 import { TooLargeError, limited } from "./_body.js";
 import { err, errors } from "./_errors.js";
 
@@ -69,6 +70,7 @@ export function blobs(store: Store, limits: Limits) {
         200: json("stored (or already present)", BlobPutResponse),
         400: errors[400],
         401: errors[401],
+        402: errors[402],
         411: errors[411],
         413: errors[413],
       },
@@ -86,6 +88,7 @@ export function blobs(store: Store, limits: Limits) {
       } catch (e) {
         if (e instanceof TooLargeError) return err(c, 413, `blob exceeds limit of ${e.limit} bytes`);
         if (e instanceof HashMismatchError) return err(c, 400, e.message);
+        if (e instanceof LimitError) return err(c, 402, e.message);
         throw e;
       }
       return c.json({ sha }, 200);

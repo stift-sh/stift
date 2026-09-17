@@ -528,6 +528,77 @@
           "name"
         ]
       },
+      "Org": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "limits": {
+            "type": "object",
+            "properties": {
+              "skills": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "storage_bytes": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "seats": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "skills",
+              "storage_bytes",
+              "seats"
+            ]
+          },
+          "usage": {
+            "type": "object",
+            "properties": {
+              "skills": {
+                "type": "integer",
+                "description": "units with at least one version, in every scope"
+              },
+              "storage_bytes": {
+                "type": "integer",
+                "description": "bytes of bundle file content"
+              },
+              "seats": {
+                "type": "integer",
+                "description": "members"
+              }
+            },
+            "required": [
+              "skills",
+              "storage_bytes",
+              "seats"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "limits",
+          "usage"
+        ]
+      },
       "Member": {
         "type": "object",
         "properties": {
@@ -1307,6 +1378,16 @@
               }
             }
           },
+          "402": {
+            "description": "the org is at one of its limits",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "411": {
             "description": "Content-Length required",
             "content": {
@@ -1559,6 +1640,16 @@
           },
           "401": {
             "description": "missing or invalid bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "the org is at one of its limits",
             "content": {
               "application/json": {
                 "schema": {
@@ -1983,6 +2074,50 @@
         }
       }
     },
+    "/v1/org": {
+      "get": {
+        "tags": [
+          "org"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "the caller's org",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Org"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "missing or invalid bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/members": {
       "get": {
         "tags": [
@@ -2061,6 +2196,16 @@
           },
           "401": {
             "description": "missing or invalid bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "the org is at one of its limits",
             "content": {
               "application/json": {
                 "schema": {
