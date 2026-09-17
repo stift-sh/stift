@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Share skills in your company — stift</title>
+<meta name="description" content="Run one stift server for your team: admins publish skills, subagents and commands to the org, everyone's agents pick them up, and you can see who runs which version.">
+<meta property="og:title" content="Share skills in your company — stift">
+<meta property="og:description" content="One registry for your team's agent skills: versioned, role-gated, self-hosted or on Stift Cloud.">
+<meta property="og:url" content="https://stift.sh/share-skills/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23202020'/%3E%3Ctext x='16' y='23' font-family='sans-serif' font-size='20' fill='%23ffffff' text-anchor='middle'%3ES%3C/text%3E%3Ccircle cx='25' cy='25' r='3' fill='%23ff682c'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/site.css">
+</head>
+<body>
+
+<header class="mast">
+  <div class="frame">
+    <div class="mast-top">
+      <span class="doc-no"><a href="/">stift.sh</a> — guide</span>
+      <span>hosted cloud · or self-host · mit core</span>
+      <span style="display:flex;gap:16px;flex-wrap:wrap">
+        <a href="https://app.stift.sh">app.stift.sh — sign in</a>
+        <a href="https://github.com/stift-sh/stift">github</a>
+      </span>
+    </div>
+    <div class="mast-main">
+      <h1 class="wordmark guide">Share skills in your company<span class="dot">.</span></h1>
+      <p class="tagline">
+        The skills, subagents and commands that make an agent useful in your
+        codebase usually live on one person's laptop. With a stift server,
+        <b>admins publish them once</b>, <b>everyone's agent picks them up</b>,
+        every change is a version you can diff and roll back, and you can see
+        who is running what.
+      </p>
+    </div>
+  </div>
+</header>
+
+<div class="frame">
+<div class="layout">
+
+<nav class="toc" aria-label="contents">
+  <div class="toc-head">Contents</div>
+  <ol>
+    <li><a href="#server">Start a server</a></li>
+    <li><a href="#people">Add your people</a></li>
+    <li><a href="#publish">Publish to the org</a></li>
+    <li><a href="#pull">Pull on every machine</a></li>
+    <li><a href="#install">Fork a skill</a></li>
+    <li><a href="#roles">Roles</a></li>
+    <li><a href="#limits">Limits</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<section class="sec" id="server">
+  <h2>Start a server</h2>
+  <div class="sec-sub">one container, a Postgres database and a bucket</div>
+  <p>
+    Skip this step on <a href="https://app.stift.sh">Stift Cloud</a>. To
+    self-host, the compose file brings everything it needs; for your own
+    database and bucket see <a href="/#server">Self-host a server</a>.
+  </p>
+  <div class="plate">
+    <div class="plate-bar"><span>sh</span><button class="copy" data-copy="curl -fsSLO https://raw.githubusercontent.com/stift-sh/stift/main/docker-compose.yml
+docker compose up -d
+docker compose logs server   # the first-boot admin token, shown once">copy</button></div>
+    <pre><code><span class="p">$</span> curl -fsSLO https://raw.githubusercontent.com/stift-sh/stift/main/docker-compose.yml
+<span class="p">$</span> docker compose up -d
+<span class="p">$</span> docker compose logs server   # the first-boot admin token, shown once</code></pre>
+  </div>
+  <p>
+    A server is one org (name it with <code>STIFT_ORG_NAME</code> in the
+    compose file). The token from the log belongs to its first admin; log in
+    with it and you are ready to add everyone else.
+  </p>
+  <div class="plate">
+    <div class="plate-bar"><span>sh</span><button class="copy" data-copy="curl -fsSL https://stift.sh/install.sh | sh
+stift login https://stift.acme.dev --token stf_...">copy</button></div>
+    <pre><code><span class="p">$</span> curl -fsSL https://stift.sh/install.sh | sh
+<span class="p">$</span> stift login https://stift.acme.dev --token stf_...</code></pre>
+  </div>
+</section>
+
+<section class="sec" id="people">
+  <h2>Add your people</h2>
+  <div class="sec-sub">users have a role, tokens belong to users</div>
+  <div class="plate">
+    <div class="plate-bar"><span>sh</span><button class="copy" data-copy="stift user add --email alice@acme.dev alice
+stift user add --admin bob
+stift user list
+stift user role alice admin
+stift user rm alice            # revokes her tokens too">copy</button></div>
+    <pre><code><span class="c"># creates the user and prints a ready-made login line with a first token, once</span>
+<span class="p">$</span> stift user add --email alice@acme.dev alice
+<span class="p">$</span> stift user add --admin bob
+
+<span class="p">$</span> stift user list
+<span class="p">$</span> stift user role alice admin
+<span class="p">$</span> stift user rm alice            # revokes her tokens too</code></pre>
+  </div>
+  <p>
+    The same is in the web app under <strong>Members</strong>. A member makes
+    further tokens for their other machines themselves
+    (<code>stift token create desktop</code>); an admin can mint one for
+    somebody else with <code>--user</code>, which is how CI gets a token.
+  </p>
+</section>
+
+<section class="sec" id="publish">
+  <h2>Publish to the org</h2>
+  <div class="sec-sub">admins write the org scope, from the terminal or the browser</div>
+  <p>
+    Org units live in <code>~/.stift/org/&lt;agent&gt;/</code> on the machine
+    that publishes them, laid out like the agent's own directory.
+  </p>
+  <div class="plate">
+    <div class="plate-bar"><span>sh</span><button class="copy" data-copy="mkdir -p ~/.stift/org/claude/skills/deploy
+$EDITOR ~/.stift/org/claude/skills/deploy/SKILL.md
+stift push --skills --scope org">copy</button></div>
+    <pre><code><span class="p">$</span> mkdir -p ~/.stift/org/claude/skills/deploy
+<span class="p">$</span> $EDITOR ~/.stift/org/claude/skills/deploy/SKILL.md
+<span class="p">$</span> stift push --skills --scope org
+<span class="g">pushed     claude/org/skills/deploy  v1 (1 files)</span></code></pre>
+  </div>
+  <ul class="spec">
+    <li><strong>Every push is a version.</strong> <code>stift skills history</code>, <code>diff</code> and <code>rollback</code> work per unit with <code>--scope org</code>; the web app shows the same timeline with rendered markdown and a diff between any two versions.</li>
+    <li><strong>No silent overwrites.</strong> A push on top of a version you have not pulled is rejected as stale.</li>
+    <li><strong>Edit in the browser.</strong> Admins can create and edit org skills in the web app; members see them read-only.</li>
+    <li><strong>Never synced:</strong> <code>settings*.json</code>, <code>.mcp.json</code>, env files and dotfiles, because they hold secrets and run code.</li>
+  </ul>
+</section>
+
+<section class="sec" id="pull">
+  <h2>Pull on every machine</h2>
+  <div class="sec-sub">a subscription: the org's newest version, linked into the agent</div>
+  <div class="plate">
+    <div class="plate-bar"><span>sh</span><button class="copy" data-copy="stift pull --skills --scope org">copy</button></div>
+    <pre><code><span class="p">$</span> stift pull --skills --scope org
+<span class="g">pulled     claude/org/skills/deploy  v1: 1 written, 0 deleted, 0 unchanged</span></code></pre>
+  </div>
+  <p>
+    Org units are mirrored into <code>~/.stift/org/</code> and each one is
+    symlinked into the agent's directory (<code>~/.claude/skills/deploy</code>),
+    so they never collide with personal skills, and a unit removed from the org
+    disappears with its link. The background service that <code>stift login</code>
+    starts keeps the mirror current, so nobody has to remember to pull.
+  </p>
+  <p>
+    Each pull is reported back. The skill's page in the web app lists
+    <strong>Pulls</strong>: which user has which version on which host, so
+    "is everyone on the new deploy checklist yet" has an answer.
+  </p>
+</section>
+
+<section class="sec" id="install">
+  <h2>Fork a skill</h2>
+  <div class="sec-sub">a detached copy that remembers where it came from</div>
+  <p>
+    A subscription is read-only by design. To adapt an org skill, install it:
+    that copies it into your own agent directory as ordinary files and records
+    the version it was copied from.
+  </p>
+  <div class="plate">
+    <div class="plate-bar"><span>sh</span><button class="copy" data-copy="stift skills install skills/deploy --replace   # --replace: swap the subscription for a copy
+stift skills outdated
+stift skills install skills/deploy --upgrade   # --force to overwrite your edits">copy</button></div>
+    <pre><code><span class="p">$</span> stift skills install skills/deploy --replace   # --replace: swap the subscription for a copy
+<span class="p">$</span> stift skills outdated
+<span class="g">AGENT    NAME                         INSTALLED ORG       STATUS
+claude   skills/deploy                v1        v3        behind</span>
+<span class="p">$</span> stift skills install skills/deploy --upgrade   # --force to overwrite your edits</code></pre>
+  </div>
+</section>
+
+<section class="sec" id="roles">
+  <h2>Roles</h2>
+  <div class="sec-sub">two of them; everyone can read everything in the org</div>
+  <table class="tbl">
+    <thead><tr><th></th><th>member</th><th>admin</th></tr></thead>
+    <tbody>
+      <tr><td class="m">read sessions, skills, members</td><td>yes</td><td>yes</td></tr>
+      <tr><td class="m">write project scope and own user scope</td><td>yes</td><td>yes</td></tr>
+      <tr><td class="m">write org scope</td><td>no</td><td>yes</td></tr>
+      <tr><td class="m">delete sessions</td><td>their own</td><td>any</td></tr>
+      <tr><td class="m">manage tokens</td><td>their own</td><td>the org's</td></tr>
+      <tr><td class="m">add and remove users, change roles</td><td>no</td><td>yes</td></tr>
+    </tbody>
+  </table>
+  <p class="note">
+    A token carries the role of its user, so a role change applies to every
+    machine at once. The server refuses to demote or remove the <b>last admin</b>.
+  </p>
+</section>
+
+<section class="sec" id="limits">
+  <h2>Limits</h2>
+  <div class="sec-sub">unlimited when you self-host, unless you say otherwise</div>
+  <table class="tbl">
+    <thead><tr><th>Variable</th><th>Caps</th></tr></thead>
+    <tbody>
+      <tr><td class="m"><code>STIFT_MAX_SKILLS</code></td><td>units (skills, agents, commands, CLAUDE.md) across all scopes</td></tr>
+      <tr><td class="m"><code>STIFT_MAX_STORAGE_BYTES</code></td><td>bytes of unit file content</td></tr>
+      <tr><td class="m"><code>STIFT_MAX_SEATS</code></td><td>users in the org</td></tr>
+    </tbody>
+  </table>
+  <p>
+    Set a positive integer, or <code>unlimited</code> to clear a limit. A write
+    over a limit is refused with <code>402</code> and a message naming it;
+    lowering a limit never deletes anything. The org card in the web app and
+    <code>GET /v1/org</code> show limits next to usage. On Stift Cloud the same
+    columns are set by your plan, which is the only difference.
+  </p>
+</section>
+
+</main>
+</div>
+</div>
+
+<footer>
+  <div class="frame" style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap">
+    <span><a href="/">stift</a> — mit core · <a href="https://app.stift.sh">stift cloud</a></span>
+    <span><a href="https://app.stift.sh">app.stift.sh</a> · <a href="/install.sh">install.sh</a> · <a href="https://github.com/stift-sh/stift">source</a></span>
+  </div>
+</footer>
+
+<script>
+for (const b of document.querySelectorAll("button.copy")) {
+  b.addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(b.dataset.copy); } catch {}
+    b.textContent = "copied"; b.classList.add("done");
+    setTimeout(() => { b.textContent = "copy"; b.classList.remove("done"); }, 1400);
+  });
+}
+</script>
+</body>
+</html>

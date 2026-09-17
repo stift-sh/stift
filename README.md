@@ -157,7 +157,7 @@ Project scope names are relative to the project directory: `.claude/skills/<name
 
 ```sh
 stift push --skills                    # every unit in user (~/.claude) + project scope
-stift push --skills --scope user       # one scope only; org requires an admin token
+stift push --skills --scope user       # one scope only; org requires the admin role
 stift push --skills --name skills/deploy
 stift pull --skills                    # user + project + org, newest version of each unit
 stift pull --skills --dry-run          # show what would change
@@ -192,6 +192,20 @@ so org and personal config never collide and removing an org unit removes
 the link. An existing entry that is not one of these links is left untouched
 with a warning; top-level org units such as `CLAUDE.md` stay in the mirror
 directory and are reported rather than merged.
+
+A subscription follows the org: the next pull brings the next version. To
+edit an org skill for yourself, install it instead, which makes a detached
+copy in the agent's own directory and remembers the version it came from:
+
+```sh
+stift skills install skills/policy             # copy the org unit into ~/.claude/skills/policy
+stift skills install skills/policy --replace   # turn an existing subscription into a copy
+stift skills outdated                          # installs that are behind the org's newest version
+stift skills install skills/policy --upgrade   # re-copy the newest version (--force: over local edits)
+```
+
+Pulls and installs of org units are reported to the server, so admins see
+who has which version on the skill's page in the web app (*Pulls*).
 
 ### Custom agents
 
@@ -244,11 +258,26 @@ a literal path is one unit, `<dir>/**` makes each entry directly under
 glob makes each match a unit named by its path relative to home or the
 project. Names may be at most three path segments deep.
 
-### Users and tokens
+### Users, roles and tokens
 
-A server has one org; every user is an `admin` or a `member`. Admins manage
-users and org-scope skills, members see everything and write their own
-user- and project-scope units. Tokens belong to a user and carry its role.
+A server has one org; every user is an `admin` or a `member`. Tokens belong
+to a user and carry its role, so changing a role applies to all of that
+user's tokens at once.
+
+| | member | admin |
+|---|---|---|
+| read sessions, skills and members of the org | yes | yes |
+| write project-scope units and their own user-scope units | yes | yes |
+| write org-scope units, or another user's user-scope units | no | yes |
+| delete sessions | their own | any |
+| manage tokens | their own | the org's |
+| add and remove users, change roles | no | yes |
+
+The first admin is `env-admin` when `STIFT_ADMIN_TOKEN` is set (changing the
+variable adds a second token for the same user, the old one keeps working
+until you revoke it), otherwise `admin`, whose token is printed once on
+first start. The server refuses to demote or remove the last admin. The
+same screens are in the web app under *Members* and *Tokens*.
 
 ```sh
 stift user add --email a@b.co alice   # admin: creates the user and prints a first token once
@@ -261,6 +290,24 @@ stift token create --user alice ci    # admin: a token for another member
 stift token list                      # admins see the org, members their own
 stift token revoke <id>
 ```
+
+### Limits
+
+A self-hosted org is unlimited by default. Three variables cap it:
+
+| Variable | Limits |
+|---|---|
+| `STIFT_MAX_SKILLS` | config units (skills, agents, commands, CLAUDE.md) across all scopes |
+| `STIFT_MAX_STORAGE_BYTES` | bytes of unit file content; session archives are not counted |
+| `STIFT_MAX_SEATS` | users in the org |
+
+Each takes a positive integer, or `unlimited` to clear a limit set earlier;
+they are written to the org at startup, and a variable you leave unset
+leaves its limit as it is. A write that would exceed a limit is refused with
+`402` and a message such as `limit: 50 skills per org`, which the CLI prints
+and the web app shows inline. Lowering a limit below current usage removes
+nothing, it only blocks growth. `GET /v1/org` and the org card in the web
+app show limits next to current usage.
 
 ### Environment variables
 
@@ -275,7 +322,8 @@ stift token revoke <id>
 | `STIFT_STATE` | daemon | sync-state cache path (default `~/.cache/stift/sync-state.json`) |
 | `STIFT_SKILLS_STATE` | client | skills sync state (default `~/.config/stift/state.json`) |
 | `PORT` | server | listen port (default `8580`) |
-| `STIFT_ADMIN_TOKEN` | server | register a fixed admin token at startup |
+| `STIFT_ADMIN_TOKEN` | server | register a fixed admin token at startup (user `env-admin`) |
+| `STIFT_ORG_NAME` | server | display name of the org (default `Default`); applied while the org still has the default name, so a rename is not overwritten |
 | `STIFT_DATABASE_URL` | server | Postgres connection string (required) |
 | `STIFT_S3_BUCKET`, `STIFT_S3_ENDPOINT`, `STIFT_S3_REGION`, `STIFT_S3_ACCESS_KEY`, `STIFT_S3_SECRET_KEY`, `STIFT_S3_FORCE_PATH_STYLE`, `STIFT_S3_PREFIX` | server | blob storage (any S3-compatible API) |
 | `STIFT_MAX_SKILLS`, `STIFT_MAX_STORAGE_BYTES`, `STIFT_MAX_SEATS` | server | limits of the default org, applied at startup: a positive integer, or `unlimited` to clear one (default: unlimited). Writes over a limit get `402`; `GET /v1/org` shows limits and usage |
@@ -338,11 +386,13 @@ All `/v1` endpoints require `Authorization: Bearer <token>`.
 | `GET /v1/bundles/{scope}/{agent}/{name}?project=&history=1` | all versions of the unit, newest first |
 | `DELETE /v1/bundles/{scope}/{agent}/{name}?project=` | delete the unit and its history (org scope admin-only) |
 | `GET /v1/whoami` | token name, user, role and org |
-| `GET/POST/DELETE /v1/tokens` | own tokens; admins see the org and may `POST` with `user` for another member |
+| `GET/POST/DELETE /v1/tokens` | own tokens, each with the `role` of its user; admins see the org and may `POST` with `user` for another member |
 | `GET /v1/members` | members of the org with role and token count |
 | `POST /v1/members` | admin: add a user (`name`, `email`, `role`, optional `token` name mints a first token, shown once) |
 | `PATCH /v1/members/{id}` | admin: change `role` (id or name); refuses to demote the last admin |
 | `DELETE /v1/members/{id}` | admin: remove a member and their tokens; refuses self |
+| `GET /v1/org` | the org with its limits and current usage |
+| `GET/POST /v1/installs` | where org units are pulled or installed, per user, agent, unit and host |
 | `GET /healthz` | liveness (no auth) |
 
 ## Security notes
