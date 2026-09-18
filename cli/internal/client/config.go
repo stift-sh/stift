@@ -12,6 +12,10 @@ import (
 type Config struct {
 	Server string `json:"server"`
 	Token  string `json:"token"`
+	// Registry is the public registry `stift skills search|install @org/name`
+	// ask by default (see registry.Resolve); empty means the logged-in
+	// server when it is one, else the default registry.
+	Registry string `json:"registry,omitempty"`
 }
 
 func configPath() (string, error) {
@@ -78,8 +82,8 @@ func SaveLinks(links []Link) (string, error) {
 	return path, os.WriteFile(path, data, 0o600)
 }
 
-// LoadConfig reads the saved config; STIFT_SERVER and STIFT_TOKEN
-// environment variables override saved values.
+// LoadConfig reads the saved config; the STIFT_SERVER, STIFT_TOKEN and
+// STIFT_REGISTRY_URL environment variables override saved values.
 func LoadConfig() (Config, error) {
 	var cfg Config
 	path, err := configPath()
@@ -93,6 +97,9 @@ func LoadConfig() (Config, error) {
 	}
 	if v := os.Getenv("STIFT_TOKEN"); v != "" {
 		cfg.Token = v
+	}
+	if v := os.Getenv("STIFT_REGISTRY_URL"); v != "" {
+		cfg.Registry = v
 	}
 	return cfg, nil
 }

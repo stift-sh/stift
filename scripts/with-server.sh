@@ -23,6 +23,7 @@ LOG=$(mktemp)
 cleanup() { kill "${SERVER_PID:-}" 2>/dev/null || true; rm -f "$LOG"; }
 trap cleanup EXIT
 
+node apps/server/dist/src/db/migrate.js >/dev/null || { echo "migrate"; exit 1; }
 (cd apps/server && node --input-type=module -e '
   import pg from "pg";
   const c = new pg.Client({ connectionString: process.env.STIFT_DATABASE_URL });

@@ -19,13 +19,28 @@ type Entry struct {
 }
 
 // InstallEntry records provenance of a detached copy made by
-// `stift skills install`: which org version was copied and the manifest
-// written, so upgrades can tell local edits from the copy.
+// `stift skills install`: which version was copied and the manifest
+// written, so upgrades can tell local edits from the copy. An org install
+// is keyed by (server, agent, unit); a registry install by (registry URL,
+// agent, ref), with Ref, Registry and Unit set, so the two never collide in
+// the state file even when they want the same directory on disk.
 type InstallEntry struct {
-	From      string            `json:"from"` // "org" today; a registry address later
+	From      string            `json:"from"` // "org" or "registry"
 	Version   int               `json:"version"`
 	Manifest  map[string]string `json:"manifest"`
 	Installed time.Time         `json:"installed"`
+	Ref       string            `json:"ref,omitempty"`      // registry: "@acme/deploy"
+	Registry  string            `json:"registry,omitempty"` // registry: its URL
+	Unit      string            `json:"unit,omitempty"`     // registry: the directory installed, e.g. "skills/deploy"
+}
+
+// UnitName is the unit the entry occupies in the agent's config directory:
+// Unit for a registry install, the key's name (passed in) for an org one.
+func (e InstallEntry) UnitName(keyName string) string {
+	if e.Unit != "" {
+		return e.Unit
+	}
+	return keyName
 }
 
 // State is the client's sync state (~/.config/stift/state.json, override
@@ -152,6 +167,42 @@ func (s *State) InstallNames(server string) [][2]string {
 		return out[i][1] < out[j][1]
 	})
 	return out
+}
+
+// InstallRef is one parsed install-map key.
+type InstallRef struct{ Server, Agent, Name string }
+
+// AllInstalls returns every install key, sorted by server, agent and name.
+func (s *State) AllInstalls() []InstallRef {
+	var out []InstallRef
+	for k := range s.Installs {
+		parts := strings.SplitN(k, "|", 3)
+		if len(parts) == 3 {
+			out = append(out, InstallRef{parts[0], parts[1], parts[2]})
+		}
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Server != out[j].Server {
+			return out[i].Server < out[j].Server
+		}
+		if out[i].Agent != out[j].Agent {
+			return out[i].Agent < out[j].Agent
+		}
+		return out[i].Name < out[j].Name
+	})
+	return out
+}
+
+// FindInstall returns the install, from any source, that occupies unit in
+// the agent's config directory, and its key; ok is false when none does.
+func (s *State) FindInstall(agent, unit string) (InstallRef, InstallEntry, bool) {
+	for _, k := range s.AllInstalls() {
+		e := s.Installs[InstallKey(k.Server, k.Agent, k.Name)]
+		if k.Agent == agent && e.UnitName(k.Name) == unit {
+			return k, e, true
+		}
+	}
+	return InstallRef{}, InstallEntry{}, false
 }
 
 // Save writes the state file atomically.

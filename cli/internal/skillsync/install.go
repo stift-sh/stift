@@ -3,6 +3,7 @@ package skillsync
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,6 +11,8 @@ import (
 	"github.com/stift-sh/stift/internal/agents"
 	"github.com/stift-sh/stift/internal/api"
 	"github.com/stift-sh/stift/internal/bundle"
+	"github.com/stift-sh/stift/internal/client"
+	"github.com/stift-sh/stift/internal/registry"
 )
 
 // ErrSubscribed is returned by Install when the destination is the symlink
@@ -32,17 +35,63 @@ type InstallResult struct {
 	Dir      string
 	Version  int
 	Apply    bundle.ApplyResult
-	Replaced bool // a subscription link was removed
-	Upgraded bool // an earlier install was on disk
-	Previous int  // version of that earlier install
+	Replaced bool   // a subscription link was removed
+	Upgraded bool   // an earlier install was on disk
+	Previous int    // version of that earlier install
+	Evicted  string // with Force: the other source ("org" or "@acme/deploy") whose install this replaced
+}
+
+// installSource is where a unit comes from: the state-file slot it is
+// recorded under and the blob fetcher for its files.
+type installSource struct {
+	server  string              // state key: the server or registry URL
+	keyName string              // state key: the unit name or the registry ref
+	entry   bundle.InstallEntry // From, Ref, Registry, Unit; Version and Manifest are filled in
+	fetch   func(sha string) (io.ReadCloser, error)
+}
+
+// label is how the source is named in messages: "org" or the ref.
+func (src installSource) label() string {
+	if src.entry.Ref != "" {
+		return src.entry.Ref
+	}
+	return src.entry.From
+}
+
+func entryLabel(e bundle.InstallEntry) string {
+	if e.Ref != "" {
+		return e.Ref
+	}
+	return e.From
 }
 
 // Install copies an org unit into the agent's own user config directory as
 // a real directory (or file) the user owns and may edit, and records the
 // provenance in the state file. This is the "fork the company skill" path;
 // subscribing (pull --scope org) is the mirror. Nothing is reported to the
-// server here; see ReportInstall.
+// server here; see Report.
 func (s *Syncer) Install(agent string, remote api.Bundle, opt InstallOptions) (InstallResult, error) {
+	src := installSource{server: s.Server, keyName: remote.Name, entry: bundle.InstallEntry{From: "org"}, fetch: s.fetch}
+	return s.install(agent, remote, src, opt)
+}
+
+// InstallRegistry copies a published skill fetched from reg into the
+// agent's user config directory, under the unit it was published from.
+// It needs no login: the fetcher hits the public blob route of that
+// version and bundle.Apply verifies every file against the manifest.
+func (s *Syncer) InstallRegistry(agent string, reg *client.Registry, ref registry.Ref, rs api.RegistrySkill, opt InstallOptions) (InstallResult, error) {
+	v := rs.Version
+	remote := api.Bundle{Scope: "org", Agent: agent, Name: rs.Skill.Unit, Version: v.Version, Files: v.Files, Skills: v.Skills}
+	src := installSource{
+		server:  reg.URL(),
+		keyName: ref.Base(),
+		entry:   bundle.InstallEntry{From: "registry", Ref: ref.Base(), Registry: reg.URL(), Unit: rs.Skill.Unit},
+		fetch:   reg.Fetch(v.Org, v.Name, v.Version),
+	}
+	return s.install(agent, remote, src, opt)
+}
+
+func (s *Syncer) install(agent string, remote api.Bundle, src installSource, opt InstallOptions) (InstallResult, error) {
 	var res InstallResult
 	name := remote.Name
 	if !agents.ValidUnitName(name) || !strings.Contains(name, "/") {
@@ -72,11 +121,11 @@ func (s *Syncer) Install(agent string, remote api.Bundle, opt InstallOptions) (I
 		}
 		res.Replaced = true
 	}
-	prev := s.State.GetInstall(s.Server, agent, name)
+	prev := s.State.GetInstall(src.server, agent, src.keyName)
 	var base map[string]string
 	if prev.Version > 0 {
 		if !opt.Upgrade && !opt.Force {
-			return res, fmt.Errorf("%s is already installed (v%d); `stift skills install %s --upgrade` re-copies it", name, prev.Version, name)
+			return res, fmt.Errorf("%s is already installed (v%d); `stift skills install %s --upgrade` re-copies it", name, prev.Version, src.keyName)
 		}
 		res.Upgraded, res.Previous = true, prev.Version
 		base = prev.Manifest
@@ -88,7 +137,19 @@ func (s *Syncer) Install(agent string, remote api.Bundle, opt InstallOptions) (I
 			}
 		}
 	}
-	apply, err := bundle.Apply(remote, s.fetch, dir, base, opt.Force, false)
+	// The same directory installed from another source (an org unit vs a
+	// registry skill): the state file keeps them apart, the disk cannot.
+	var evict *bundle.InstallRef
+	if other, oe, found := s.State.FindInstall(agent, name); found && (other.Server != src.server || other.Name != src.keyName) {
+		if !opt.Force {
+			return res, fmt.Errorf("%s is already installed from %s; `--force` replaces it", name, entryLabel(oe))
+		}
+		if base == nil {
+			base = oe.Manifest
+		}
+		evict, res.Evicted = &other, entryLabel(oe)
+	}
+	apply, err := bundle.Apply(remote, src.fetch, dir, base, opt.Force, false)
 	if err != nil {
 		return res, err
 	}
@@ -101,7 +162,12 @@ func (s *Syncer) Install(agent string, remote api.Bundle, opt InstallOptions) (I
 			delete(manifest, p)
 		}
 	}
-	err = s.State.SetInstall(s.Server, agent, name, bundle.InstallEntry{From: "org", Version: remote.Version, Manifest: manifest})
+	if evict != nil {
+		delete(s.State.Installs, bundle.InstallKey(evict.Server, evict.Agent, evict.Name))
+	}
+	entry := src.entry
+	entry.Version, entry.Manifest = remote.Version, manifest
+	err = s.State.SetInstall(src.server, agent, src.keyName, entry)
 	return res, err
 }
 

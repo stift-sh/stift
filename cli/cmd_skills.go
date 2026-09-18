@@ -13,6 +13,7 @@ import (
 	"github.com/stift-sh/stift/internal/api"
 	"github.com/stift-sh/stift/internal/bundle"
 	"github.com/stift-sh/stift/internal/client"
+	"github.com/stift-sh/stift/internal/registry"
 	"github.com/stift-sh/stift/internal/skillsync"
 )
 
@@ -230,6 +231,11 @@ func cmdSkills(args []string) error {
 	replace := fs.Bool("replace", false, "install: turn an org-scope subscription (symlink) into a copy")
 	upgrade := fs.Bool("upgrade", false, "install: re-copy over an existing install")
 	force := fs.Bool("force", false, "install: overwrite local modifications")
+	license := fs.String("license", "", "publish: SPDX identifier or LicenseRef-<name> (required on the first publish)")
+	pubName := fs.String("name", "", "publish: public name (default: the unit's last segment; fixed after the first publish)")
+	version := fs.Int("version", 0, "publish: source version to publish (default: newest)")
+	regURL := fs.String("registry", "", "search/install @ref: registry URL (default: STIFT_REGISTRY_URL, the config file, then the logged-in server or "+registry.DefaultURL+")")
+	limit := fs.Int("limit", 20, "search: results per page (max 50)")
 	fs.Usage = func() {
 		fmt.Fprintln(os.Stderr, "usage: stift skills list [--scope S] [--agent A]")
 		fmt.Fprintln(os.Stderr, "       stift skills history NAME [--scope S] [--agent A]")
@@ -238,7 +244,14 @@ func cmdSkills(args []string) error {
 		fmt.Fprintln(os.Stderr, "       stift skills delete NAME         delete a unit and its history from the server")
 		fmt.Fprintln(os.Stderr, "       stift skills install NAME [--agent A] [--replace] [--upgrade] [--force]")
 		fmt.Fprintln(os.Stderr, "                                        copy an org unit into your own config (a fork you may edit)")
-		fmt.Fprintln(os.Stderr, "       stift skills outdated            installed copies that are behind the org head")
+		fmt.Fprintln(os.Stderr, "       stift skills install @ORG/NAME[@N] [--registry URL] [--agent A] [--upgrade] [--force]")
+		fmt.Fprintln(os.Stderr, "                                        install a published skill from a registry (no login needed)")
+		fmt.Fprintln(os.Stderr, "       stift skills outdated            installed copies that are behind the org head or the registry")
+		fmt.Fprintln(os.Stderr, "       stift skills publish NAME --license L [--name PUBLIC] [--version N] [--agent A]")
+		fmt.Fprintln(os.Stderr, "                                        publish an org skill as @<org-slug>/<name> (admins)")
+		fmt.Fprintln(os.Stderr, "       stift skills unpublish @ORG/NAME[@N]   hide a version (or the skill) from search and latest")
+		fmt.Fprintln(os.Stderr, "       stift skills restore @ORG/NAME[@N]     make it visible again")
+		fmt.Fprintln(os.Stderr, "       stift skills search [QUERY] [--registry URL] [--limit N]")
 		fmt.Fprintln(os.Stderr, "NAME is a unit such as skills/deploy, agents/reviewer, commands/fix-tests or CLAUDE.md.")
 		fs.PrintDefaults()
 	}
@@ -260,7 +273,18 @@ func cmdSkills(args []string) error {
 	}
 	narg := func() int { return len(pos) }
 	arg := func(i int) string { return pos[i] }
-	c, err := client.Require()
+	// Registry reads (search, install @ref, outdated for registry installs)
+	// work without a login, so the client is only required by the
+	// subcommands that talk to the org.
+	var c *client.Client
+	login := func() (*client.Client, error) {
+		var err error
+		if c == nil {
+			c, err = client.Require()
+		}
+		return c, err
+	}
+	home, err := os.UserHomeDir()
 	if err != nil {
 		return err
 	}
@@ -281,9 +305,32 @@ func cmdSkills(args []string) error {
 		}
 		return n, nil
 	}
+	// refArg parses the @org/name[@N] positional of unpublish and restore.
+	// A bare name is accepted too; an org that is not the caller's is
+	// refused before the server gets a request it cannot mean.
+	refArg := func(c *client.Client) (string, int, error) {
+		if narg() < 1 {
+			return "", 0, fmt.Errorf("usage: stift skills %s @ORG/NAME[@N]", sub)
+		}
+		if !registry.IsRef(arg(0)) {
+			return arg(0), 0, nil
+		}
+		r, err := registry.Parse(arg(0))
+		if err != nil {
+			return "", 0, err
+		}
+		if w, err := c.Whoami(); err == nil && w.Org.Slug != "" && w.Org.Slug != r.Org {
+			return "", 0, fmt.Errorf("%s is not in your org (@%s)", r.Base(), w.Org.Slug)
+		}
+		return r.Name, r.Version, nil
+	}
 
 	switch sub {
 	case "list", "ls":
+		c, err := login()
+		if err != nil {
+			return err
+		}
 		f := client.BundleFilter{}
 		if isFlagSet(fs, "agent") {
 			f.Agent = *agent
@@ -312,6 +359,10 @@ func cmdSkills(args []string) error {
 			}
 		}
 	case "history":
+		c, err := login()
+		if err != nil {
+			return err
+		}
 		name, err := unitArg()
 		if err != nil {
 			return err
@@ -325,6 +376,10 @@ func cmdSkills(args []string) error {
 				b.Created.Local().Format("2006-01-02 15:04:05"), b.Author, b.Host, len(b.Files))
 		}
 	case "diff":
+		c, err := login()
+		if err != nil {
+			return err
+		}
 		name, err := unitArg()
 		if err != nil {
 			return err
@@ -336,10 +391,6 @@ func cmdSkills(args []string) error {
 			}
 		}
 		remote, err := c.GetBundle(t.Key(name), version)
-		if err != nil {
-			return err
-		}
-		home, err := os.UserHomeDir()
 		if err != nil {
 			return err
 		}
@@ -372,6 +423,10 @@ func cmdSkills(args []string) error {
 			fmt.Printf("  - %s  (server only)\n", p)
 		}
 	case "rollback":
+		c, err := login()
+		if err != nil {
+			return err
+		}
 		name, err := unitArg()
 		if err != nil {
 			return err
@@ -399,11 +454,15 @@ func cmdSkills(args []string) error {
 		}
 		fmt.Printf("%s: published v%d as v%d; run `stift pull --skills --scope %s` to apply it locally\n", name, version, res.Version, key.Scope)
 	case "install":
-		name, err := unitArg()
+		if narg() >= 1 && registry.IsRef(arg(0)) {
+			return installFromRegistry(arg(0), *regURL, *agent, isFlagSet(fs, "agent"), home,
+				skillsync.InstallOptions{Replace: *replace, Upgrade: *upgrade, Force: *force})
+		}
+		c, err := login()
 		if err != nil {
 			return err
 		}
-		home, err := os.UserHomeDir()
+		name, err := unitArg()
 		if err != nil {
 			return err
 		}
@@ -420,58 +479,17 @@ func cmdSkills(args []string) error {
 		if err != nil {
 			return err
 		}
-		verb := "installed"
-		if res.Upgraded {
-			verb = fmt.Sprintf("upgraded v%d →", res.Previous)
-		}
-		fmt.Printf("%s %s v%d → %s: %d written, %d unchanged", verb, name, res.Version, res.Dir, len(res.Apply.Written), res.Apply.Unchanged)
-		if len(res.Apply.Conflicts) > 0 {
-			fmt.Printf(", %d locally modified (kept; use --force to overwrite)", len(res.Apply.Conflicts))
-		}
-		fmt.Println()
-		if res.Replaced {
-			fmt.Printf("the org subscription link was replaced; this copy no longer follows org updates (`stift skills outdated` shows when it falls behind)\n")
-		}
+		reportInstall(name, res)
 		if err := s.Report(*agent, name, res.Version, api.InstallReportFromInstall); err != nil {
 			warnf(fmt.Sprintf("could not report the install to the server: %v", err))
 		}
 	case "outdated":
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return err
-		}
-		s, err := skillsync.New(c, home, warnf)
-		if err != nil {
-			return err
-		}
-		names := s.State.InstallNames(s.Server)
-		if len(names) == 0 {
-			fmt.Println("nothing installed from this server")
-			return nil
-		}
-		fmt.Printf("%-8s %-28s %-9s %-9s %s\n", "AGENT", "NAME", "INSTALLED", "ORG", "STATUS")
-		behind := 0
-		for _, an := range names {
-			a, n := an[0], an[1]
-			e := s.State.GetInstall(s.Server, a, n)
-			head, err := c.GetBundle(client.BundleKey{Scope: "org", Agent: a, Name: n}, 0)
-			status := "up to date"
-			headV := "-"
-			if err != nil {
-				status = "gone from org: " + err.Error()
-			} else {
-				headV = fmt.Sprintf("v%d", head.Version)
-				if head.Version > e.Version {
-					status = "behind; `stift skills install " + n + " --upgrade --agent " + a + "`"
-					behind++
-				}
-			}
-			fmt.Printf("%-8s %-28s %-9s %-9s %s\n", a, n, fmt.Sprintf("v%d", e.Version), headV, status)
-		}
-		if behind > 0 {
-			return fmt.Errorf("%d install(s) behind the org head", behind)
-		}
+		return skillsOutdated(home)
 	case "delete", "rm":
+		c, err := login()
+		if err != nil {
+			return err
+		}
 		name, err := unitArg()
 		if err != nil {
 			return err
@@ -480,9 +498,249 @@ func cmdSkills(args []string) error {
 			return err
 		}
 		fmt.Printf("deleted %s\n", t.Label(name))
+	case "publish":
+		c, err := login()
+		if err != nil {
+			return err
+		}
+		name, err := unitArg()
+		if err != nil {
+			return err
+		}
+		v, err := c.Publish(api.PublishRequest{Agent: *agent, Unit: name, Name: *pubName, License: *license, Version: *version})
+		if err != nil {
+			return err
+		}
+		ref := registry.Ref{Org: v.Org, Name: v.Name}
+		fmt.Printf("published %s/org/%s v%d as %s v%d (%d files)\n", *agent, name, v.SourceVersion, ref.Base(), v.Version, len(v.Files))
+		fmt.Printf("  install anywhere: stift skills install %s --registry %s\n", ref.Base(), c.Server())
+	case "unpublish":
+		c, err := login()
+		if err != nil {
+			return err
+		}
+		name, version, err := refArg(c)
+		if err != nil {
+			return err
+		}
+		if err := c.Unpublish(name, version); err != nil {
+			return err
+		}
+		if version > 0 {
+			fmt.Printf("unpublished %s v%d: hidden from search and latest, still resolves by number; `stift skills restore %s@%d` brings it back\n", name, version, name, version)
+		} else {
+			fmt.Printf("unpublished %s: hidden from search and latest, versions still resolve by number; `stift skills restore %s` brings it back\n", name, name)
+		}
+	case "restore":
+		c, err := login()
+		if err != nil {
+			return err
+		}
+		name, version, err := refArg(c)
+		if err != nil {
+			return err
+		}
+		if err := c.RestorePublished(name, version); err != nil {
+			return err
+		}
+		if version > 0 {
+			fmt.Printf("restored %s v%d\n", name, version)
+		} else {
+			fmt.Printf("restored %s\n", name)
+		}
+	case "search":
+		q := ""
+		if narg() >= 1 {
+			q = strings.Join(pos, " ")
+		}
+		reg, err := searchRegistry(*regURL)
+		if err != nil {
+			return err
+		}
+		page, err := reg.Search(q, *limit, "")
+		if err != nil {
+			return err
+		}
+		if len(page.Skills) == 0 {
+			fmt.Printf("no published skills match on %s\n", reg.URL())
+			return nil
+		}
+		fmt.Printf("%-32s %-5s %-12s %-8s %s\n", "SKILL", "VER", "LICENSE", "AGENT", "DESCRIPTION")
+		for _, sk := range page.Skills {
+			fmt.Printf("%-32s v%-4d %-12s %-8s %s\n", "@"+sk.Org+"/"+sk.Name, sk.Latest, sk.License, sk.Agent, sk.Description)
+		}
+		if page.Next != "" {
+			fmt.Printf("more on %s; narrow the query or raise --limit\n", reg.URL())
+		}
 	default:
 		fs.Usage()
 		os.Exit(2)
+	}
+	return nil
+}
+
+func reportInstall(name string, res skillsync.InstallResult) {
+	verb := "installed"
+	if res.Upgraded {
+		verb = fmt.Sprintf("upgraded v%d →", res.Previous)
+	}
+	fmt.Printf("%s %s v%d → %s: %d written, %d unchanged", verb, name, res.Version, res.Dir, len(res.Apply.Written), res.Apply.Unchanged)
+	if len(res.Apply.Conflicts) > 0 {
+		fmt.Printf(", %d locally modified (kept; use --force to overwrite)", len(res.Apply.Conflicts))
+	}
+	fmt.Println()
+	if res.Replaced {
+		fmt.Printf("the org subscription link was replaced; this copy no longer follows org updates (`stift skills outdated` shows when it falls behind)\n")
+	}
+	if res.Evicted != "" {
+		fmt.Printf("replaced the copy installed from %s\n", res.Evicted)
+	}
+}
+
+// searchRegistry picks the registry for a search: an explicit URL
+// (--registry, STIFT_REGISTRY_URL, `registry` in the config file), else the
+// logged-in server when it advertises the registry feature, else the
+// default registry.
+func searchRegistry(flagURL string) (*client.Registry, error) {
+	cfg, _ := client.LoadConfig()
+	if u := oneOf(flagURL, cfg.Registry); u != "" {
+		return client.NewRegistry(u), nil
+	}
+	if cfg.Server != "" {
+		if reg := client.NewRegistry(cfg.Server); reg.HasRegistry() {
+			return reg, nil
+		}
+	}
+	return client.NewRegistry(registry.DefaultURL), nil
+}
+
+// resolveRef finds a reference: on the explicit registry when one is
+// configured, else on the logged-in server (if it is a registry and has
+// the ref) and then the default registry. A miss names the registry asked.
+func resolveRef(flagURL string, ref registry.Ref) (*client.Registry, api.RegistrySkill, error) {
+	cfg, _ := client.LoadConfig()
+	var candidates []string
+	if u := oneOf(flagURL, cfg.Registry); u != "" {
+		candidates = []string{u}
+	} else {
+		if cfg.Server != "" && client.NewRegistry(cfg.Server).HasRegistry() {
+			candidates = append(candidates, cfg.Server)
+		}
+		if strings.TrimRight(cfg.Server, "/") != registry.DefaultURL {
+			candidates = append(candidates, registry.DefaultURL)
+		}
+	}
+	var rs api.RegistrySkill
+	for i, u := range candidates {
+		reg := client.NewRegistry(u)
+		rs, err := reg.Get(ref.Org, ref.Name, ref.Version)
+		if err == nil {
+			return reg, rs, nil
+		}
+		if !errors.Is(err, client.ErrNotFound) || i == len(candidates)-1 {
+			if errors.Is(err, client.ErrNotFound) {
+				return nil, rs, fmt.Errorf("%s not found on %s (--registry URL or STIFT_REGISTRY_URL asks another registry)", ref, u)
+			}
+			return nil, rs, err
+		}
+	}
+	return nil, rs, fmt.Errorf("%s: no registry to ask", ref)
+}
+
+// installFromRegistry is `stift skills install @org/name[@N]`: resolve the
+// ref, then copy it with checksum verification. No login is needed.
+func installFromRegistry(refStr, flagURL, agent string, agentSet bool, home string, opt skillsync.InstallOptions) error {
+	ref, err := registry.Parse(refStr)
+	if err != nil {
+		return err
+	}
+	reg, rs, err := resolveRef(flagURL, ref)
+	if err != nil {
+		return err
+	}
+	if !agentSet && rs.Skill.Agent != "" {
+		agent = rs.Skill.Agent
+	}
+	s, err := skillsync.New(nil, home, warnf)
+	if err != nil {
+		return err
+	}
+	res, err := s.InstallRegistry(agent, reg, ref, rs, opt)
+	if err != nil {
+		return err
+	}
+	reportInstall(ref.Base(), res)
+	if !rs.Version.UnpublishedAt.IsZero() {
+		warnf(fmt.Sprintf("%s v%d was unpublished; it still installs but `stift skills outdated` will flag it", ref.Base(), res.Version))
+	}
+	return nil
+}
+
+// skillsOutdated lists every install in the state file, org and registry,
+// and where each stands against its source.
+func skillsOutdated(home string) error {
+	st, err := bundle.LoadState()
+	if err != nil {
+		return err
+	}
+	refs := st.AllInstalls()
+	if len(refs) == 0 {
+		fmt.Println("nothing installed")
+		return nil
+	}
+	cfg, _ := client.LoadConfig()
+	var c *client.Client
+	if cfg.Server != "" && cfg.Token != "" {
+		c = client.New(cfg.Server, cfg.Token)
+	}
+	fmt.Printf("%-8s %-28s %-9s %-9s %s\n", "AGENT", "NAME", "INSTALLED", "LATEST", "STATUS")
+	behind := 0
+	for _, r := range refs {
+		e := st.Installs[bundle.InstallKey(r.Server, r.Agent, r.Name)]
+		status, latest := "up to date", "-"
+		switch e.From {
+		case "registry":
+			ref, err := registry.Parse(e.Ref)
+			if err != nil {
+				status = "bad state entry: " + err.Error()
+				break
+			}
+			cur, err := client.NewRegistry(e.Registry).Get(ref.Org, ref.Name, 0)
+			switch {
+			case errors.Is(err, client.ErrNotFound):
+				status = "unpublished on " + e.Registry
+			case err != nil:
+				status = "unreachable: " + err.Error()
+			case cur.Version.Version > e.Version:
+				latest = fmt.Sprintf("v%d", cur.Version.Version)
+				status = fmt.Sprintf("behind; `stift skills install %s --upgrade --registry %s`", e.Ref, e.Registry)
+				behind++
+			case cur.Version.Version < e.Version:
+				latest = fmt.Sprintf("v%d", cur.Version.Version)
+				status = fmt.Sprintf("unpublished; latest is v%d, `stift skills install %s --upgrade --force --registry %s` goes back to it", cur.Version.Version, e.Ref, e.Registry)
+			default:
+				latest = fmt.Sprintf("v%d", cur.Version.Version)
+			}
+		default:
+			if c == nil || strings.TrimRight(cfg.Server, "/") != r.Server {
+				status = "not logged in to " + r.Server
+				break
+			}
+			head, err := c.GetBundle(client.BundleKey{Scope: "org", Agent: r.Agent, Name: r.Name}, 0)
+			if err != nil {
+				status = "gone from org: " + err.Error()
+				break
+			}
+			latest = fmt.Sprintf("v%d", head.Version)
+			if head.Version > e.Version {
+				status = "behind; `stift skills install " + r.Name + " --upgrade --agent " + r.Agent + "`"
+				behind++
+			}
+		}
+		fmt.Printf("%-8s %-28s %-9s %-9s %s\n", r.Agent, r.Name, fmt.Sprintf("v%d", e.Version), latest, status)
+	}
+	if behind > 0 {
+		return fmt.Errorf("%d install(s) behind", behind)
 	}
 	return nil
 }

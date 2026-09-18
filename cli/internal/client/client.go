@@ -58,9 +58,20 @@ func (c *Client) do(method, path string, body io.Reader, contentType string) (*h
 		if res.StatusCode == http.StatusConflict {
 			return nil, fmt.Errorf("%w: %s", ErrStale, e.Error)
 		}
+		if res.StatusCode == http.StatusNotFound {
+			return nil, fmt.Errorf("%w: %s", ErrNotFound, e.Error)
+		}
 		return nil, fmt.Errorf("server: %s", e.Error)
 	}
 	return res, nil
+}
+
+// ErrNotFound is wrapped into errors for 404 responses.
+var ErrNotFound = errors.New("not found")
+
+// Version returns the server's version and feature flags (no auth).
+func (c *Client) Version() (api.Version, error) {
+	return serverVersion(c.http, c.base)
 }
 
 func (c *Client) getJSON(path string, out any) error {
@@ -393,6 +404,42 @@ func (c *Client) BundleHistory(k BundleKey) ([]api.Bundle, error) {
 
 func (c *Client) DeleteBundle(k BundleKey) error {
 	res, err := c.do(http.MethodDelete, bundlePath(k, nil), nil, "")
+	if err != nil {
+		return err
+	}
+	return res.Body.Close()
+}
+
+// ---- publishing (the org's side of the public registry) ----
+
+// Publish copies an org-scope unit to the org's public namespace as
+// `@<org>/<name>` (admins only).
+func (c *Client) Publish(in api.PublishRequest) (api.PublishedVersion, error) {
+	var out api.PublishedVersion
+	return out, c.postJSON("/v1/published", in, &out)
+}
+
+func publishedPath(name string, version int, suffix string) string {
+	p := "/v1/published/" + url.PathEscape(name) + suffix
+	if version > 0 {
+		p += "?version=" + strconv.Itoa(version)
+	}
+	return p
+}
+
+// Unpublish hides one version (or, with version 0, the whole skill) from
+// search and `latest`; numbered versions keep resolving.
+func (c *Client) Unpublish(name string, version int) error {
+	res, err := c.do(http.MethodDelete, publishedPath(name, version, ""), nil, "")
+	if err != nil {
+		return err
+	}
+	return res.Body.Close()
+}
+
+// RestorePublished makes a hidden version (or skill) visible again.
+func (c *Client) RestorePublished(name string, version int) error {
+	res, err := c.do(http.MethodPost, publishedPath(name, version, "/restore"), nil, "")
 	if err != nil {
 		return err
 	}
