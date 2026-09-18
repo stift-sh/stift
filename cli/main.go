@@ -94,6 +94,8 @@ Client:
                                     Inspect and roll back per-unit config versions
   stift skills install NAME | outdated
                                     Copy an org unit for editing; list copies behind the org
+  stift skills publish|unpublish|restore|search|install @ORG/NAME
+                                    Share org skills publicly; install from any registry (no login)
   stift list [flags]                List sessions stored on the server
   stift delete ID...                Delete sessions from the server
   stift agents [flags]              Show sessions detected on this machine

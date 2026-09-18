@@ -149,8 +149,16 @@ func (s *Syncer) install(agent string, remote api.Bundle, src installSource, opt
 		}
 		evict, res.Evicted = &other, entryLabel(oe)
 	}
+	_, statErr := os.Lstat(dir)
+	fresh := os.IsNotExist(statErr)
 	apply, err := bundle.Apply(remote, src.fetch, dir, base, opt.Force, false)
 	if err != nil {
+		if fresh {
+			// A first install that failed (a tampered blob, a dead registry)
+			// leaves no trace: Apply never keeps a bad file, and the empty
+			// directory it made would otherwise shadow a later subscription.
+			os.Remove(dir)
+		}
 		return res, err
 	}
 	res.Dir, res.Version, res.Apply = dir, remote.Version, apply

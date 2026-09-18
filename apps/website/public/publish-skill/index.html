@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Publish a skill — stift</title>
+<meta name="description" content="Share an agent skill with the world from your own stift server: publish it as @org/name, and anyone installs it with one command and no account.">
+<meta property="og:title" content="Publish a skill — stift">
+<meta property="og:description" content="Every stift server is a registry: publish @org/name, install anywhere with checksum-verified files, no login.">
+<meta property="og:url" content="https://stift.sh/publish-skill/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23202020'/%3E%3Ctext x='16' y='23' font-family='sans-serif' font-size='20' fill='%23ffffff' text-anchor='middle'%3ES%3C/text%3E%3Ccircle cx='25' cy='25' r='3' fill='%23ff682c'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/site.css">
+</head>
+<body>
+
+<header class="mast">
+  <div class="frame">
+    <div class="mast-top">
+      <span class="doc-no"><a href="/">stift.sh</a> — guide</span>
+      <span>hosted cloud · or self-host · mit core</span>
+      <span style="display:flex;gap:16px;flex-wrap:wrap">
+        <a href="https://app.stift.sh">app.stift.sh — sign in</a>
+        <a href="https://github.com/stift-sh/stift">github</a>
+      </span>
+    </div>
+    <div class="mast-main">
+      <h1 class="wordmark guide">Publish a skill<span class="dot">.</span></h1>
+      <p class="tagline">
+        A skill your org keeps in stift can be shared with everyone.
+        <b>Every stift server is a registry</b>: an admin publishes an org skill
+        as <code>@org/name</code>, and anyone installs it with one command,
+        <b>no account and no login</b>, every file verified against the
+        published manifest.
+      </p>
+    </div>
+  </div>
+</header>
+
+<div class="frame">
+<div class="layout">
+
+<nav class="toc" aria-label="contents">
+  <div class="toc-head">Contents</div>
+  <ol>
+    <li><a href="#slug">Pick a slug</a></li>
+    <li><a href="#publish">Publish</a></li>
+    <li><a href="#install">Install anywhere</a></li>
+    <li><a href="#versions">Versions and unpublishing</a></li>
+    <li><a href="#registry">What a registry is</a></li>
+    <li><a href="#off">Keep it private</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<section class="sec" id="slug">
+  <h2>Pick a slug</h2>
+  <div class="sec-sub">the <code>@org</code> half of every reference, chosen once</div>
+  <p>
+    Published skills are addressed as <code>@&lt;slug&gt;/&lt;name&gt;</code>.
+    The slug is your org's: 2–39 lowercase letters, digits or hyphens. Set it
+    on the org card in the web app (<em>Members</em>), with
+    <code>STIFT_ORG_SLUG</code> when you start the server, or over the API.
+  </p>
+  <div class="plate">
+    <div class="plate-bar"><span>sh</span><button class="copy" data-copy="STIFT_ORG_SLUG=acme docker compose up -d">copy</button></div>
+    <pre><code><span class="c"># self-host: applied while the org still has the default slug</span>
+<span class="p">$</span> STIFT_ORG_SLUG=acme docker compose up -d</code></pre>
+  </div>
+  <p class="note">
+    The slug is <b>locked once anything is published</b>: renaming it would
+    break every reference anyone has installed. Pick the name people should
+    type.
+  </p>
+</section>
+
+<section class="sec" id="publish">
+  <h2>Publish</h2>
+  <div class="sec-sub">admins, from the terminal or the skill's page</div>
+  <p>
+    Anything you can publish is already an org skill (see
+    <a href="/share-skills/#publish">Share skills in your company</a>): a
+    <code>skills/&lt;name&gt;</code> unit in the org scope with a
+    <code>SKILL.md</code>. Publishing takes a snapshot of it under a public
+    name and a license.
+  </p>
+  <div class="plate">
+    <div class="plate-bar"><span>sh</span><button class="copy" data-copy="stift skills publish skills/deploy --license MIT">copy</button></div>
+    <pre><code><span class="p">$</span> stift skills publish skills/deploy --license MIT
+<span class="g">published claude/org/skills/deploy v3 as @acme/deploy v1 (1 files)</span>
+<span class="c"># later, after another push of skills/deploy:</span>
+<span class="p">$</span> stift skills publish skills/deploy
+<span class="g">published claude/org/skills/deploy v5 as @acme/deploy v2 (1 files)</span></code></pre>
+  </div>
+  <ul class="spec">
+    <li><strong>Name.</strong> Defaults to the unit's last segment (<code>skills/deploy</code> → <code>deploy</code>); <code>--name</code> changes it on the first publish and it is fixed after that. One public name maps to one org unit.</li>
+    <li><strong>License.</strong> An SPDX identifier (<code>MIT</code>, <code>Apache-2.0</code>) or <code>LicenseRef-&lt;name&gt;</code>. Required the first time; a later <code>--license</code> changes it going forward.</li>
+    <li><strong>Version.</strong> Head by default; <code>--version N</code> publishes a known-good older version of the unit.</li>
+    <li><strong>In the browser.</strong> The skill's page has a <em>Published</em> card with the same form, the install command ready to copy, and every published version.</li>
+  </ul>
+</section>
+
+<section class="sec" id="install">
+  <h2>Install anywhere</h2>
+  <div class="sec-sub">one command, no account</div>
+  <div class="plate">
+    <div class="plate-bar"><span>sh</span><button class="copy" data-copy="stift skills install @acme/deploy --registry https://stift.acme.example">copy</button></div>
+    <pre><code><span class="p">$</span> stift skills install @acme/deploy --registry https://stift.acme.example
+<span class="g">installed @acme/deploy v2 → ~/.claude/skills/deploy: 1 written, 0 unchanged</span>
+<span class="p">$</span> stift skills install @acme/deploy@1 --agent cursor   <span class="c"># pin a version, pick the agent</span>
+<span class="p">$</span> stift skills search deploy --registry https://stift.acme.example</code></pre>
+  </div>
+  <p>
+    The files land as an ordinary directory in the agent's own config, each
+    one checked against the sha256 in the published manifest; a tampered or
+    truncated download fails the install and leaves nothing half-written.
+    Nothing is reported back to the registry.
+  </p>
+  <p>
+    <code>--registry</code> says which server to ask. Without it the CLI tries
+    <code>STIFT_REGISTRY_URL</code>, then <code>registry</code> in its config
+    file, then the server you are logged in to if it is a registry, then
+    <code>app.stift.sh</code>. Later, <code>stift skills outdated</code> lists
+    registry installs that are behind, and <code>install --upgrade</code>
+    moves them forward, refusing to overwrite your edits unless you pass
+    <code>--force</code>.
+  </p>
+</section>
+
+<section class="sec" id="versions">
+  <h2>Versions and unpublishing</h2>
+  <div class="sec-sub">a publish sequence, and a snapshot nothing can change</div>
+  <p>
+    Public versions count 1, 2, 3… on their own, independent of the org
+    unit's history; each records the source version it was copied from.
+    Publishing copies the manifest, so editing, rolling back or even deleting
+    the org unit never changes what people installed. Publishing identical
+    files again is refused.
+  </p>
+  <div class="plate">
+    <div class="plate-bar"><span>sh</span><button class="copy" data-copy="stift skills unpublish @acme/deploy@2
+stift skills restore @acme/deploy@2">copy</button></div>
+    <pre><code><span class="p">$</span> stift skills unpublish @acme/deploy@2    <span class="c"># or the whole skill: @acme/deploy</span>
+<span class="g">unpublished deploy v2: hidden from search and latest, still resolves by number</span>
+<span class="p">$</span> stift skills restore @acme/deploy@2</code></pre>
+  </div>
+  <p>
+    Unpublishing <b>hides</b> a version, or the whole skill, from search and
+    from <code>latest</code>. It still resolves by number, so existing
+    installs keep verifying and <code>stift skills outdated</code> tells
+    their owners it was unpublished rather than offering an upgrade.
+  </p>
+</section>
+
+<section class="sec" id="registry">
+  <h2>What a registry is</h2>
+  <div class="sec-sub">four read-only routes, no token</div>
+  <div class="plate">
+    <div class="plate-bar"><span>sh</span><button class="copy" data-copy="curl https://stift.acme.example/v1/registry/skills/@acme/deploy">copy</button></div>
+    <pre><code><span class="p">$</span> curl https://stift.acme.example/v1/registry/skills/@acme/deploy      <span class="c"># latest visible version</span>
+<span class="p">$</span> curl https://stift.acme.example/v1/registry/skills/@acme/deploy/2    <span class="c"># a numbered version, immutable</span>
+<span class="p">$</span> curl https://stift.acme.example/v1/registry/skills?q=deploy          <span class="c"># search</span></code></pre>
+  </div>
+  <p>
+    A published version is its manifest plus its files, served by digest and
+    only for digests that manifest lists. The org's other files stay behind
+    the token. Numbered versions and their files are immutable and cached as
+    such; <code>latest</code> and search are cached for a minute. Rate
+    limiting is your reverse proxy's job.
+  </p>
+</section>
+
+<section class="sec" id="off">
+  <h2>Keep it private</h2>
+  <div class="sec-sub">nothing is public until an admin publishes</div>
+  <p>
+    A server exposes nothing through the registry until an admin publishes a
+    skill. Companies that want the guarantee set
+    <code>STIFT_REGISTRY=off</code>: the registry routes disappear and
+    publishing is refused, while the org scope keeps working as the team's
+    own registry.
+  </p>
+</section>
+
+</main>
+</div>
+</div>
+
+<footer>
+  <div class="frame" style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap">
+    <span><a href="/">stift</a> — mit core · <a href="https://app.stift.sh">stift cloud</a></span>
+    <span><a href="https://app.stift.sh">app.stift.sh</a> · <a href="/install.sh">install.sh</a> · <a href="https://github.com/stift-sh/stift">source</a></span>
+  </div>
+</footer>
+
+<script>
+for (const b of document.querySelectorAll("button.copy")) {
+  b.addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(b.dataset.copy); } catch {}
+    b.textContent = "copied"; b.classList.add("done");
+    setTimeout(() => { b.textContent = "copy"; b.classList.remove("done"); }, 1400);
+  });
+}
+</script>
+</body>
+</html>

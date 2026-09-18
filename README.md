@@ -313,25 +313,49 @@ app show limits next to current usage.
 
 Every stift server is a registry. An admin sets the org slug (`STIFT_ORG_SLUG`,
 `PATCH /v1/org` or the org card), then publishes an org-scope skill as
-`@<slug>/<name>`; the slug is locked once anything is published. Anyone can
-then resolve it and fetch its files **without a token**:
+`@<slug>/<name>`; the slug is locked once anything is published.
 
 ```sh
-curl https://stift.example.com/v1/registry/skills/@acme/deploy          # latest visible version
-curl https://stift.example.com/v1/registry/skills/@acme/deploy/2        # a numbered version, immutable
-curl https://stift.example.com/v1/registry/skills?q=deploy              # search
+stift skills publish skills/deploy --license MIT       # admin: @acme/deploy v1 (--name, --version N)
+stift skills publish skills/deploy                     # after an edit + push: v2
+stift skills unpublish @acme/deploy@2                  # hide one version (or the skill: @acme/deploy)
+stift skills restore @acme/deploy@2                    # visible again
+stift skills search deploy --registry https://stift.example.com
 ```
 
-Versions are a publish sequence (1, 2, 3…). Publishing copies the manifest,
-so editing, rolling back or deleting the org unit never changes what was
-published. Unpublishing hides a version (or the skill) from search and
-`latest`; it still resolves by number so existing installs keep verifying.
-Only files listed in a published version's manifest are reachable through
-the registry; the org's other blobs stay behind the token. Nothing is
-exposed until an admin publishes, and `STIFT_REGISTRY=off` disables the
-routes and publishing altogether. The server does not rate-limit these
-routes; do that in your reverse proxy. The `stift skills publish|search|install
-@org/name` commands and the web UI for publishing follow.
+The same actions live on the skill's page in the web app (*Published*), with
+the install command ready to copy. Anyone can then resolve a published skill
+and fetch its files **without a token**, from the CLI or with plain HTTP:
+
+```sh
+stift skills install @acme/deploy --registry https://stift.example.com   # no stift login needed
+stift skills install @acme/deploy@1 --agent cursor                       # pin a version, pick the agent
+stift skills outdated                                                    # also checks registry installs
+curl https://stift.example.com/v1/registry/skills/@acme/deploy           # latest visible version
+curl https://stift.example.com/v1/registry/skills/@acme/deploy/2         # a numbered version, immutable
+curl https://stift.example.com/v1/registry/skills?q=deploy               # search
+```
+
+Versions are a publish sequence (1, 2, 3…), independent of the org unit's own
+history; each records the source version it was copied from. Publishing
+copies the manifest, so editing, rolling back or deleting the org unit never
+changes what was published, and publishing identical files again is refused.
+Unpublishing hides a version (or the skill) from search and `latest`; it
+still resolves by number so existing installs keep verifying, and `outdated`
+says `unpublished`. Only files listed in a published version's manifest are
+reachable through the registry; the org's other blobs stay behind the token.
+Nothing is exposed until an admin publishes, and `STIFT_REGISTRY=off`
+disables the routes and publishing altogether. The server does not rate-limit
+these routes; do that in your reverse proxy.
+
+**Which registry the CLI asks**, in order: `--registry`, `STIFT_REGISTRY_URL`,
+`registry` in `~/.config/stift/config.json`, the server you are logged in to
+when it advertises the `registry` feature, then `https://app.stift.sh`. A miss
+names the registry it asked. Registry installs are plain directories under
+the agent (`~/.claude/skills/deploy`), verified blob by blob against the
+published manifest, and are never reported to any server. A registry install
+and an org install of the same unit cannot share the directory; `--force`
+replaces one with the other.
 
 ### Environment variables
 
@@ -354,6 +378,7 @@ routes; do that in your reverse proxy. The `stift skills publish|search|install
 | `STIFT_MAX_SKILLS`, `STIFT_MAX_STORAGE_BYTES`, `STIFT_MAX_SEATS` | server | limits of the default org, applied at startup: a positive integer, or `unlimited` to clear one (default: unlimited). Writes over a limit get `402`; `GET /v1/org` shows limits and usage |
 | `STIFT_AUTH` | server | comma-separated authenticators (default `local`) |
 | `STIFT_FEATURES` | server | comma-separated feature flags advertised on `/api/version` (e.g. `cloud`); the web app shows matching screens only |
+| `STIFT_REGISTRY_URL` | client | registry for `stift skills install @org/name` and `search` when `--registry` is not given; see *Public registry* for the full order |
 | `STIFT_REGISTRY` | server | `public` (default) serves the unauthenticated registry under `/v1/registry` and advertises feature `registry`; `off` 404s those routes and refuses `POST /v1/published` |
 | `STIFT_WEB_DIR` | server | directory of the built web app to serve at `/` (default `apps/web/dist`, `/app/web` in the image); absent → API only |
 

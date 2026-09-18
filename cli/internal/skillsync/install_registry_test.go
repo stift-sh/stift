@@ -163,6 +163,9 @@ func TestInstallRegistryRejectsTamperedBlob(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, "SKILL.md")); !os.IsNotExist(err) {
 		t.Fatal("a tampered blob must not be written")
 	}
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		t.Fatal("a failed first install must not leave the directory behind")
+	}
 	if entries, _ := os.ReadDir(dir); len(entries) != 0 {
 		t.Fatalf("temp files left behind: %v", entries)
 	}
