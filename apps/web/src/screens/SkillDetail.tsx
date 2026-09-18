@@ -6,6 +6,7 @@ import { useMembers } from "../api/members";
 import { useInstalls } from "../api/org";
 import { fetchBlobText, isEditable, keyHref, type SkillKey, unitLabel, useBlobText, useBundle, useBundleHistory, useDeleteBundle, usePublish, useRollback } from "../api/skills";
 import { SkillEditor } from "./SkillEditor";
+import { PublishedCard } from "../components/PublishedCard";
 import { ErrorState, NotFound, PageHeader, Spinner } from "../components/States";
 import { diffLines, diffManifests, type FileChange, isBinary, MAX_TEXT_DIFF } from "../lib/diff";
 import { ago, fmtBytes, fmtTime } from "../lib/format";
@@ -227,6 +228,7 @@ export function SkillDetail() {
               ))}
             </dl>
           </div>
+          {key.scope === "org" && <PublishedCard skillKey={key} head={current} versions={history.data?.map((b) => b.version)} />}
           {key.scope === "org" && <Pulls skillKey={key} head={current.version} />}
           <div className="card">
             <span className="card-eyebrow">History</span>

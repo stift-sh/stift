@@ -1,0 +1,15 @@
+.ref { font-family: var(--mono); font-size: 14px; margin: 0 0 4px; overflow-wrap: anywhere; }
+.meta { font-size: 13px; color: var(--ink-soft); margin: 0 0 8px; }
+.note { font-size: 13px; color: var(--ink-soft); margin: 0; }
+.note code { font-family: var(--mono); font-size: 0.9em; }
+.card :global(.field) { margin: 12px 0; }
+.error { color: var(--accent); font-size: 13px; margin: 8px 0 0; }
+.actions { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.versions { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 6px; font-size: 13px; }
+.versions li { display: grid; grid-template-columns: auto 1fr auto; column-gap: 8px; align-items: baseline; }
+.hidden { color: var(--ink-faint); text-decoration: line-through; }
+.when { color: var(--ink-faint); font-size: 12px; white-space: nowrap; }
+.rowActions { grid-column: 1 / -1; display: inline-flex; gap: 10px; font-size: 12px; }
+.rowActions button { font: inherit; color: var(--ink-faint); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
+.rowActions button:disabled { cursor: not-allowed; opacity: 0.5; }
+.preview { font-family: var(--mono); font-size: 13px; margin: 4px 0 0; overflow-wrap: anywhere; }
