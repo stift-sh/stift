@@ -376,7 +376,11 @@ replaces one with the other.
 | `STIFT_DATABASE_URL` | server | Postgres connection string (required) |
 | `STIFT_S3_BUCKET`, `STIFT_S3_ENDPOINT`, `STIFT_S3_REGION`, `STIFT_S3_ACCESS_KEY`, `STIFT_S3_SECRET_KEY`, `STIFT_S3_FORCE_PATH_STYLE`, `STIFT_S3_PREFIX` | server | blob storage (any S3-compatible API) |
 | `STIFT_MAX_SKILLS`, `STIFT_MAX_STORAGE_BYTES`, `STIFT_MAX_SEATS` | server | limits of the default org, applied at startup: a positive integer, or `unlimited` to clear one (default: unlimited). Writes over a limit get `402`; `GET /v1/org` shows limits and usage |
-| `STIFT_AUTH` | server | comma-separated authenticators (default `local`) |
+| `STIFT_AUTH` | server | comma-separated authenticators (default `local`): `local` is `stf_` tokens, `jwt` is JWTs from an identity provider. Use `local,jwt` to sign in to the web app through the provider while the CLI keeps using tokens |
+| `STIFT_JWT_JWKS_URL`, `STIFT_JWT_SECRET` | server | with `jwt`, exactly one: the provider's JWKS URL, or a shared HS256 secret (32+ characters) |
+| `STIFT_JWT_ISSUER`, `STIFT_JWT_AUDIENCE` | server | expected `iss` (required with a JWKS URL) and `aud` (checked when set). Tokens need `sub` and `exp` |
+| `STIFT_JWT_ORG` | server | pins every JWT to one org and ignores the org claims; set it to the empty string on a single-org server. Unset = multi-org: the org comes from the token, is created on first sight, and a token without one is rejected |
+| `STIFT_JWT_CLAIM_ORG`, `_ORG_SLUG`, `_ORG_NAME`, `_ROLE`, `_NAME`, `_EMAIL` | server | claim names (defaults `org_id`, `org_slug`, `org_name`, `org_role`, `name`, `email`). Users and memberships are created on first sight. A role of `admin`, `org:admin` or `owner` is an admin, any other value a member; without a role claim new users start as members and roles are managed in stift |
 | `STIFT_FEATURES` | server | comma-separated feature flags advertised on `/api/version` (e.g. `cloud`); the web app shows matching screens only |
 | `STIFT_REGISTRY_URL` | client | registry for `stift skills install @org/name` and `search` when `--registry` is not given; see *Public registry* for the full order |
 | `STIFT_REGISTRY` | server | `public` (default) serves the unauthenticated registry under `/v1/registry` and advertises feature `registry`; `off` 404s those routes and refuses `POST /v1/published` |

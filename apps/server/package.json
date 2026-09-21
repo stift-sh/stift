@@ -21,6 +21,7 @@
     "@stift/shared": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.9.0",
+    "jose": "^6.2.12",
     "pg": "^8.23.0",
     "zod": "^4.1.0"
   },

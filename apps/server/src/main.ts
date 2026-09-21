@@ -16,7 +16,7 @@ if (!dbUrl) throw new Error("STIFT_DATABASE_URL is required");
 const { db } = connect(dbUrl);
 await runMigrations(db);
 const auth = authFromEnv(db);
-if (auth.local) await bootstrap(db);
+if (auth.bootstrap) await bootstrap(db);
 const limits = limitsFromEnv();
 const features = (process.env.STIFT_FEATURES ?? "").split(",").map((f) => f.trim()).filter(Boolean);
 const registryEnv = process.env.STIFT_REGISTRY ?? "public";
