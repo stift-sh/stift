@@ -5,7 +5,7 @@ import type { Bundle, BundleFile, PublishedSkillDetail, PublishedVersion, Regist
 import type { Db } from "../db/client.js";
 import { blobs, bundleVersions, bundles, sessions, users } from "../db/schema.js";
 import { BlobStore } from "./blobs.js";
-import { countSkills, orgLimits, storageBytes } from "../limits.js";
+import { countSessions, countSkills, orgLimits, storageBytes } from "../limits.js";
 import { LimitError, MissingBlobError, NotFoundError, StaleError } from "./errors.js";
 import { parseFrontmatter } from "./frontmatter.js";
 import { listPublished, publish, restore, unpublish, type PublishInput } from "./published.js";
@@ -170,6 +170,10 @@ export class PgStore implements Store {
         const now = new Date();
         if (existing && existing.sha256 === staged.sha256) {
           return { session: await this.withUser(tx, existing), status: "unchanged" as const };
+        }
+        if (!existing) {
+          const { maxSessions } = await orgLimits(tx, orgId, true);
+          if (maxSessions !== null && (await countSessions(tx, orgId)) >= maxSessions) throw new LimitError(maxSessions, "sessions");
         }
         const id = existing?.id ?? newId();
         const row: typeof sessions.$inferInsert = {

@@ -21,6 +21,7 @@ export function OrgCard() {
     ["Skills", usage.skills, limits.skills, count],
     ["Storage", usage.storage_bytes, limits.storage_bytes, fmtBytes],
     ["Seats", usage.seats, limits.seats, count],
+    ["Sessions", usage.sessions, limits.sessions, count],
   ];
   return (
     <div className={`card ${s.card}`} role="region" aria-label="Organization">

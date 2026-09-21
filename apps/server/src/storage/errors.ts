@@ -29,7 +29,7 @@ export class LimitError extends Error {
   readonly name = "LimitError";
   constructor(
     readonly limit: number,
-    readonly what: "skills" | "bytes of storage" | "seats",
+    readonly what: "skills" | "bytes of storage" | "seats" | "sessions",
   ) {
     super(`limit: ${limit} ${what} per org`);
   }

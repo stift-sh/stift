@@ -6,11 +6,11 @@ import { bootstrap } from "../auth/bootstrap.js";
 import { orgLimitsFromEnv, setOrgLimits } from "../limits.js";
 import { sql } from "drizzle-orm";
 import { ensureDefaultOrg } from "../auth/bootstrap.js";
-import { createTestApp, req, resetDb, skip, type TestApp } from "./harness.js";
+import { createTestApp, pushSession, req, resetDb, skip, testMeta, type TestApp } from "./harness.js";
 
 const shaOf = (b: Uint8Array) => createHash("sha256").update(b).digest("hex");
 const bytes = (s: string) => new TextEncoder().encode(s);
-const UNLIMITED = { maxSkills: null, maxStorageBytes: null, maxSeats: null };
+const UNLIMITED = { maxSkills: null, maxStorageBytes: null, maxSeats: null, maxSessions: null };
 
 describe("org limits", { skip }, () => {
   let t: TestApp;
@@ -51,8 +51,8 @@ describe("org limits", { skip }, () => {
       slug: "default",
       name: "Default",
       slug_locked: false,
-      limits: { skills: null, storage_bytes: null, seats: null },
-      usage: { skills: 0, storage_bytes: 0, seats: 2 },
+      limits: { skills: null, storage_bytes: null, seats: null, sessions: null },
+      usage: { skills: 0, storage_bytes: 0, seats: 2, sessions: 0 },
     });
   });
 
@@ -108,6 +108,25 @@ describe("org limits", { skip }, () => {
     r = await add("seat-four");
     assert.equal(r.status, 201);
     await req(t.app, "DELETE", `/v1/members/${((await r.json()) as { id: string }).id}`, t.admin);
+  });
+
+  test("max_sessions: a new session over the limit is 402, re-pushing one is not", async () => {
+    await setOrgLimits(t.db, "", { maxSessions: 1 });
+    const push = (key: string, payload: string) => pushSession(t.app, t.member, { ...testMeta(), key, session_id: key }, bytes(payload));
+    assert.equal((await push("h/claude/one", "v1")).status, 201);
+
+    const r = await push("h/claude/two", "v1");
+    assert.equal(r.status, 402);
+    assert.deepEqual(await r.json(), { error: "limit: 1 sessions per org" });
+    assert.equal((await push("h/claude/one", "v2")).status, 200);
+    const o = await getOrg(t.admin);
+    assert.equal(o.usage.sessions, 1);
+    assert.equal(o.limits.sessions, 1);
+
+    // Deleting frees the slot.
+    const [s] = (await (await req(t.app, "GET", "/v1/sessions", t.admin)).json()) as { id: string }[];
+    assert.equal((await req(t.app, "DELETE", `/v1/sessions/${s!.id}`, t.admin)).status, 204);
+    assert.equal((await push("h/claude/two", "v1")).status, 201);
   });
 
   describe("PATCH /v1/org", () => {
@@ -170,12 +189,12 @@ describe("org limits", { skip }, () => {
 
   test("env sets the default org's limits on start; unset leaves the row alone", async () => {
     assert.deepEqual(orgLimitsFromEnv({}), {});
-    assert.deepEqual(orgLimitsFromEnv({ STIFT_MAX_SKILLS: "5", STIFT_MAX_SEATS: "unlimited" }), { maxSkills: 5, maxSeats: null });
+    assert.deepEqual(orgLimitsFromEnv({ STIFT_MAX_SKILLS: "5", STIFT_MAX_SEATS: "unlimited", STIFT_MAX_SESSIONS: "100" }), { maxSkills: 5, maxSeats: null, maxSessions: 100 });
     assert.throws(() => orgLimitsFromEnv({ STIFT_MAX_STORAGE_BYTES: "0" }), /STIFT_MAX_STORAGE_BYTES: expected a positive integer/);
 
     await bootstrap(t.db, { STIFT_MAX_SKILLS: "5", STIFT_MAX_STORAGE_BYTES: "1000" }, () => {});
-    assert.deepEqual((await getOrg(t.admin)).limits, { skills: 5, storage_bytes: 1000, seats: null });
+    assert.deepEqual((await getOrg(t.admin)).limits, { skills: 5, storage_bytes: 1000, seats: null, sessions: null });
     await bootstrap(t.db, { STIFT_MAX_SKILLS: "unlimited" }, () => {});
-    assert.deepEqual((await getOrg(t.admin)).limits, { skills: null, storage_bytes: 1000, seats: null });
+    assert.deepEqual((await getOrg(t.admin)).limits, { skills: null, storage_bytes: 1000, seats: null, sessions: null });
   });
 });

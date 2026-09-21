@@ -6,7 +6,7 @@ export const version: Version = { version: "test", api: 1, features: [] };
 export const org = { id: "", slug: "default", name: "Acme" };
 export const admin: Whoami = { name: "root", role: "admin", user: { id: "u-root", name: "root" }, org };
 export const member: Whoami = { name: "dev-laptop", role: "member", user: { id: "u-dev", name: "dev" }, org };
-export const orgOverview: Org = { ...org, slug_locked: false, limits: { skills: null, storage_bytes: null, seats: null }, usage: { skills: 2, storage_bytes: 2048, seats: 2 } };
+export const orgOverview: Org = { ...org, slug_locked: false, limits: { skills: null, storage_bytes: null, seats: null, sessions: null }, usage: { skills: 2, storage_bytes: 2048, seats: 2, sessions: 3 } };
 export const members: Member[] = [
   { id: "u-root", name: "root", email: null, role: "admin", created_at: "2026-08-20T10:00:00Z", tokens: 1 },
   { id: "u-dev", name: "dev", email: "dev@acme.test", role: "member", created_at: "2026-08-27T10:00:00Z", tokens: 2 },

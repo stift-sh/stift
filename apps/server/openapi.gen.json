@@ -10,6 +10,11 @@
         "type": "http",
         "scheme": "bearer",
         "description": "stift access token (stf_…)"
+      },
+      "serviceToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "the server's STIFT_SERVICE_TOKEN; /v1/service only"
       }
     },
     "schemas": {
@@ -263,6 +268,127 @@
           "id",
           "name"
         ]
+      },
+      "Org": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug_locked": {
+            "type": "boolean",
+            "description": "true once the org has published skills: `@<slug>/…` references must keep resolving"
+          },
+          "limits": {
+            "type": "object",
+            "properties": {
+              "skills": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "storage_bytes": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "seats": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "sessions": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "skills",
+              "storage_bytes",
+              "seats",
+              "sessions"
+            ]
+          },
+          "usage": {
+            "type": "object",
+            "properties": {
+              "skills": {
+                "type": "integer",
+                "description": "units with at least one version, in every scope"
+              },
+              "storage_bytes": {
+                "type": "integer",
+                "description": "bytes of bundle file content"
+              },
+              "seats": {
+                "type": "integer",
+                "description": "members"
+              },
+              "sessions": {
+                "type": "integer",
+                "description": "uploaded sessions"
+              }
+            },
+            "required": [
+              "skills",
+              "storage_bytes",
+              "seats",
+              "sessions"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "slug_locked",
+          "limits",
+          "usage"
+        ]
+      },
+      "OrgLimitsRequest": {
+        "type": "object",
+        "properties": {
+          "max_skills": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "exclusiveMinimum": 0
+          },
+          "max_storage_bytes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "exclusiveMinimum": 0
+          },
+          "max_seats": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "exclusiveMinimum": 0
+          },
+          "max_sessions": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "exclusiveMinimum": 0
+          }
+        }
       },
       "Whoami": {
         "type": "object",
@@ -775,82 +901,6 @@
           "name"
         ]
       },
-      "Org": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "slug": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "slug_locked": {
-            "type": "boolean",
-            "description": "true once the org has published skills: `@<slug>/…` references must keep resolving"
-          },
-          "limits": {
-            "type": "object",
-            "properties": {
-              "skills": {
-                "type": [
-                  "integer",
-                  "null"
-                ]
-              },
-              "storage_bytes": {
-                "type": [
-                  "integer",
-                  "null"
-                ]
-              },
-              "seats": {
-                "type": [
-                  "integer",
-                  "null"
-                ]
-              }
-            },
-            "required": [
-              "skills",
-              "storage_bytes",
-              "seats"
-            ]
-          },
-          "usage": {
-            "type": "object",
-            "properties": {
-              "skills": {
-                "type": "integer",
-                "description": "units with at least one version, in every scope"
-              },
-              "storage_bytes": {
-                "type": "integer",
-                "description": "bytes of bundle file content"
-              },
-              "seats": {
-                "type": "integer",
-                "description": "members"
-              }
-            },
-            "required": [
-              "skills",
-              "storage_bytes",
-              "seats"
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "slug",
-          "name",
-          "slug_locked",
-          "limits",
-          "usage"
-        ]
-      },
       "OrgUpdateRequest": {
         "type": "object",
         "properties": {
@@ -1346,6 +1396,197 @@
         }
       }
     },
+    "/v1/service/orgs/{id}": {
+      "get": {
+        "tags": [
+          "service"
+        ],
+        "security": [
+          {
+            "serviceToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "org id"
+            },
+            "required": true,
+            "description": "org id",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "the org with limits and usage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Org"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "missing or invalid bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/service/orgs/{id}/limits": {
+      "put": {
+        "tags": [
+          "service"
+        ],
+        "security": [
+          {
+            "serviceToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "org id"
+            },
+            "required": true,
+            "description": "org id",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrgLimitsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "the org with its new limits",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Org"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "missing or invalid bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/service/orgs/{id}/members/{userId}": {
+      "delete": {
+        "tags": [
+          "service"
+        ],
+        "security": [
+          {
+            "serviceToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "org id"
+            },
+            "required": true,
+            "description": "org id",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "user id"
+            },
+            "required": true,
+            "description": "user id",
+            "name": "userId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "removed, with the member's tokens"
+          },
+          "401": {
+            "description": "missing or invalid bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/whoami": {
       "get": {
         "tags": [
@@ -1447,6 +1688,16 @@
           },
           "401": {
             "description": "missing or invalid bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "the org is at one of its limits",
             "content": {
               "application/json": {
                 "schema": {

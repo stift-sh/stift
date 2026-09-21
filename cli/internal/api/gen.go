@@ -316,6 +316,7 @@ type Org struct {
 	ID     string `json:"id"`
 	Limits struct {
 		Seats        int `json:"seats"`
+		Sessions     int `json:"sessions"`
 		Skills       int `json:"skills"`
 		StorageBytes int `json:"storage_bytes"`
 	} `json:"limits"`
@@ -328,12 +329,23 @@ type Org struct {
 		// Seats members
 		Seats int `json:"seats"`
 
+		// Sessions uploaded sessions
+		Sessions int `json:"sessions"`
+
 		// Skills units with at least one version, in every scope
 		Skills int `json:"skills"`
 
 		// StorageBytes bytes of bundle file content
 		StorageBytes int `json:"storage_bytes"`
 	} `json:"usage"`
+}
+
+// OrgLimitsRequest defines model for OrgLimitsRequest.
+type OrgLimitsRequest struct {
+	MaxSeats        int `json:"max_seats,omitempty"`
+	MaxSessions     int `json:"max_sessions,omitempty"`
+	MaxSkills       int `json:"max_skills,omitempty"`
+	MaxStorageBytes int `json:"max_storage_bytes,omitempty"`
 }
 
 // OrgRef defines model for OrgRef.
@@ -695,6 +707,9 @@ type PatchV1OrgJSONRequestBody = OrgUpdateRequest
 
 // PostV1PublishedJSONRequestBody defines body for PostV1Published for application/json ContentType.
 type PostV1PublishedJSONRequestBody = PublishRequest
+
+// PutV1ServiceOrgsIDLimitsJSONRequestBody defines body for PutV1ServiceOrgsIDLimits for application/json ContentType.
+type PutV1ServiceOrgsIDLimitsJSONRequestBody = OrgLimitsRequest
 
 // PostV1SessionsMultipartRequestBody defines body for PostV1Sessions for multipart/form-data ContentType.
 type PostV1SessionsMultipartRequestBody PostV1SessionsMultipartBody

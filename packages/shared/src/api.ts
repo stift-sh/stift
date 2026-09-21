@@ -20,14 +20,23 @@ const quota = z.int().nullable();
  *  unlimited) and what it currently uses of them. */
 export const Org = OrgRef.extend({
   slug_locked: z.boolean().describe("true once the org has published skills: `@<slug>/…` references must keep resolving"),
-  limits: z.object({ skills: quota, storage_bytes: quota, seats: quota }),
+  limits: z.object({ skills: quota, storage_bytes: quota, seats: quota, sessions: quota }),
   usage: z.object({
     skills: z.int().describe("units with at least one version, in every scope"),
     storage_bytes: z.int().describe("bytes of bundle file content"),
     seats: z.int().describe("members"),
+    sessions: z.int().describe("uploaded sessions"),
   }),
 }).meta({ id: "Org" });
 export type Org = z.infer<typeof Org>;
+
+/** Body of PUT /v1/service/orgs/{id}/limits: null clears a limit, an
+ *  absent one is left as it is. */
+const limit = z.int().positive().nullable().optional();
+export const OrgLimitsRequest = z
+  .object({ max_skills: limit, max_storage_bytes: limit, max_seats: limit, max_sessions: limit })
+  .meta({ id: "OrgLimitsRequest" });
+export type OrgLimitsRequest = z.infer<typeof OrgLimitsRequest>;
 
 /** Body of PATCH /v1/org (admins). */
 export const OrgUpdateRequest = z

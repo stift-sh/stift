@@ -16,6 +16,9 @@ import { PgStore } from "../storage/store.js";
 export const dbUrl = process.env.STIFT_TEST_DATABASE_URL;
 export const skip = dbUrl ? false : "STIFT_TEST_DATABASE_URL not set";
 
+/** The harness app mounts /v1/service with this secret. */
+export const SERVICE_TOKEN = "test-service-token-0123456789abcdef";
+
 /** `admin` and `member` are tokens of two users of the default org. */
 export type TestApp = { app: App; admin: string; member: string; db: Db; auth: Authenticator; store: PgStore; close: () => Promise<void> };
 
@@ -36,12 +39,12 @@ export async function createTestApp(limits: Partial<Limits> = {}): Promise<TestA
     prefix: "test",
   });
   await ensureDefaultOrg(conn.db, {});
-  await setOrgLimits(conn.db, "", { maxSkills: null, maxStorageBytes: null, maxSeats: null });
+  await setOrgLimits(conn.db, "", { maxSkills: null, maxStorageBytes: null, maxSeats: null, maxSessions: null });
   const { raw: admin } = await createToken(conn.db, "", "admin", true);
   const { raw: member } = await createToken(conn.db, "", "dev", false);
   const auth = authFromEnv(conn.db, "local").authenticator;
   const store = new PgStore(conn.db, blobs);
-  const app = createApp({ version: "test", auth, store, db: conn.db, limits: { ...DEFAULT_LIMITS, ...limits } });
+  const app = createApp({ version: "test", auth, store, db: conn.db, limits: { ...DEFAULT_LIMITS, ...limits }, serviceToken: SERVICE_TOKEN });
   return { app, admin, member, db: conn.db, auth, store, close: () => conn.pool.end() };
 }
 

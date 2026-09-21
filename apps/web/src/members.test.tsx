@@ -39,7 +39,7 @@ beforeEach(() => {
 const rowOf = (name: string) => screen.getByText(name, { selector: "td" }).closest("tr")!;
 
 test("admins see the org card and every member, with no remove on their own row", async () => {
-  server.use(http.get("*/v1/org", () => HttpResponse.json({ ...orgOverview, limits: { skills: 10, storage_bytes: null, seats: 2 } })));
+  server.use(http.get("*/v1/org", () => HttpResponse.json({ ...orgOverview, limits: { skills: 10, storage_bytes: null, seats: 2, sessions: null } })));
   renderApp({ path: "/members" });
   expect(await screen.findByText("dev@acme.test")).toBeInTheDocument();
   expect(screen.getByRole("navigation", { name: "Main" })).toHaveTextContent("Members");

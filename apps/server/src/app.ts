@@ -3,6 +3,7 @@ import type { Authenticator } from "./auth/authenticator.js";
 import { bearer, type AuthEnv } from "./auth/middleware.js";
 import { blobs } from "./routes/blobs.js";
 import { bundles } from "./routes/bundles.js";
+import { service } from "./routes/service.js";
 import { sessions } from "./routes/sessions.js";
 import { health } from "./routes/health.js";
 import { installsRoutes } from "./routes/installs.js";
@@ -38,6 +39,9 @@ export type AppOptions = {
   /** The public, unauthenticated registry under `/v1/registry` (STIFT_REGISTRY).
    *  Off: those routes 404 and publishing is refused. Default on. */
   registry?: boolean;
+  /** Shared secret of the service API under `/v1/service` (STIFT_SERVICE_TOKEN).
+   *  Unset: those routes are not mounted. */
+  serviceToken?: string;
 };
 
 const denyAll: Authenticator = { authenticate: async () => null };
@@ -65,9 +69,12 @@ export function createApp(opts: AppOptions) {
   // Public and read-only, so mounted ahead of `bearer`.
   if (registryOn) app.route("/", registry(store));
 
+  const db = opts.db ?? unavailable<Db>("database");
+  // Its own secret, not an identity: ahead of `bearer` too.
+  if (opts.serviceToken) app.route("/", service(db, opts.serviceToken));
+
   app.use("/v1/*", bearer(opts.auth ?? denyAll));
   app.route("/", whoami(opts.db));
-  const db = opts.db ?? unavailable<Db>("database");
   const limits = opts.limits ?? DEFAULT_LIMITS;
   app.route("/", sessions(store, limits));
   app.route("/", blobs(store, limits));
@@ -83,6 +90,11 @@ export function createApp(opts: AppOptions) {
     type: "http",
     scheme: "bearer",
     description: "stift access token (stf_…)",
+  });
+  app.openAPIRegistry.registerComponent("securitySchemes", "serviceToken", {
+    type: "http",
+    scheme: "bearer",
+    description: "the server's STIFT_SERVICE_TOKEN; /v1/service only",
   });
   app.doc("/api/openapi.json", {
     openapi: "3.1.0",

@@ -2,7 +2,7 @@
 
 import { type Client, formDataBodySerializer, type Options as Options2, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { DeleteV1BundlesByScopeByAgentByNameData, DeleteV1BundlesByScopeByAgentByNameErrors, DeleteV1BundlesByScopeByAgentByNameResponses, DeleteV1MembersByIdData, DeleteV1MembersByIdErrors, DeleteV1MembersByIdResponses, DeleteV1PublishedByNameData, DeleteV1PublishedByNameErrors, DeleteV1PublishedByNameResponses, DeleteV1SessionsByIdData, DeleteV1SessionsByIdErrors, DeleteV1SessionsByIdResponses, DeleteV1TokensByIdData, DeleteV1TokensByIdErrors, DeleteV1TokensByIdResponses, GetApiVersionData, GetApiVersionResponses, GetHealthzData, GetHealthzResponses, GetV1BlobsByShaData, GetV1BlobsByShaErrors, GetV1BlobsByShaResponses, GetV1BundlesByScopeByAgentByNameData, GetV1BundlesByScopeByAgentByNameErrors, GetV1BundlesByScopeByAgentByNameResponses, GetV1BundlesData, GetV1BundlesErrors, GetV1BundlesResponses, GetV1InstallsData, GetV1InstallsErrors, GetV1InstallsResponses, GetV1MembersData, GetV1MembersErrors, GetV1MembersResponses, GetV1OrgData, GetV1OrgErrors, GetV1OrgResponses, GetV1PublishedData, GetV1PublishedErrors, GetV1PublishedResponses, GetV1RegistrySkillsByOrgByNameByVersionBlobsByShaData, GetV1RegistrySkillsByOrgByNameByVersionBlobsByShaErrors, GetV1RegistrySkillsByOrgByNameByVersionBlobsByShaResponses, GetV1RegistrySkillsByOrgByNameByVersionData, GetV1RegistrySkillsByOrgByNameByVersionErrors, GetV1RegistrySkillsByOrgByNameByVersionResponses, GetV1RegistrySkillsByOrgByNameData, GetV1RegistrySkillsByOrgByNameErrors, GetV1RegistrySkillsByOrgByNameResponses, GetV1RegistrySkillsData, GetV1RegistrySkillsErrors, GetV1RegistrySkillsResponses, GetV1SessionsByIdArchiveData, GetV1SessionsByIdArchiveErrors, GetV1SessionsByIdArchiveResponses, GetV1SessionsByIdData, GetV1SessionsByIdErrors, GetV1SessionsByIdResponses, GetV1SessionsData, GetV1SessionsErrors, GetV1SessionsResponses, GetV1TokensData, GetV1TokensErrors, GetV1TokensResponses, GetV1WhoamiData, GetV1WhoamiErrors, GetV1WhoamiResponses, PatchV1MembersByIdData, PatchV1MembersByIdErrors, PatchV1MembersByIdResponses, PatchV1OrgData, PatchV1OrgErrors, PatchV1OrgResponses, PostV1BlobsCheckData, PostV1BlobsCheckErrors, PostV1BlobsCheckResponses, PostV1InstallsData, PostV1InstallsErrors, PostV1InstallsResponses, PostV1MembersData, PostV1MembersErrors, PostV1MembersResponses, PostV1PublishedByNameRestoreData, PostV1PublishedByNameRestoreErrors, PostV1PublishedByNameRestoreResponses, PostV1PublishedData, PostV1PublishedErrors, PostV1PublishedResponses, PostV1SessionsData, PostV1SessionsErrors, PostV1SessionsResponses, PostV1TokensData, PostV1TokensErrors, PostV1TokensResponses, PutV1BlobsByShaData, PutV1BlobsByShaErrors, PutV1BlobsByShaResponses, PutV1BundlesByScopeByAgentByNameData, PutV1BundlesByScopeByAgentByNameErrors, PutV1BundlesByScopeByAgentByNameResponses } from './types.gen';
+import type { DeleteV1BundlesByScopeByAgentByNameData, DeleteV1BundlesByScopeByAgentByNameErrors, DeleteV1BundlesByScopeByAgentByNameResponses, DeleteV1MembersByIdData, DeleteV1MembersByIdErrors, DeleteV1MembersByIdResponses, DeleteV1PublishedByNameData, DeleteV1PublishedByNameErrors, DeleteV1PublishedByNameResponses, DeleteV1ServiceOrgsByIdMembersByUserIdData, DeleteV1ServiceOrgsByIdMembersByUserIdErrors, DeleteV1ServiceOrgsByIdMembersByUserIdResponses, DeleteV1SessionsByIdData, DeleteV1SessionsByIdErrors, DeleteV1SessionsByIdResponses, DeleteV1TokensByIdData, DeleteV1TokensByIdErrors, DeleteV1TokensByIdResponses, GetApiVersionData, GetApiVersionResponses, GetHealthzData, GetHealthzResponses, GetV1BlobsByShaData, GetV1BlobsByShaErrors, GetV1BlobsByShaResponses, GetV1BundlesByScopeByAgentByNameData, GetV1BundlesByScopeByAgentByNameErrors, GetV1BundlesByScopeByAgentByNameResponses, GetV1BundlesData, GetV1BundlesErrors, GetV1BundlesResponses, GetV1InstallsData, GetV1InstallsErrors, GetV1InstallsResponses, GetV1MembersData, GetV1MembersErrors, GetV1MembersResponses, GetV1OrgData, GetV1OrgErrors, GetV1OrgResponses, GetV1PublishedData, GetV1PublishedErrors, GetV1PublishedResponses, GetV1RegistrySkillsByOrgByNameByVersionBlobsByShaData, GetV1RegistrySkillsByOrgByNameByVersionBlobsByShaErrors, GetV1RegistrySkillsByOrgByNameByVersionBlobsByShaResponses, GetV1RegistrySkillsByOrgByNameByVersionData, GetV1RegistrySkillsByOrgByNameByVersionErrors, GetV1RegistrySkillsByOrgByNameByVersionResponses, GetV1RegistrySkillsByOrgByNameData, GetV1RegistrySkillsByOrgByNameErrors, GetV1RegistrySkillsByOrgByNameResponses, GetV1RegistrySkillsData, GetV1RegistrySkillsErrors, GetV1RegistrySkillsResponses, GetV1ServiceOrgsByIdData, GetV1ServiceOrgsByIdErrors, GetV1ServiceOrgsByIdResponses, GetV1SessionsByIdArchiveData, GetV1SessionsByIdArchiveErrors, GetV1SessionsByIdArchiveResponses, GetV1SessionsByIdData, GetV1SessionsByIdErrors, GetV1SessionsByIdResponses, GetV1SessionsData, GetV1SessionsErrors, GetV1SessionsResponses, GetV1TokensData, GetV1TokensErrors, GetV1TokensResponses, GetV1WhoamiData, GetV1WhoamiErrors, GetV1WhoamiResponses, PatchV1MembersByIdData, PatchV1MembersByIdErrors, PatchV1MembersByIdResponses, PatchV1OrgData, PatchV1OrgErrors, PatchV1OrgResponses, PostV1BlobsCheckData, PostV1BlobsCheckErrors, PostV1BlobsCheckResponses, PostV1InstallsData, PostV1InstallsErrors, PostV1InstallsResponses, PostV1MembersData, PostV1MembersErrors, PostV1MembersResponses, PostV1PublishedByNameRestoreData, PostV1PublishedByNameRestoreErrors, PostV1PublishedByNameRestoreResponses, PostV1PublishedData, PostV1PublishedErrors, PostV1PublishedResponses, PostV1SessionsData, PostV1SessionsErrors, PostV1SessionsResponses, PostV1TokensData, PostV1TokensErrors, PostV1TokensResponses, PutV1BlobsByShaData, PutV1BlobsByShaErrors, PutV1BlobsByShaResponses, PutV1BundlesByScopeByAgentByNameData, PutV1BundlesByScopeByAgentByNameErrors, PutV1BundlesByScopeByAgentByNameResponses, PutV1ServiceOrgsByIdLimitsData, PutV1ServiceOrgsByIdLimitsErrors, PutV1ServiceOrgsByIdLimitsResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -56,6 +56,49 @@ export const getV1RegistrySkillsByOrgByNameByVersion = <ThrowOnError extends boo
 export const getV1RegistrySkillsByOrgByNameByVersionBlobsBySha = <ThrowOnError extends boolean = false>(options: Options<GetV1RegistrySkillsByOrgByNameByVersionBlobsByShaData, ThrowOnError>) => {
     return (options.client ?? client).get<GetV1RegistrySkillsByOrgByNameByVersionBlobsByShaResponses, GetV1RegistrySkillsByOrgByNameByVersionBlobsByShaErrors, ThrowOnError>({
         url: '/v1/registry/skills/{org}/{name}/{version}/blobs/{sha}',
+        ...options
+    });
+};
+
+export const getV1ServiceOrgsById = <ThrowOnError extends boolean = false>(options: Options<GetV1ServiceOrgsByIdData, ThrowOnError>) => {
+    return (options.client ?? client).get<GetV1ServiceOrgsByIdResponses, GetV1ServiceOrgsByIdErrors, ThrowOnError>({
+        security: [
+            {
+                scheme: 'bearer',
+                type: 'http'
+            }
+        ],
+        url: '/v1/service/orgs/{id}',
+        ...options
+    });
+};
+
+export const putV1ServiceOrgsByIdLimits = <ThrowOnError extends boolean = false>(options: Options<PutV1ServiceOrgsByIdLimitsData, ThrowOnError>) => {
+    return (options.client ?? client).put<PutV1ServiceOrgsByIdLimitsResponses, PutV1ServiceOrgsByIdLimitsErrors, ThrowOnError>({
+        security: [
+            {
+                scheme: 'bearer',
+                type: 'http'
+            }
+        ],
+        url: '/v1/service/orgs/{id}/limits',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+export const deleteV1ServiceOrgsByIdMembersByUserId = <ThrowOnError extends boolean = false>(options: Options<DeleteV1ServiceOrgsByIdMembersByUserIdData, ThrowOnError>) => {
+    return (options.client ?? client).delete<DeleteV1ServiceOrgsByIdMembersByUserIdResponses, DeleteV1ServiceOrgsByIdMembersByUserIdErrors, ThrowOnError>({
+        security: [
+            {
+                scheme: 'bearer',
+                type: 'http'
+            }
+        ],
+        url: '/v1/service/orgs/{id}/members/{userId}',
         ...options
     });
 };

@@ -34,6 +34,7 @@ export const orgs = pgTable("orgs", {
   maxSkills: integer("max_skills"),
   maxStorageBytes: bigint("max_storage_bytes", { mode: "number" }),
   maxSeats: integer("max_seats"),
+  maxSessions: integer("max_sessions"),
 });
 
 export const ROLES = ["admin", "member"] as const;

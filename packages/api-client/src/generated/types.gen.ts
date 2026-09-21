@@ -113,6 +113,47 @@ export type UserRef = {
     name: string;
 };
 
+export type Org = {
+    id: string;
+    slug: string;
+    name: string;
+    /**
+     * true once the org has published skills: `@<slug>/…` references must keep resolving
+     */
+    slug_locked: boolean;
+    limits: {
+        skills: number | null;
+        storage_bytes: number | null;
+        seats: number | null;
+        sessions: number | null;
+    };
+    usage: {
+        /**
+         * units with at least one version, in every scope
+         */
+        skills: number;
+        /**
+         * bytes of bundle file content
+         */
+        storage_bytes: number;
+        /**
+         * members
+         */
+        seats: number;
+        /**
+         * uploaded sessions
+         */
+        sessions: number;
+    };
+};
+
+export type OrgLimitsRequest = {
+    max_skills?: number | null;
+    max_storage_bytes?: number | null;
+    max_seats?: number | null;
+    max_sessions?: number | null;
+};
+
 export type Whoami = {
     name: string;
     role: Role;
@@ -310,35 +351,6 @@ export type TokenCreated = {
 export type TokenCreateRequest = {
     name: string;
     user?: string;
-};
-
-export type Org = {
-    id: string;
-    slug: string;
-    name: string;
-    /**
-     * true once the org has published skills: `@<slug>/…` references must keep resolving
-     */
-    slug_locked: boolean;
-    limits: {
-        skills: number | null;
-        storage_bytes: number | null;
-        seats: number | null;
-    };
-    usage: {
-        /**
-         * units with at least one version, in every scope
-         */
-        skills: number;
-        /**
-         * bytes of bundle file content
-         */
-        storage_bytes: number;
-        /**
-         * members
-         */
-        seats: number;
-    };
 };
 
 export type OrgUpdateRequest = {
@@ -596,6 +608,116 @@ export type GetV1RegistrySkillsByOrgByNameByVersionBlobsByShaResponses = {
 
 export type GetV1RegistrySkillsByOrgByNameByVersionBlobsByShaResponse = GetV1RegistrySkillsByOrgByNameByVersionBlobsByShaResponses[keyof GetV1RegistrySkillsByOrgByNameByVersionBlobsByShaResponses];
 
+export type GetV1ServiceOrgsByIdData = {
+    body?: never;
+    path: {
+        /**
+         * org id
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/v1/service/orgs/{id}';
+};
+
+export type GetV1ServiceOrgsByIdErrors = {
+    /**
+     * missing or invalid bearer token
+     */
+    401: _Error;
+    /**
+     * not found
+     */
+    404: _Error;
+};
+
+export type GetV1ServiceOrgsByIdError = GetV1ServiceOrgsByIdErrors[keyof GetV1ServiceOrgsByIdErrors];
+
+export type GetV1ServiceOrgsByIdResponses = {
+    /**
+     * the org with limits and usage
+     */
+    200: Org;
+};
+
+export type GetV1ServiceOrgsByIdResponse = GetV1ServiceOrgsByIdResponses[keyof GetV1ServiceOrgsByIdResponses];
+
+export type PutV1ServiceOrgsByIdLimitsData = {
+    body: OrgLimitsRequest;
+    path: {
+        /**
+         * org id
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/v1/service/orgs/{id}/limits';
+};
+
+export type PutV1ServiceOrgsByIdLimitsErrors = {
+    /**
+     * bad request
+     */
+    400: _Error;
+    /**
+     * missing or invalid bearer token
+     */
+    401: _Error;
+    /**
+     * not found
+     */
+    404: _Error;
+};
+
+export type PutV1ServiceOrgsByIdLimitsError = PutV1ServiceOrgsByIdLimitsErrors[keyof PutV1ServiceOrgsByIdLimitsErrors];
+
+export type PutV1ServiceOrgsByIdLimitsResponses = {
+    /**
+     * the org with its new limits
+     */
+    200: Org;
+};
+
+export type PutV1ServiceOrgsByIdLimitsResponse = PutV1ServiceOrgsByIdLimitsResponses[keyof PutV1ServiceOrgsByIdLimitsResponses];
+
+export type DeleteV1ServiceOrgsByIdMembersByUserIdData = {
+    body?: never;
+    path: {
+        /**
+         * org id
+         */
+        id: string;
+        /**
+         * user id
+         */
+        userId: string;
+    };
+    query?: never;
+    url: '/v1/service/orgs/{id}/members/{userId}';
+};
+
+export type DeleteV1ServiceOrgsByIdMembersByUserIdErrors = {
+    /**
+     * missing or invalid bearer token
+     */
+    401: _Error;
+    /**
+     * not found
+     */
+    404: _Error;
+};
+
+export type DeleteV1ServiceOrgsByIdMembersByUserIdError = DeleteV1ServiceOrgsByIdMembersByUserIdErrors[keyof DeleteV1ServiceOrgsByIdMembersByUserIdErrors];
+
+export type DeleteV1ServiceOrgsByIdMembersByUserIdResponses = {
+    /**
+     * removed, with the member's tokens
+     */
+    204: void;
+};
+
+export type DeleteV1ServiceOrgsByIdMembersByUserIdResponse = DeleteV1ServiceOrgsByIdMembersByUserIdResponses[keyof DeleteV1ServiceOrgsByIdMembersByUserIdResponses];
+
 export type GetV1WhoamiData = {
     body?: never;
     path?: never;
@@ -676,6 +798,10 @@ export type PostV1SessionsErrors = {
      * missing or invalid bearer token
      */
     401: _Error;
+    /**
+     * the org is at one of its limits
+     */
+    402: _Error;
     /**
      * payload too large
      */

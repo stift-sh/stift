@@ -6,7 +6,7 @@ import { PushMeta, PushResult, Session, SessionFilter } from "@stift/shared";
 import type { AuthEnv } from "../auth/middleware.js";
 import { can } from "../auth/permissions.js";
 import type { Limits } from "../limits.js";
-import { NotFoundError } from "../storage/errors.js";
+import { LimitError, NotFoundError } from "../storage/errors.js";
 import type { Store } from "../storage/store.js";
 import { TooLargeError, limited } from "./_body.js";
 import { err, errors } from "./_errors.js";
@@ -19,7 +19,7 @@ const json = <T extends z.ZodTypeAny>(description: string, schema: T) => ({
 });
 const idParam = z.object({ id: z.string().openapi({ description: "session id or unambiguous prefix" }) });
 
-type Outcome = { status: 200 | 201 | 400 | 413 | 500; body: unknown };
+type Outcome = { status: 200 | 201 | 400 | 402 | 413 | 500; body: unknown };
 
 /**
  * Streams a multipart push: the `meta` JSON field must precede the `archive`
@@ -86,6 +86,7 @@ function readPush(
 
 function errorOutcome(e: unknown): Outcome {
   if (e instanceof TooLargeError) return { status: 413, body: { error: `archive exceeds limit of ${e.limit} bytes` } };
+  if (e instanceof LimitError) return { status: 402, body: { error: e.message } };
   const msg = e instanceof Error ? e.message : String(e);
   if (e instanceof Error && e.name === "TooLargeError") return { status: 413, body: { error: msg } };
   return { status: 500, body: { error: msg } };
@@ -121,6 +122,7 @@ export function sessions(store: Store, limits: Limits) {
         201: json("created", PushResult),
         400: errors[400],
         401: errors[401],
+        402: errors[402],
         413: errors[413],
         500: errors[500],
       },

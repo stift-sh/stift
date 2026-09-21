@@ -32,13 +32,14 @@ test("copy writes the command to the clipboard", async () => {
 });
 
 test("the org card shows usage against the limits", async () => {
-  server.use(http.get("*/v1/org", () => HttpResponse.json({ ...orgOverview, limits: { skills: 2, storage_bytes: 4096, seats: null } })));
+  server.use(http.get("*/v1/org", () => HttpResponse.json({ ...orgOverview, limits: { skills: 2, storage_bytes: 4096, seats: null, sessions: 100 } })));
   renderApp({ path: "/start" });
   const card = await screen.findByRole("region", { name: "Organization" });
   expect(card).toHaveTextContent("Acme");
   expect(card).toHaveTextContent("2 / 2");
   expect(card).toHaveTextContent("2.0 KB / 4.0 KB");
   expect(card).toHaveTextContent("2 · unlimited");
+  expect(card).toHaveTextContent("3 / 100");
 });
 
 test("admins edit the org name and slug; the card and whoami follow", async () => {

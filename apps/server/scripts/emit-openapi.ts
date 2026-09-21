@@ -4,7 +4,8 @@ import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { createApp } from "../src/app.js";
 
-const app = createApp({ version: "0.0.0" });
+// A service token so the /v1/service routes are mounted, and so documented.
+const app = createApp({ version: "0.0.0", serviceToken: "openapi" });
 const doc = app.getOpenAPI31Document({ openapi: "3.1.0", info: { title: "stift", version: "0.0.0" } });
 // Hono's `{name}{.+}` (multi-segment param) is not OpenAPI syntax.
 doc.paths = Object.fromEntries(Object.entries(doc.paths ?? {}).map(([k, v]) => [k.replace(/\{\.\+\}/g, ""), v]));
