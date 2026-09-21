@@ -8,11 +8,12 @@ import { createApp } from "./app.js";
 test("healthz and version", async () => {
   const app = createApp({ version: "1.2.3" });
   assert.equal(await (await app.request("/healthz")).text(), "ok");
-  assert.deepEqual(await (await app.request("/api/version")).json(), { version: "1.2.3", api: 1, features: ["registry"] });
-  const flagged = createApp({ version: "1.2.3", features: ["cloud"] });
-  assert.deepEqual(await (await flagged.request("/api/version")).json(), { version: "1.2.3", api: 1, features: ["cloud", "registry"] });
+  assert.deepEqual(await (await app.request("/api/version")).json(), { version: "1.2.3", api: 1, features: ["registry"], auth: { kinds: ["token"] } });
+  const authInfo = { kinds: ["token" as const, "jwt" as const], login: { provider: "test" as const } };
+  const flagged = createApp({ version: "1.2.3", features: ["cloud"], authInfo, cloudApiUrl: "https://billing.test" });
+  assert.deepEqual(await (await flagged.request("/api/version")).json(), { version: "1.2.3", api: 1, features: ["cloud", "registry"], auth: authInfo, cloud_api_url: "https://billing.test" });
   const off = createApp({ version: "1.2.3", registry: false });
-  assert.deepEqual(await (await off.request("/api/version")).json(), { version: "1.2.3", api: 1, features: [] });
+  assert.deepEqual(await (await off.request("/api/version")).json(), { version: "1.2.3", api: 1, features: [], auth: { kinds: ["token"] } });
 });
 
 test("whoami requires a bearer token", async () => {

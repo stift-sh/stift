@@ -15,6 +15,7 @@ import { tokens } from "./routes/tokens.js";
 import { whoami } from "./routes/whoami.js";
 import type { Store } from "./storage/store.js";
 import type { Db } from "./db/client.js";
+import type { VersionAuth } from "@stift/shared";
 import { DEFAULT_LIMITS, type Limits } from "./limits.js";
 import { web } from "./web.js";
 
@@ -33,6 +34,10 @@ export type AppOptions = {
   /** Feature flags advertised on /api/version; the web app shows cloud-only
    *  screens only when the server lists them. */
   features?: string[];
+  /** Sign-in description advertised on /api/version. Default: tokens only. */
+  authInfo?: VersionAuth;
+  /** Billing service the cloud billing screen reads (STIFT_CLOUD_API_URL). */
+  cloudApiUrl?: string;
   /** Directory holding the built web app (index.html + assets). When unset the
    *  server is API-only and unknown paths 404. */
   webDir?: string;

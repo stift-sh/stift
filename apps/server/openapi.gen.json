@@ -34,12 +34,62 @@
               "type": "string"
             },
             "description": "server-declared feature flags the web app keys screens on (e.g. cloud, marketplace)"
+          },
+          "auth": {
+            "$ref": "#/components/schemas/VersionAuth"
+          },
+          "cloud_api_url": {
+            "type": "string",
+            "description": "base URL of the operator's billing service, read by the cloud billing screen"
           }
         },
         "required": [
           "version",
           "api",
-          "features"
+          "features",
+          "auth"
+        ]
+      },
+      "VersionAuth": {
+        "type": "object",
+        "properties": {
+          "kinds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "token",
+                "jwt"
+              ]
+            },
+            "description": "accepted bearer credentials: `token` is a pasted stf_ token, `jwt` an identity provider's JWT"
+          },
+          "login": {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string",
+                "enum": [
+                  "clerk",
+                  "test"
+                ],
+                "description": "sign-in adapter the web app loads; `test` takes its tokens from the page and is for end-to-end tests"
+              },
+              "publishable_key": {
+                "type": "string"
+              },
+              "jwt_template": {
+                "type": "string",
+                "description": "name of the provider's JWT template carrying the org claims"
+              }
+            },
+            "required": [
+              "provider"
+            ]
+          }
+        },
+        "required": [
+          "kinds"
         ]
       },
       "RegistrySearch": {

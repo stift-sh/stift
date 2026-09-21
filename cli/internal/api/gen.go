@@ -161,6 +161,42 @@ func (e SessionBase) Valid() bool {
 	}
 }
 
+// Defines values for VersionAuthKinds.
+const (
+	Jwt   VersionAuthKinds = "jwt"
+	Token VersionAuthKinds = "token"
+)
+
+// Valid indicates whether the value is a known member of the VersionAuthKinds enum.
+func (e VersionAuthKinds) Valid() bool {
+	switch e {
+	case Jwt:
+		return true
+	case Token:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for VersionAuthLoginProvider.
+const (
+	Clerk VersionAuthLoginProvider = "clerk"
+	Test  VersionAuthLoginProvider = "test"
+)
+
+// Valid indicates whether the value is a known member of the VersionAuthLoginProvider enum.
+func (e VersionAuthLoginProvider) Valid() bool {
+	switch e {
+	case Clerk:
+		return true
+	case Test:
+		return true
+	default:
+		return false
+	}
+}
+
 // BlobPutResponse defines model for BlobPutResponse.
 type BlobPutResponse struct {
 	Sha string `json:"sha"`
@@ -575,12 +611,36 @@ type UserRef struct {
 // Version defines model for Version.
 type Version struct {
 	// API API major version
-	API int `json:"api"`
+	API  int         `json:"api"`
+	Auth VersionAuth `json:"auth"`
+
+	// CloudAPIURL base URL of the operator's billing service, read by the cloud billing screen
+	CloudAPIURL string `json:"cloud_api_url,omitempty"`
 
 	// Features server-declared feature flags the web app keys screens on (e.g. cloud, marketplace)
 	Features []string `json:"features"`
 	Version  string   `json:"version"`
 }
+
+// VersionAuth defines model for VersionAuth.
+type VersionAuth struct {
+	// Kinds accepted bearer credentials: `token` is a pasted stf_ token, `jwt` an identity provider's JWT
+	Kinds []VersionAuthKinds `json:"kinds"`
+	Login struct {
+		// JwtTemplate name of the provider's JWT template carrying the org claims
+		JwtTemplate string `json:"jwt_template,omitempty"`
+
+		// Provider sign-in adapter the web app loads; `test` takes its tokens from the page and is for end-to-end tests
+		Provider       VersionAuthLoginProvider `json:"provider"`
+		PublishableKey string                   `json:"publishable_key,omitempty"`
+	} `json:"login,omitempty"`
+}
+
+// VersionAuthKinds defines model for VersionAuth.Kinds.
+type VersionAuthKinds string
+
+// VersionAuthLoginProvider sign-in adapter the web app loads; `test` takes its tokens from the page and is for end-to-end tests
+type VersionAuthLoginProvider string
 
 // Whoami defines model for Whoami.
 type Whoami struct {

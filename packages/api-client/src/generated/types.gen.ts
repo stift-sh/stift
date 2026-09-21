@@ -14,6 +14,29 @@ export type Version = {
      * server-declared feature flags the web app keys screens on (e.g. cloud, marketplace)
      */
     features: Array<string>;
+    auth: VersionAuth;
+    /**
+     * base URL of the operator's billing service, read by the cloud billing screen
+     */
+    cloud_api_url?: string;
+};
+
+export type VersionAuth = {
+    /**
+     * accepted bearer credentials: `token` is a pasted stf_ token, `jwt` an identity provider's JWT
+     */
+    kinds: Array<'token' | 'jwt'>;
+    login?: {
+        /**
+         * sign-in adapter the web app loads; `test` takes its tokens from the page and is for end-to-end tests
+         */
+        provider: 'clerk' | 'test';
+        publishable_key?: string;
+        /**
+         * name of the provider's JWT template carrying the org claims
+         */
+        jwt_template?: string;
+    };
 };
 
 export type RegistrySearch = {

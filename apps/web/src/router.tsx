@@ -1,7 +1,7 @@
 import { createBrowserRouter, Navigate, Outlet, type RouteObject, useLocation } from "react-router";
-import { useToken } from "./api/auth";
+import { useAuth } from "./api/auth";
 import { Shell } from "./components/Shell";
-import { NotFound, PageHeader } from "./components/States";
+import { NotFound, Spinner } from "./components/States";
 import { Login } from "./screens/Login";
 import { Sessions } from "./screens/Sessions";
 import { SessionDetail } from "./screens/SessionDetail";
@@ -11,16 +11,16 @@ import { NewSkill } from "./screens/NewSkill";
 import { Members } from "./screens/Members";
 import { Tokens } from "./screens/Tokens";
 import { GettingStarted } from "./screens/GettingStarted";
+import { Billing } from "./screens/Billing";
 
 function RequireAuth() {
-  const token = useToken();
+  const { status } = useAuth();
   const location = useLocation();
-  if (!token) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  if (status === "loading") return <Spinner />;
+  if (status === "out") return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   return <Outlet />;
 }
 
-// Placeholder until the cloud billing screen lands (ADR 0001 step 5).
-const Billing = () => <PageHeader title="Billing" subtitle="Coming soon." />;
 
 export const routes: RouteObject[] = [
   { path: "/login", element: <Login /> },

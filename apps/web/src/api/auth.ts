@@ -2,11 +2,17 @@
 // on login, and is dropped by any 401 so a revoked token never leaves a
 // half-working UI. Components read the token through useToken() so a
 // logout re-renders RequireAuth immediately.
-import { useSyncExternalStore } from "react";
+//
+// Provider auth (the server advertises auth.login): the adapter in
+// ../auth owns the session and useAuth() folds both into one status. A
+// pasted token wins over a provider session, here and in the API client.
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { QueryCache, QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getV1Whoami } from "@stift/api-client";
 import type { Whoami } from "@stift/shared";
+import { type AuthProvider, loadProvider } from "../auth/provider";
 import { getToken, setToken } from "./client";
+import { useServerVersion } from "./version";
 
 const listeners = new Set<() => void>();
 function notify() {
@@ -28,6 +34,54 @@ export function logout(qc: QueryClient) {
   setToken(null);
   qc.clear();
   notify();
+}
+
+const noSession = () => null;
+const noSubscribe = () => () => {};
+
+export type Auth = {
+  status: "loading" | "in" | "out";
+  /** The loaded sign-in adapter, when the server names one. */
+  provider: AuthProvider | null;
+  /** Whether the login screen offers the pasted-token form next to it. */
+  tokens: boolean;
+  error: Error | null;
+};
+
+/** Signed-in state across both kinds of credential. Without a stored
+ *  token it waits for /api/version, which says whether there is a
+ *  provider to ask. */
+export function useAuth(): Auth {
+  const token = useToken();
+  const version = useServerVersion();
+  const login = version.data?.auth.login;
+  const loaded = useQuery({
+    queryKey: ["auth-provider", login?.provider],
+    queryFn: () => loadProvider(login!),
+    enabled: !!login,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    retry: false,
+  });
+  const provider = loaded.data ?? null;
+  const session = useSyncExternalStore(provider?.subscribe ?? noSubscribe, provider?.session ?? noSession, noSession);
+  const tokens = !login || (version.data?.auth.kinds.includes("token") ?? true);
+
+  // Another user or org: nothing cached is theirs.
+  const qc = useQueryClient();
+  const last = useRef(session);
+  useEffect(() => {
+    if (last.current !== null && session !== null && last.current !== session) {
+      void qc.resetQueries({ predicate: (q) => q.queryKey[0] !== "version" && q.queryKey[0] !== "auth-provider" });
+    }
+    last.current = session;
+  }, [session, qc]);
+
+  let status: Auth["status"];
+  if (token) status = "in";
+  else if (version.isPending || (login && loaded.isPending)) status = "loading";
+  else status = session ? "in" : "out";
+  return { status, provider, tokens, error: loaded.error };
 }
 
 /** Errors from the API keep their status so the 401 handler can tell a
@@ -53,13 +107,15 @@ async function whoami() {
   return res.data;
 }
 
-/** Creates the app's QueryClient: any 401 from any query signs out. */
+/** Creates the app's QueryClient: a 401 drops a pasted token. A provider
+ *  session is left alone (its 401 is "no organization selected", which
+ *  the shell answers with the org switcher, not a sign-out). */
 export function createQueryClient() {
   const qc: QueryClient = new QueryClient({
     defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
     queryCache: new QueryCache({
       onError: (error) => {
-        if (error instanceof ApiError && error.status === 401) logout(qc);
+        if (error instanceof ApiError && error.status === 401 && getToken()) logout(qc);
       },
     }),
   });
@@ -90,5 +146,10 @@ export function useLogin() {
 
 export function useLogout() {
   const qc = useQueryClient();
-  return () => logout(qc);
+  const { provider } = useAuth();
+  return () => {
+    const viaProvider = !getToken() && provider;
+    logout(qc);
+    if (viaProvider) void provider.signOut();
+  };
 }

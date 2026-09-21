@@ -17,3 +17,4 @@
 .card { width: min(100%, 440px); }
 .hint { margin: 16px 0 0; font-size: 14px; color: var(--ink-soft); }
 .error { margin: 12px 0 0; color: var(--accent); font-size: 14px; }
+.provider { margin-top: 16px; display: grid; justify-items: start; }

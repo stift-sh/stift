@@ -155,6 +155,13 @@ describe("jwt authenticator", { skip: dbUrl ? false : "STIFT_TEST_DATABASE_URL n
     assert.deepEqual([authFromEnv(conn.db, "local,jwt", { ...env, STIFT_JWT_ORG: "" }).bootstrap, authFromEnv(conn.db, "jwt", env).local], [true, false]);
     assert.equal(authFromEnv(conn.db, "local", {}).bootstrap, true);
     assert.throws(() => authFromEnv(conn.db, "oidc", {}), /supported: local, jwt/);
+    assert.deepEqual([cfg.info, authFromEnv(conn.db, "local", {}).info], [{ kinds: ["token", "jwt"] }, { kinds: ["token"] }]);
+    const clerk = { ...env, STIFT_LOGIN_PROVIDER: "clerk", STIFT_CLERK_PUBLISHABLE_KEY: "pk_test_x", STIFT_CLERK_JWT_TEMPLATE: "stift" };
+    assert.deepEqual(authFromEnv(conn.db, "jwt", clerk).info, { kinds: ["jwt"], login: { provider: "clerk", publishable_key: "pk_test_x", jwt_template: "stift" } });
+    assert.deepEqual(authFromEnv(conn.db, "local,jwt", { ...env, STIFT_LOGIN_PROVIDER: "test" }).info.login, { provider: "test" });
+    assert.throws(() => authFromEnv(conn.db, "jwt", { ...env, STIFT_LOGIN_PROVIDER: "clerk" }), /STIFT_CLERK_PUBLISHABLE_KEY/);
+    assert.throws(() => authFromEnv(conn.db, "local", { STIFT_LOGIN_PROVIDER: "test" }), /needs jwt/);
+    assert.throws(() => authFromEnv(conn.db, "jwt", { ...env, STIFT_LOGIN_PROVIDER: "okta" }), /supported: clerk, test/);
     const { raw } = await createToken(conn.db, "", "ci", false);
     assert.equal((await cfg.authenticator.authenticate(raw))?.name, "ci");
     assert.equal((await cfg.authenticator.authenticate(await sign()))?.orgId, "org_acme");

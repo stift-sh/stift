@@ -36,3 +36,10 @@ export function fmtTime(iso: string): string {
   if (Number.isNaN(d.getTime())) return iso;
   return d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }
+
+/** Absolute local date, for things that happen on a day (a renewal). */
+export function fmtDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString(undefined, { dateStyle: "medium" });
+}

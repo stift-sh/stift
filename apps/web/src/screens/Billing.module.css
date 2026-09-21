@@ -1,0 +1,3 @@
+.card { margin-bottom: 24px; display: grid; gap: 8px; justify-items: start; }
+.plan { margin: 0; font-size: 28px; line-height: 1; }
+.error { margin: 0; color: var(--accent); font-size: 14px; }

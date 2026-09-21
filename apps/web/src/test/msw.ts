@@ -2,7 +2,7 @@ import { setupServer } from "msw/node";
 import { http, HttpResponse } from "msw";
 import type { Member, Org, Version, Whoami } from "@stift/shared";
 
-export const version: Version = { version: "test", api: 1, features: [] };
+export const version: Version = { version: "test", api: 1, features: [], auth: { kinds: ["token"] } };
 export const org = { id: "", slug: "default", name: "Acme" };
 export const admin: Whoami = { name: "root", role: "admin", user: { id: "u-root", name: "root" }, org };
 export const member: Whoami = { name: "dev-laptop", role: "member", user: { id: "u-dev", name: "dev" }, org };

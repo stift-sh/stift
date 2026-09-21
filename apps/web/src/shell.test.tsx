@@ -2,7 +2,7 @@ import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { getToken, setToken } from "./api/client";
 import { renderApp } from "./test/render";
-import { http, HttpResponse, member, server, unauthorized } from "./test/msw";
+import { http, HttpResponse, member, server, unauthorized, version } from "./test/msw";
 
 const TOKEN = "stf_" + "a".repeat(48);
 
@@ -60,7 +60,7 @@ test("cloud entries appear only with the cloud feature", async () => {
   expect(screen.queryByText("cloud")).not.toBeInTheDocument();
   first.unmount();
 
-  server.use(http.get("*/api/version", () => HttpResponse.json({ version: "t", api: 1, features: ["cloud"] })));
+  server.use(http.get("*/api/version", () => HttpResponse.json({ ...version, features: ["cloud"] })));
   renderApp({ path: "/sessions" });
   expect(await screen.findByRole("link", { name: "Billing" })).toBeInTheDocument();
   expect(screen.getByText("cloud")).toBeInTheDocument();

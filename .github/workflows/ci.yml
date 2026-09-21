@@ -62,3 +62,9 @@ jobs:
         run: |
           pnpm --filter @stift/web exec playwright install --with-deps chromium
           ./scripts/with-server.sh pnpm --filter @stift/web test:e2e
+      - name: Web smoke, provider sign-in (multi-org JWT server with the test adapter)
+        env:
+          STIFT_AUTH: local,jwt
+          STIFT_JWT_SECRET: ci-only-secret-ci-only-secret-ci-only
+          STIFT_LOGIN_PROVIDER: test
+        run: ./scripts/with-server.sh pnpm --filter @stift/web test:e2e e2e/provider.spec.ts

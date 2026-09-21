@@ -29,6 +29,7 @@ node apps/server/dist/src/db/migrate.js >/dev/null || { echo "migrate"; exit 1; 
   const c = new pg.Client({ connectionString: process.env.STIFT_DATABASE_URL });
   await c.connect();
   await c.query("truncate sessions, blobs, bundles, bundle_versions, published_skills, published_versions, tokens, installs, memberships, users cascade");
+  await c.query("delete from orgs where id <> $1", [""]);
   await c.query("update orgs set slug = $1 where id = $2", ["default", ""]);
   await c.end();
 ')

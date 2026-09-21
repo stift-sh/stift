@@ -1,7 +1,9 @@
 import { NavLink, Outlet } from "react-router";
-import { useIdentity, useLogout } from "../api/auth";
+import { ApiError, useAuth, useIdentity, useLogout } from "../api/auth";
+import { getToken } from "../api/client";
 import { useServerVersion } from "../api/version";
 import { Logo } from "./Logo";
+import { EmptyState } from "./States";
 import s from "./Shell.module.css";
 
 type NavItem = { to: string; label: string; admin?: boolean; feature?: string };
@@ -20,6 +22,11 @@ export function Shell() {
   const me = useIdentity();
   const version = useServerVersion();
   const logout = useLogout();
+  const { provider } = useAuth();
+  // The provider's session, not a pasted token, is what it can switch.
+  const OrgSwitcher = getToken() ? null : (provider?.OrgSwitcher ?? null);
+  // Signed in to the provider but refused by the server: no org is active.
+  const noOrg = OrgSwitcher && me.error instanceof ApiError && me.error.status === 401 ? me.error : null;
   const features = version.data?.features ?? [];
   const cloud = features.includes("cloud");
   const nav = NAV.filter((i) => (!i.admin || me.data?.role === "admin") && (!i.feature || features.includes(i.feature)));
@@ -45,6 +52,7 @@ export function Shell() {
           ))}
         </nav>
         <div className={s.right}>
+          {OrgSwitcher && !noOrg && <OrgSwitcher />}
           {me.data && (
             <span className={s.identity}>
               <span className={s.name}>{me.data.user?.name ?? me.data.name}</span>
@@ -58,7 +66,14 @@ export function Shell() {
         </div>
       </header>
       <main className={s.main}>
-        <Outlet />
+        {noOrg && OrgSwitcher ? (
+          <EmptyState title="Pick an organization">
+            <p>Sessions and skills belong to an organization ({noOrg.message}). Select or create one to continue.</p>
+            <OrgSwitcher />
+          </EmptyState>
+        ) : (
+          <Outlet />
+        )}
       </main>
     </div>
   );

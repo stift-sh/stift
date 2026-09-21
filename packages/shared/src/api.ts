@@ -159,12 +159,30 @@ export const Bundle = z
   .meta({ id: "Bundle" });
 export type Bundle = z.infer<typeof Bundle>;
 
+/** How the web app signs in: what the server accepts, and the identity
+ *  provider's sign-in to hand off to when there is one. */
+export const VersionAuth = z
+  .object({
+    kinds: z.array(z.enum(["token", "jwt"])).describe("accepted bearer credentials: `token` is a pasted stf_ token, `jwt` an identity provider's JWT"),
+    login: z
+      .object({
+        provider: z.enum(["clerk", "test"]).describe("sign-in adapter the web app loads; `test` takes its tokens from the page and is for end-to-end tests"),
+        publishable_key: z.string().optional(),
+        jwt_template: z.string().optional().describe("name of the provider's JWT template carrying the org claims"),
+      })
+      .optional(),
+  })
+  .meta({ id: "VersionAuth" });
+export type VersionAuth = z.infer<typeof VersionAuth>;
+
 /** Returned by GET /api/version. */
 export const Version = z
   .object({
     version: z.string(),
     api: z.int().describe("API major version"),
     features: z.array(z.string()).describe("server-declared feature flags the web app keys screens on (e.g. cloud, marketplace)"),
+    auth: VersionAuth,
+    cloud_api_url: z.string().optional().describe("base URL of the operator's billing service, read by the cloud billing screen"),
   })
   .meta({ id: "Version" });
 export type Version = z.infer<typeof Version>;

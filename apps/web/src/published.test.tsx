@@ -4,7 +4,7 @@ import type { Bundle, PublishedSkillDetail, PublishedVersion } from "@stift/shar
 import { setToken } from "./api/client";
 import { installCommand } from "./api/published";
 import { renderApp } from "./test/render";
-import { http, HttpResponse, member, orgOverview, server } from "./test/msw";
+import { http, HttpResponse, member, orgOverview, server, version } from "./test/msw";
 
 const TOKEN = "stf_" + "a".repeat(48);
 const SHA = "1".repeat(64);
@@ -54,7 +54,7 @@ const acme = { ...orgOverview, slug: "acme" };
 
 let published: PublishedSkillDetail[];
 let calls: { method: string; url: string; body?: unknown }[];
-const withRegistry = (features: string[] = ["registry"]) => server.use(http.get("*/api/version", () => HttpResponse.json({ version: "t", api: 1, features })));
+const withRegistry = (features: string[] = ["registry"]) => server.use(http.get("*/api/version", () => HttpResponse.json({ ...version, features })));
 
 beforeEach(() => {
   setToken(TOKEN);

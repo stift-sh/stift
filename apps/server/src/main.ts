@@ -24,10 +24,11 @@ if (registryEnv !== "public" && registryEnv !== "off") throw new Error(`STIFT_RE
 const registry = registryEnv === "public";
 const serviceToken = process.env.STIFT_SERVICE_TOKEN || undefined;
 if (serviceToken && serviceToken.length < 32) throw new Error("STIFT_SERVICE_TOKEN: expected at least 32 characters");
+const cloudApiUrl = (process.env.STIFT_CLOUD_API_URL || "").replace(/\/+$/, "") || undefined;
 const webDir = await findWebDir();
 if (!webDir) console.log("no web bundle found (STIFT_WEB_DIR); serving the API only");
 const store = new PgStore(db, new BlobStore(blobConfigFromEnv()));
 
-serve({ fetch: createApp({ version, auth: auth.authenticator, store, db, limits, features, webDir: webDir ?? undefined, registry, serviceToken }).fetch, port }, (info) => {
+serve({ fetch: createApp({ version, auth: auth.authenticator, store, db, limits, features, authInfo: auth.info, cloudApiUrl, webDir: webDir ?? undefined, registry, serviceToken }).fetch, port }, (info) => {
   console.log(`stift server ${version} listening on :${info.port}`);
 });
